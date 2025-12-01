@@ -1,0 +1,47 @@
+{% extends 'firstApp/base.html' %}
+
+{% block content %}
+<div class="row justify-content-center mt-5">
+    <div class="col-md-5">
+        <div class="card shadow">
+            <div class="card-body p-5">
+                <h3 class="text-center mb-4">Login with OTP</h3>
+                <p class="text-center text-muted">Enter your registered phone number</p>
+
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="mb-4">
+                        <label class="form-label">Phone Number</label>
+                        <input type="tel" name="phone_number" class="form-control form-control-lg"
+                            placeholder="Enter 10-digit phone number" maxlength="10" pattern="[0-9]{10}" required
+                            autofocus>
+                        <small class="text-muted">We'll send you an OTP to verify</small>
+                    </div>
+
+                    <button type="submit" class="btn btn-warning btn-lg w-100">
+                        <i class="fas fa-paper-plane"></i> Send OTP
+                    </button>
+                </form>
+
+                <hr class="my-4">
+
+                <div class="text-center">
+                    <p class="mb-2">Don't have an account?</p>
+                    <a href="{% url 'signup_otp' %}" class="btn btn-outline-primary">Sign Up with OTP</a>
+                </div>
+
+                <div class="text-center mt-3">
+                    <small class="text-muted">Admin? <a href="{% url 'login' %}">Login with Password</a></small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Only allow digits in phone input
+    document.querySelector('input[name="phone_number"]').addEventListener('input', function (e) {
+        this.value = this.value.replace(/\D/g, '').slice(0, 10);
+    });
+</script>
+{% endblock %}
