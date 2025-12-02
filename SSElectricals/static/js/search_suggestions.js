@@ -66,7 +66,7 @@ function displaySuggestions(results) {
             <img src="${product.image}" alt="${product.name}" style="width:40px;height:40px;object-fit:cover;margin-right:10px;border-radius:4px;">
             <div>
                 <div style="font-weight:bold;">${product.name}</div>
-                <div style="font-size:12px;color:#666;">$${product.price}</div>
+                <div style="font-size:12px;color:#666;">₹${product.price}</div>
             </div>
         `;
         item.addEventListener('mouseenter', function () {

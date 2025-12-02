@@ -1,0 +1,108 @@
+{% extends 'firstApp/base.html' %}
+
+{% block content %}
+<div class="container my-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <h4 class="mb-0">Update Appointment #{{ appointment.id }}</h4>
+                    <a href="{% url 'admin_appointment_list' %}" class="btn btn-light btn-sm">Back to List</a>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Customer Name</label>
+                                {{ form.customer_name }}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Phone</label>
+                                {{ form.phone }}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Email</label>
+                                {{ form.email }}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">City</label>
+                                {{ form.city }}
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label fw-bold">Address</label>
+                                {{ form.address }}
+                            </div>
+
+                            <hr class="my-4">
+
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Service Type</label>
+                                {{ form.service_type }}
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label fw-bold">Date</label>
+                                {{ form.date }}
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label fw-bold">Time</label>
+                                {{ form.time }}
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label fw-bold">Problem Description</label>
+                                {{ form.problem_description }}
+                            </div>
+
+                            <hr class="my-4">
+
+                            <div class="col-md-4">
+                                <label class="form-label fw-bold">Status</label>
+                                {{ form.status }}
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-bold">Visiting Charge (₹)</label>
+                                {{ form.visiting_charge }}
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-bold">Extra Charge (₹)</label>
+                                {{ form.extra_charge }}
+                            </div>
+                        </div>
+
+                        <div class="mt-4 d-flex justify-content-between">
+                            <button type="button" class="btn btn-danger" data-bs-toggle="modal"
+                                data-bs-target="#deleteModal">
+                                Delete Appointment
+                            </button>
+                            <button type="submit" class="btn btn-success btn-lg">Update Appointment</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">Confirm Delete</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                Are you sure you want to delete this appointment? This action cannot be undone.
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form action="{% url 'admin_appointment_delete' appointment.id %}" method="post">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">Delete Permanently</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -33,7 +33,7 @@
                                         </div>
                                     </div>
                                 </td>
-                                <td>${{ item.product.final_price }}</td>
+                                <td>₹{{ item.product.final_price }}</td>
                                 <td>
                                     <form action="{% url 'update_cart' item.id %}" method="post" class="d-flex"
                                         style="width: 100px;">
@@ -44,7 +44,7 @@
                                                 class="fas fa-sync"></i></button>
                                     </form>
                                 </td>
-                                <td>${{ item.total_price }}</td>
+                                <td>₹{{ item.total_price }}</td>
                                 <td>
                                     <a href="{% url 'remove_from_cart' item.id %}" class="btn btn-sm btn-danger"><i
                                             class="fas fa-trash"></i></a>
@@ -65,12 +65,12 @@
             <div class="card-body">
                 <div class="d-flex justify-content-between mb-3">
                     <span>Subtotal</span>
-                    <strong>${{ cart.total_price }}</strong>
+                    <strong>₹{{ cart.total_price }}</strong>
                 </div>
                 <hr>
                 <div class="d-flex justify-content-between mb-3">
                     <span class="fs-5">Total</span>
-                    <strong class="fs-5">${{ cart.total_price }}</strong>
+                    <strong class="fs-5">₹{{ cart.total_price }}</strong>
                 </div>
                 <a href="{% url 'checkout' %}" class="btn btn-success w-100 btn-lg">Proceed to Checkout</a>
             </div>

@@ -15,6 +15,12 @@ urlpatterns = [
     path('signup-complete/', views.signup_complete, name='signup_complete'),
     path('resend-otp/', views.resend_otp, name='resend_otp'),
     
+    # Email OTP Authentication
+    path('signup-email/', views.email_signup, name='email_signup'),
+    path('signup-email/verify/', views.email_signup_verify, name='email_signup_verify'),
+    path('login-email/', views.email_login, name='email_login'),
+    path('login-email/verify/', views.email_login_verify, name='email_login_verify'),
+    
     # Password Authentication (For admins)
     path('signup/', views.signup, name='signup'),
     path('login/', auth_views.LoginView.as_view(template_name='firstApp/login.html'), name='login'),
@@ -37,6 +43,16 @@ urlpatterns = [
     path('admin/activity-log/', admin_views.admin_activity_log_view, name='admin_activity_log'),
     path('admin/terminate-session/<int:session_id>/', admin_views.terminate_session, name='terminate_session'),
     
+    # Appointment URLs
+    path('book-appointment/', views.book_appointment, name='book_appointment'),
+    path('appointment-success/', views.appointment_success, name='appointment_success'),
+    path('my-appointments/', views.my_appointments, name='my_appointments'),
+    
+    # Admin Appointment URLs
+    path('admin/appointments/', admin_views.admin_appointment_list, name='admin_appointment_list'),
+    path('admin/appointments/update/<int:pk>/', admin_views.admin_appointment_update, name='admin_appointment_update'),
+    path('admin/appointments/delete/<int:pk>/', admin_views.admin_appointment_delete, name='admin_appointment_delete'),
+
     # AJAX API endpoints
     path('api/cart/add/', views.ajax_add_to_cart, name='ajax_add_to_cart'),
     path('api/cart/update/', views.ajax_update_cart, name='ajax_update_cart'),

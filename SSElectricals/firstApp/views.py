@@ -4,8 +4,8 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.db.models import Q
 from django.http import JsonResponse
-from .models import Product, Category, Cart, CartItem, Order, OrderItem
-from .forms import CustomUserCreationForm, CustomUserUpdateForm, CheckoutForm
+from .models import Product, Category, Cart, CartItem, Order, OrderItem, Appointment
+from .forms import CustomUserCreationForm, CustomUserUpdateForm, CheckoutForm, AppointmentForm
 
 def home(request):
     categories = Category.objects.all()
@@ -115,24 +115,13 @@ def checkout(request):
         if form.is_valid():
             address = form.cleaned_data['address']
             payment_method = form.cleaned_data['payment_method']
-            
-            # Validate COD orders (limit to 2 pending COD orders)
-            if payment_method == 'COD':
-                pending_cod_orders = Order.objects.filter(
-                    user=request.user,
-                    payment_method='COD',
-                    status__in=['Pending', 'Shipped']
-                ).count()
-                
-                if pending_cod_orders >= 2:
-                    messages.error(request, "You have 2 pending COD orders. Please complete them before placing a new COD order.")
-                    return redirect('checkout')
+            upi_id = form.cleaned_data.get('upi_id', '')
             
             # Check stock availability
             for item in cart.items.all():
                 if item.product.stock_quantity < item.quantity:
                     messages.error(request, f"{item.product.name} is out of stock or insufficient quantity available.")
-                    return redirect('cart')
+                    return redirect('view_cart')
             
             # Create Order
             order = Order.objects.create(
@@ -181,6 +170,41 @@ def about(request):
 
 def contact(request):
     return render(request, 'firstApp/contact.html')
+
+# Appointment Views
+@login_required
+def book_appointment(request):
+    if request.method == 'POST':
+        form = AppointmentForm(request.POST)
+        if form.is_valid():
+            appointment = form.save(commit=False)
+            if request.user.is_authenticated:
+                appointment.user = request.user
+            appointment.save()
+            messages.success(request, "Appointment booked successfully!")
+            return redirect('appointment_success')
+    else:
+        initial_data = {}
+        if request.user.is_authenticated:
+            initial_data = {
+                'customer_name': request.user.first_name + ' ' + request.user.last_name if request.user.first_name else request.user.username,
+                'phone': request.user.phone_number,
+                'email': request.user.email,
+                'address': request.user.address,
+                'city': 'Indore'
+            }
+        form = AppointmentForm(initial=initial_data)
+    
+    return render(request, 'firstApp/book_appointment.html', {'form': form})
+
+def appointment_success(request):
+    return render(request, 'firstApp/appointment_success.html')
+
+@login_required
+def my_appointments(request):
+    appointments = Appointment.objects.filter(user=request.user).order_by('-created_at')
+    return render(request, 'firstApp/my_appointments.html', {'appointments': appointments})
+
 
 # AJAX API Endpoints
 @login_required
@@ -274,7 +298,9 @@ def ajax_search(request):
 
 # OTP Authentication Views
 from .otp_service import OTPService
-from .models import CustomUser, PhoneOTP
+from .models import CustomUser, PhoneOTP, EmailOTP
+from .forms import EmailSignupForm, EmailLoginForm, OTPVerificationForm
+from .utils import send_otp_email
 
 def otp_login(request):
     """Phone number input page for OTP login"""
@@ -444,3 +470,112 @@ def resend_otp(request):
         return JsonResponse({'success': success, 'message': message})
     
     return JsonResponse({'success': False, 'message': 'Invalid request'})
+
+def email_signup(request):
+    if request.method == 'POST':
+        form = EmailSignupForm(request.POST)
+        if form.is_valid():
+            email = form.cleaned_data['email']
+            # Generate OTP
+            otp = EmailOTP.generate_otp()
+            # Save OTP
+            EmailOTP.objects.create(email=email, otp=otp)
+            # Send Email
+            if send_otp_email(email, otp):
+                # Store signup data in session
+                request.session['signup_data'] = form.cleaned_data
+                request.session['otp_email'] = email
+                request.session['otp_purpose'] = 'signup'
+                messages.success(request, f"OTP sent to {email}")
+                return redirect('email_signup_verify')
+            else:
+                messages.error(request, "Failed to send OTP. Please try again.")
+    else:
+        form = EmailSignupForm()
+    return render(request, 'firstApp/signup_email.html', {'form': form})
+
+def email_signup_verify(request):
+    email = request.session.get('otp_email')
+    if not email:
+        messages.error(request, "Session expired.")
+        return redirect('email_signup')
+    
+    if request.method == 'POST':
+        form = OTPVerificationForm(request.POST)
+        if form.is_valid():
+            otp_entered = form.cleaned_data['otp']
+            # Verify OTP
+            try:
+                otp_obj = EmailOTP.objects.filter(email=email).latest('created_at')
+                success, message = otp_obj.verify(otp_entered)
+                if success:
+                    # Create User
+                    data = request.session.get('signup_data')
+                    user = CustomUser.objects.create_user(
+                        username=data['phone'], # Using phone as username per model
+                        email=data['email'],
+                        phone_number=data['phone'],
+                        password=data['password'],
+                        first_name=data['full_name'].split(' ')[0],
+                        last_name=' '.join(data['full_name'].split(' ')[1:]) if ' ' in data['full_name'] else ''
+                    )
+                    login(request, user, backend='django.contrib.auth.backends.ModelBackend')
+                    # Cleanup
+                    del request.session['signup_data']
+                    del request.session['otp_email']
+                    del request.session['otp_purpose']
+                    messages.success(request, "Signup successful!")
+                    return redirect('home')
+                else:
+                    messages.error(request, message)
+            except EmailOTP.DoesNotExist:
+                messages.error(request, "Invalid OTP request.")
+    else:
+        form = OTPVerificationForm()
+    return render(request, 'firstApp/signup_otp_verify.html', {'form': form, 'email': email})
+
+def email_login(request):
+    if request.method == 'POST':
+        form = EmailLoginForm(request.POST)
+        if form.is_valid():
+            email = form.cleaned_data['email']
+            otp = EmailOTP.generate_otp()
+            EmailOTP.objects.create(email=email, otp=otp)
+            if send_otp_email(email, otp):
+                request.session['otp_email'] = email
+                request.session['otp_purpose'] = 'login'
+                messages.success(request, f"OTP sent to {email}")
+                return redirect('email_login_verify')
+            else:
+                messages.error(request, "Failed to send OTP.")
+    else:
+        form = EmailLoginForm()
+    return render(request, 'firstApp/login_email.html', {'form': form})
+
+def email_login_verify(request):
+    email = request.session.get('otp_email')
+    if not email:
+        messages.error(request, "Session expired.")
+        return redirect('email_login')
+        
+    if request.method == 'POST':
+        form = OTPVerificationForm(request.POST)
+        if form.is_valid():
+            otp_entered = form.cleaned_data['otp']
+            try:
+                otp_obj = EmailOTP.objects.filter(email=email).latest('created_at')
+                success, message = otp_obj.verify(otp_entered)
+                if success:
+                    user = CustomUser.objects.get(email=email)
+                    login(request, user, backend='django.contrib.auth.backends.ModelBackend')
+                    del request.session['otp_email']
+                    del request.session['otp_purpose']
+                    messages.success(request, "Login successful!")
+                    return redirect('home')
+                else:
+                    messages.error(request, message)
+            except EmailOTP.DoesNotExist:
+                messages.error(request, "Invalid OTP request.")
+    else:
+        form = OTPVerificationForm()
+    return render(request, 'firstApp/login_email_otp_verify.html', {'form': form, 'email': email})

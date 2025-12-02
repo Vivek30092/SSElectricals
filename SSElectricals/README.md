@@ -5,33 +5,41 @@ A full-featured Django e-commerce platform for electrical products with advanced
 ## 🚀 New Advanced Features
 
 ### 1. Admin Session Management
-- **Session Tracking**: Track all admin login sessions with IP address, user-agent, and timestamps
+- **Signal-Based Session Tracking**: Django signals automatically track admin login/logout sessions
 - **Auto-Logout**: Automatic logout after 30 minutes of inactivity
 - **Session Dashboard**: View active admin sessions in real-time
 - **Manual Termination**: Superusers can manually terminate other admin sessions
-- **Activity Logging**: Comprehensive logging of all admin activities (CRUD operations, logins)
+- **Comprehensive Activity Logging**: Automatic CRUD operation logging for:
+  - Products (create, update, delete)
+  - Categories (create, update, delete)
+  - Orders (create, status changes)
+  - Login/Logout events with IP tracking
 
 ### 2. Dynamic & Responsive Design  
 - **Fully Responsive**: Mobile-first design that works on all devices
 - **AJAX Cart Operations**: Add/update cart items without page reload
-- **Live Search Suggestions**: Dynamic product search with keyboard navigation
+- **Live Search Suggestions**: Dynamic product search with keyboard navigation (arrow keys, enter)
 - **Animated UI**: Smooth transitions, hover effects, and loading states
 - **Custom CSS**: Professional styling with animations and accessibility features
+- **Toast Notifications**: Real-time feedback for user actions
 
 ### 3. Smart Validations
 - **Frontend Validation**: Real-time form validation with visual feedback
 - **Backend Validation**: Server-side validation for security
 - **Phone Number**: 10-digit Indian mobile number format
 - **Strong Password**: Min 8 chars, uppercase, number, symbol required
+- **UPI ID Validation**: Format validation for UPI payments (e.g., username@paytm)
 - **Stock Validation**: Prevent orders exceeding available stock
-- **COD Limits**: Maximum 2 pending COD orders per user
+- **No COD Limits**: Unlimited COD orders allowed (removed order restrictions)
 
 ### 4. Custom Admin Dashboard
 - **Metrics Cards**: Total products, orders, revenue, active sessions
-- **Sales Charts**: Daily/weekly/monthly sales visualization with Chart.js
-- **Recent Orders**: Quick view of latest orders
-- **Active Sessions**: Monitor logged-in admins
+- **Sales Charts**: Daily/weekly/monthly sales visualization with Chart.js 4.0
+- **Recent Orders**: Quick view of latest 10 orders
+- **Active Sessions**: Monitor logged-in admins with last activity time
 - **Activity Log**: Filterable and paginated admin activity history
+- **Real-Time Clock**: Server time display
+- **Session Auto-Refresh**: Active sessions refresh every 60 seconds
 
 ## 📋 Features
 
@@ -284,8 +292,33 @@ For issues, questions, or contributions:
 
 ## 📚 Version History
 
-### v2.0.0 (Current) - Advanced Features
-- Added admin session management
+### v3.0.0 (Current) - December 2025 Major Upgrade
+**Admin Session Management:**
+- Added Django signal-based session tracking (login/logout)
+- Implemented comprehensive activity logging with signals
+- Enhanced middleware to attach user context to models
+
+**Smart Validations:**
+- Enhanced forms with UPI ID field and validation
+- Removed COD order limit (now unlimited)
+- Added password strength validation
+- Implemented comprehensive validators.py functions
+
+**Frontend Enhancements:**
+- Created admin_dashboard.js with Chart.js integration
+- Fixed duplicate DOCTYPE in base.html
+- Added cart badge styling
+- Verified existing AJAX cart and search functionality
+
+**Files Modified:**
+- `admin.py`: Added signal handlers for CRUD logging
+- `middleware.py`: Enhanced with model instance tracking
+- `forms.py`: Added UPI field, validators, help text
+- `views.py`: Removed COD limit validation
+- `admin_dashboard.js`: New file for dashboard interactivity
+
+### v2.0.0 - Previous Features
+- Added admin session management models
 - Implemented AJAX cart operations
 - Created custom admin dashboard
 - Added smart validations

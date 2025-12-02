@@ -33,14 +33,14 @@
                     <tr>
                         <td>{{ item.product.name }}</td>
                         <td>{{ item.quantity }}</td>
-                        <td>${{ item.price }}</td>
+                        <td>₹{{ item.price }}</td>
                     </tr>
                     {% endfor %}
                 </tbody>
                 <tfoot>
                     <tr class="border-top">
                         <td colspan="2" class="text-end fw-bold">Total:</td>
-                        <td class="fw-bold">${{ order.total_price }}</td>
+                        <td class="fw-bold">₹{{ order.total_price }}</td>
                     </tr>
                 </tfoot>
             </table>

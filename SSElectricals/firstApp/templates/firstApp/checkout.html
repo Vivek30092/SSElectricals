@@ -96,22 +96,23 @@
                                                         <h6 class="my-0">{{ item.product.name }}</h6>
                                                         <small class="text-muted">Qty: {{ item.quantity }}</small>
                                                     </div>
-                                                    <span class="text-muted">${{ item.total_price }}</span>
+                                                    <span class="text-muted">₹{{ item.total_price }}</span>
                                                 </li>
                                                 {% endfor %}
                                             </ul>
                                             <div class="d-flex justify-content-between mb-2">
                                                 <span>Subtotal</span>
-                                                <span>${{ cart.total_price }}</span>
+                                                <span>₹{{ cart.total_price }}</span>
                                             </div>
                                             <div class="d-flex justify-content-between mb-2">
                                                 <span>Delivery Charge</span>
-                                                <span>${{ delivery_charge }}</span>
+                                                <span>₹{{ delivery_charge }} <small class="text-muted">(Indore
+                                                        only)</small></span>
                                             </div>
                                             <hr>
                                             <div class="d-flex justify-content-between mb-3">
                                                 <span class="fw-bold fs-5">Total</span>
-                                                <span class="fw-bold fs-5">${{ total_amount }}</span>
+                                                <span class="fw-bold fs-5">₹{{ total_amount }}</span>
                                             </div>
                                             <div class="alert alert-warning small">
                                                 <i class="fas fa-exclamation-triangle"></i> Note: Delivery available

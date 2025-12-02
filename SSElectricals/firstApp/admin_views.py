@@ -1,4 +1,5 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib import messages
 from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth.decorators import user_passes_test
 from django.core.paginator import Paginator
@@ -6,12 +7,11 @@ from django.db.models import Sum, Count, Q
 from django.http import JsonResponse
 from django.utils import timezone
 from datetime import timedelta
-from .models import Product, Order, OrderItem, AdminSession, AdminActivityLog, Category, CustomUser
-
+from .models import Product, Order, OrderItem, AdminSession, AdminActivityLog, Category, CustomUser, Appointment
+from .forms import AdminAppointmentForm
 
 def superuser_required(user):
     return user.is_superuser
-
 
 @staff_member_required
 def admin_dashboard(request):
@@ -135,3 +135,53 @@ def terminate_session(request, session_id):
             return JsonResponse({'success': False, 'message': 'Session not found'}, status=404)
     
     return JsonResponse({'success': False, 'message': 'Invalid request method'}, status=400)
+    return JsonResponse({'success': False, 'message': 'Invalid request method'}, status=400)
+
+@staff_member_required
+def admin_appointment_list(request):
+    appointments = Appointment.objects.all().order_by('-created_at')
+    
+    # Filtering
+    status_filter = request.GET.get('status')
+    service_filter = request.GET.get('service')
+    
+    if status_filter:
+        appointments = appointments.filter(status=status_filter)
+    if service_filter:
+        appointments = appointments.filter(service_type=service_filter)
+        
+    paginator = Paginator(appointments, 20)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    context = {
+        'page_obj': page_obj,
+        'status_filter': status_filter,
+        'service_filter': service_filter,
+        'service_choices': Appointment.SERVICE_CHOICES,
+        'status_choices': Appointment.STATUS_CHOICES,
+    }
+    return render(request, 'admin/admin_appointments.html', context)
+
+@staff_member_required
+def admin_appointment_update(request, pk):
+    appointment = get_object_or_404(Appointment, pk=pk)
+    if request.method == 'POST':
+        form = AdminAppointmentForm(request.POST, instance=appointment)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Appointment updated successfully!")
+            return redirect('admin_appointment_list')
+    else:
+        form = AdminAppointmentForm(instance=appointment)
+    
+    return render(request, 'admin/appointment_update.html', {'form': form, 'appointment': appointment})
+
+@staff_member_required
+def admin_appointment_delete(request, pk):
+    appointment = get_object_or_404(Appointment, pk=pk)
+    if request.method == 'POST':
+        appointment.delete()
+        messages.success(request, "Appointment deleted successfully!")
+        return redirect('admin_appointment_list')
+    return redirect('admin_appointment_list')

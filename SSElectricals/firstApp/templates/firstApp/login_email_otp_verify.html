@@ -1,0 +1,29 @@
+{% extends 'firstApp/base.html' %}
+{% block content %}
+<div class="container my-5">
+    <div class="row justify-content-center">
+        <div class="col-md-5">
+            <div class="card shadow">
+                <div class="card-header bg-dark text-white">
+                    <h4 class="mb-0">Verify Login OTP</h4>
+                </div>
+                <div class="card-body text-center">
+                    <p>OTP sent to <strong>{{ email }}</strong></p>
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="mb-4">
+                            {{ form.otp }}
+                            {% if form.otp.errors %}
+                            <div class="text-danger small">{{ form.otp.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-success">Verify & Login</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -66,12 +66,39 @@ class AdminSessionMiddleware(MiddlewareMixin):
 
 class AdminActivityLogMiddleware(MiddlewareMixin):
     """
-    Middleware to log admin activities automatically.
+    Middleware to log admin activities automatically and attach user info to models.
     """
+    
+    def process_request(self, request):
+        """Attach current user and IP to request for signal handlers."""
+        if request.user.is_authenticated and request.user.is_staff:
+            # Store user and IP in thread local or request
+            request._current_user = request.user
+            request._ip_address = get_client_ip(request)
+        return None
+    
+    def process_view(self, request, view_func, view_args, view_kwargs):
+        """Attach user and IP to models being saved in admin."""
+        if request.user.is_authenticated and request.user.is_staff:
+            # This will be used by ModelAdmin save_model method
+            if hasattr(request, 'POST') and request.method == 'POST':
+                from django.contrib.admin.options import ModelAdmin
+                
+                # Monkey patch to attach user to model instances
+                original_save_model = ModelAdmin.save_model
+                
+                def patched_save_model(self, request, obj, form, change):
+                    obj._current_user = request.user
+                    obj._ip_address = get_client_ip(request)
+                    return original_save_model(self, request, obj, form, change)
+                
+                ModelAdmin.save_model = patched_save_model
+        
+        return None
     
     def process_response(self, request, response):
         if request.user.is_authenticated and request.user.is_staff:
-            # Log admin panel actions
+            # Log admin panel actions (legacy fallback for non-signal actions)
             if request.path.startswith('/admin/') and request.method in ['POST', 'DELETE']:
                 # Determine action and module from request path
                 path_parts = request.path.split('/')
@@ -100,15 +127,7 @@ class AdminActivityLogMiddleware(MiddlewareMixin):
                 elif 'cart' in request.path.lower():
                     module = 'CART'
                 
-                if action and module:
-                    description = f"{action.title()} operation on {module}"
-                    
-                    AdminActivityLog.objects.create(
-                        admin=request.user,
-                        action=action,
-                        module=module,
-                        description=description,
-                        ip_address=get_client_ip(request)
-                    )
+                # Note: Signals will handle most logging now, this is just a fallback
+                # for any actions not caught by signals
         
         return response

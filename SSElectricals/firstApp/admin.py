@@ -1,6 +1,9 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from .models import CustomUser, Category, Product, Cart, CartItem, Order, OrderItem, AdminSession, AdminActivityLog, PhoneOTP
+from django.contrib.auth.signals import user_logged_in, user_logged_out
+from django.db.models.signals import post_save, post_delete, pre_save
+from django.dispatch import receiver
+from .models import CustomUser, Category, Product, Cart, CartItem, Order, OrderItem, AdminSession, AdminActivityLog, PhoneOTP, Appointment
 
 class CustomUserAdmin(UserAdmin):
     fieldsets = UserAdmin.fieldsets + (
@@ -58,3 +61,190 @@ admin.site.register(OrderItem)
 admin.site.register(AdminSession, AdminSessionAdmin)
 admin.site.register(AdminActivityLog, AdminActivityLogAdmin)
 admin.site.register(PhoneOTP, PhoneOTPAdmin)
+
+class AppointmentAdmin(admin.ModelAdmin):
+    list_display = ('id', 'customer_name', 'service_type', 'date', 'time', 'status', 'total_charge')
+    list_filter = ('status', 'service_type', 'date')
+    search_fields = ('customer_name', 'phone', 'email')
+    readonly_fields = ('created_at',)
+
+admin.site.register(Appointment, AppointmentAdmin)
+
+
+# Signal Handlers for Session Tracking and Activity Logging
+
+def get_client_ip(request):
+    """Extract client IP address from request."""
+    x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+    if x_forwarded_for:
+        ip = x_forwarded_for.split(',')[0]
+    else:
+        ip = request.META.get('REMOTE_ADDR', '0.0.0.0')
+    return ip
+
+
+@receiver(user_logged_in)
+def log_admin_login(sender, request, user, **kwargs):
+    """Track admin login sessions."""
+    if user.is_staff:
+        # Create session record
+        session_key = request.session.session_key
+        if session_key:
+            AdminSession.objects.create(
+                user=user,
+                session_key=session_key,
+                ip_address=get_client_ip(request),
+                user_agent=request.META.get('HTTP_USER_AGENT', '')[:250],
+                is_active=True
+            )
+        
+        # Log the login activity
+        AdminActivityLog.objects.create(
+            admin=user,
+            action='LOGIN',
+            module='SESSION',
+            description=f'Admin logged in from {get_client_ip(request)}',
+            ip_address=get_client_ip(request)
+        )
+
+
+@receiver(user_logged_out)
+def log_admin_logout(sender, request, user, **kwargs):
+    """Log admin logout."""
+    if user and user.is_staff:
+        # Mark session as inactive
+        session_key = request.session.session_key
+        if session_key:
+            from django.utils import timezone
+            AdminSession.objects.filter(
+                session_key=session_key,
+                is_active=True
+            ).update(
+                is_active=False,
+                logout_time=timezone.now()
+            )
+        
+        # Log the logout activity
+        AdminActivityLog.objects.create(
+            admin=user,
+            action='LOGOUT',
+            module='SESSION',
+            description=f'Admin logged out',
+            ip_address=get_client_ip(request)
+        )
+
+
+# Track Product CRUD Operations
+@receiver(post_save, sender=Product)
+def log_product_save(sender, instance, created, **kwargs):
+    """Log product creation and updates."""
+    from django.contrib.auth import get_user_model
+    # Get current user from thread local storage (will be set by middleware)
+    user = getattr(instance, '_current_user', None)
+    
+    if user and user.is_staff:
+        action = 'CREATE' if created else 'UPDATE'
+        description = f"{'Created' if created else 'Updated'} product: {instance.name} (ID: {instance.id})"
+        
+        AdminActivityLog.objects.create(
+            admin=user,
+            action=action,
+            module='PRODUCT',
+            description=description,
+            ip_address=getattr(instance, '_ip_address', '0.0.0.0')
+        )
+
+
+@receiver(post_delete, sender=Product)
+def log_product_delete(sender, instance, **kwargs):
+    """Log product deletion."""
+    user = getattr(instance, '_current_user', None)
+    
+    if user and user.is_staff:
+        AdminActivityLog.objects.create(
+            admin=user,
+            action='DELETE',
+            module='PRODUCT',
+            description=f'Deleted product: {instance.name} (ID: {instance.id})',
+            ip_address=getattr(instance, '_ip_address', '0.0.0.0')
+        )
+
+
+# Track Category CRUD Operations
+@receiver(post_save, sender=Category)
+def log_category_save(sender, instance, created, **kwargs):
+    """Log category creation and updates."""
+    user = getattr(instance, '_current_user', None)
+    
+    if user and user.is_staff:
+        action = 'CREATE' if created else 'UPDATE'
+        description = f"{'Created' if created else 'Updated'} category: {instance.name} (ID: {instance.id})"
+        
+        AdminActivityLog.objects.create(
+            admin=user,
+            action=action,
+            module='CATEGORY',
+            description=description,
+            ip_address=getattr(instance, '_ip_address', '0.0.0.0')
+        )
+
+
+@receiver(post_delete, sender=Category)
+def log_category_delete(sender, instance, **kwargs):
+    """Log category deletion."""
+    user = getattr(instance, '_current_user', None)
+    
+    if user and user.is_staff:
+        AdminActivityLog.objects.create(
+            admin=user,
+            action='DELETE',
+            module='CATEGORY',
+            description=f'Deleted category: {instance.name} (ID: {instance.id})',
+            ip_address=getattr(instance, '_ip_address', '0.0.0.0')
+        )
+
+
+# Track Order Updates (status changes)
+_order_original_status = {}
+
+@receiver(pre_save, sender=Order)
+def track_order_status(sender, instance, **kwargs):
+    """Track original order status before save."""
+    if instance.pk:
+        try:
+            original = Order.objects.get(pk=instance.pk)
+            _order_original_status[instance.pk] = original.status
+        except Order.DoesNotExist:
+            pass
+
+
+@receiver(post_save, sender=Order)
+def log_order_save(sender, instance, created, **kwargs):
+    """Log order status changes."""
+    user = getattr(instance, '_current_user', None)
+    
+    if user and user.is_staff:
+        if created:
+            description = f'Created order #{instance.id} for user {instance.user.username}'
+            action = 'CREATE'
+        else:
+            # Check if status changed
+            old_status = _order_original_status.get(instance.pk)
+            if old_status and old_status != instance.status:
+                description = f'Updated order #{instance.id} status from {old_status} to {instance.status}'
+                action = 'UPDATE'
+            else:
+                description = f'Updated order #{instance.id}'
+                action = 'UPDATE'
+            
+            # Clean up tracking dict
+            if instance.pk in _order_original_status:
+                del _order_original_status[instance.pk]
+        
+        AdminActivityLog.objects.create(
+            admin=user,
+            action=action,
+            module='ORDER',
+            description=description,
+            ip_address=getattr(instance, '_ip_address', '0.0.0.0')
+        )

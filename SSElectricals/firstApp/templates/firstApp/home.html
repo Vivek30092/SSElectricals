@@ -100,11 +100,7 @@
                             class="overlay position-absolute top-0 start-0 w-100 h-100 bg-dark bg-opacity-25 d-flex align-items-center justify-content-center opacity-0 transition-opacity duration-300">
                             <a href="{% url 'product_detail' product.pk %}" class="btn btn-light rounded-circle mx-1"
                                 title="View Details"><i class="fas fa-eye"></i></a>
-                            <form action="{% url 'add_to_cart' product.pk %}" method="post" class="d-inline">
-                                {% csrf_token %}
-                                <button type="submit" class="btn btn-warning rounded-circle mx-1" title="Add to Cart"><i
-                                        class="fas fa-shopping-cart"></i></button>
-                            </form>
+                            <!-- Cart removed -->
                         </div>
                     </div>
                     <div class="card-body text-center">
@@ -115,10 +111,10 @@
                                 product.name }}</a></h5>
                         <div class="mb-2">
                             {% if product.discount_price %}
-                            <span class="text-danger fw-bold fs-5">${{ product.discount_price }}</span>
-                            <small class="text-muted text-decoration-line-through ms-1">${{ product.price }}</small>
+                            <span class="text-danger fw-bold fs-5">₹{{ product.discount_price }}</span>
+                            <small class="text-muted text-decoration-line-through ms-1">₹{{ product.price }}</small>
                             {% else %}
-                            <span class="fw-bold fs-5 text-dark">${{ product.price }}</span>
+                            <span class="fw-bold fs-5 text-dark">₹{{ product.price }}</span>
                             {% endif %}
                         </div>
                     </div>
