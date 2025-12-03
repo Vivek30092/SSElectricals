@@ -126,6 +126,7 @@
 </div>
 
 <!-- Newsletter/CTA -->
+{% if not user.is_authenticated %}
 <div class="container my-5">
     <div class="bg-warning rounded-3 p-5 text-center shadow-lg position-relative overflow-hidden">
         <div class="position-relative z-1">
@@ -137,6 +138,7 @@
             style="font-size: 15rem; top: -20%; right: -5%; transform: rotate(-15deg);"></i>
     </div>
 </div>
+{% endif %}
 
 <style>
     .hover-lift {

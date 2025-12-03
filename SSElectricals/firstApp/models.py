@@ -6,7 +6,9 @@ from django.conf import settings
 class CustomUser(AbstractUser):
     phone_number = models.CharField(max_length=15, unique=True)
     address = models.TextField(blank=True, null=True)
+    pincode = models.CharField(max_length=6, blank=True, null=True)
     profile_picture = models.ImageField(upload_to='profile_pics/', blank=True, null=True)
+    is_email_verified = models.BooleanField(default=False)
 
     USERNAME_FIELD = 'phone_number'
     REQUIRED_FIELDS = ['username', 'email']
@@ -52,6 +54,16 @@ class Product(models.Model):
     @property
     def final_price(self):
         return self.discount_price if self.discount_price else self.price
+
+class ProductImage(models.Model):
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='images')
+    image = models.ImageField(upload_to='product_gallery/')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Image for {self.product.name}"
+
+
 
 # 3. Shopping Features
 class Cart(models.Model):
@@ -159,52 +171,7 @@ class AdminActivityLog(models.Model):
         return f"{self.admin.username} - {self.action} on {self.module} at {self.timestamp.strftime('%Y-%m-%d %H:%M')}"
 
 # 5. OTP Authentication
-class PhoneOTP(models.Model):
-    phone_number = models.CharField(max_length=15)
-    otp = models.CharField(max_length=6)
-    created_at = models.DateTimeField(auto_now_add=True)
-    is_verified = models.BooleanField(default=False)
-    max_retries = models.IntegerField(default=3)
-    retry_count = models.IntegerField(default=0)
 
-    class Meta:
-        ordering = ['-created_at']
-        indexes = [
-            models.Index(fields=['phone_number', 'created_at']),
-        ]
-
-    def __str__(self):
-        return f"{self.phone_number} - {self.otp}"
-
-    @staticmethod
-    def generate_otp():
-        """Generate a 6-digit OTP"""
-        import random
-        return str(random.randint(100000, 999999))
-
-    def is_valid(self):
-        """Check if OTP is still valid (within 5 minutes)"""
-        from django.utils import timezone
-        from datetime import timedelta
-        expiry_time = self.created_at + timedelta(minutes=5)
-        return timezone.now() < expiry_time and not self.is_verified
-
-    def verify(self, entered_otp):
-        """Verify the OTP"""
-        if not self.is_valid():
-            return False, "OTP has expired"
-        
-        if self.retry_count >= self.max_retries:
-            return False, "Maximum retry attempts exceeded"
-        
-        if self.otp == entered_otp:
-            self.is_verified = True
-            self.save()
-            return True, "OTP verified successfully"
-        else:
-            self.retry_count += 1
-            self.save()
-            return False, f"Invalid OTP. {self.max_retries - self.retry_count} attempts remaining"
 
 class EmailOTP(models.Model):
     email = models.EmailField()

@@ -4,8 +4,11 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.db.models import Q
 from django.http import JsonResponse
-from .models import Product, Category, Cart, CartItem, Order, OrderItem, Appointment
-from .forms import CustomUserCreationForm, CustomUserUpdateForm, CheckoutForm, AppointmentForm
+from .models import Product, Category, Cart, CartItem, Order, OrderItem, Appointment, EmailOTP, CustomUser
+from .forms import CustomUserCreationForm, CustomUserUpdateForm, CheckoutForm, AppointmentForm, EmailSignupForm, EmailLoginForm, OTPVerificationForm, AccountDeletionForm, ForgotPasswordForm, ResetPasswordForm
+from .utils import send_otp_email
+import requests
+from django.conf import settings
 
 def home(request):
     categories = Category.objects.all()
@@ -53,15 +56,40 @@ def signup(request):
 
 @login_required
 def profile(request):
+    user = request.user
     if request.method == 'POST':
-        form = CustomUserUpdateForm(request.POST, request.FILES, instance=request.user)
-        if form.is_valid():
-            form.save()
-            messages.success(request, "Profile updated successfully!")
-            return redirect('profile')
+        if 'delete_account' in request.POST:
+            delete_form = AccountDeletionForm(request.POST)
+            if delete_form.is_valid():
+                password = delete_form.cleaned_data['password']
+                if user.check_password(password):
+                    user.delete()
+                    messages.success(request, "Your account has been deleted.")
+                    return redirect('home')
+                else:
+                    messages.error(request, "Incorrect password.")
+            else:
+                 messages.error(request, "Please enter your password to confirm deletion.")
+            form = CustomUserUpdateForm(instance=user) # Re-init form to avoid unbound error in template
+        else:
+            form = CustomUserUpdateForm(request.POST, request.FILES, instance=user)
+            if form.is_valid():
+                # Prevent email change if verified
+                if user.is_email_verified and 'email' in form.changed_data:
+                    messages.error(request, "Email cannot be changed after verification.")
+                else:
+                    form.save()
+                    messages.success(request, "Profile updated successfully!")
+                    return redirect('profile')
+            delete_form = AccountDeletionForm()
     else:
-        form = CustomUserUpdateForm(instance=request.user)
-    return render(request, 'firstApp/profile.html', {'form': form})
+        form = CustomUserUpdateForm(instance=user)
+        if user.is_email_verified:
+            form.fields['email'].widget.attrs['readonly'] = True
+            form.fields['email'].help_text = "Email is verified and cannot be changed."
+        delete_form = AccountDeletionForm()
+        
+    return render(request, 'firstApp/profile.html', {'form': form, 'delete_form': delete_form})
 
 @login_required
 def add_to_cart(request, product_id):
@@ -166,7 +194,8 @@ def order_history(request):
     return render(request, 'firstApp/orders.html', {'orders': orders})
 
 def about(request):
-    return render(request, 'firstApp/about.html')
+    reviews = fetch_google_reviews()
+    return render(request, 'firstApp/about.html', {'reviews': reviews})
 
 def contact(request):
     return render(request, 'firstApp/contact.html')
@@ -180,6 +209,9 @@ def book_appointment(request):
             appointment = form.save(commit=False)
             if request.user.is_authenticated:
                 appointment.user = request.user
+                # If verified, force the email to be the user's email
+                if request.user.is_email_verified:
+                    appointment.email = request.user.email
             appointment.save()
             messages.success(request, "Appointment booked successfully!")
             return redirect('appointment_success')
@@ -194,6 +226,9 @@ def book_appointment(request):
                 'city': 'Indore'
             }
         form = AppointmentForm(initial=initial_data)
+        if request.user.is_authenticated and request.user.is_email_verified:
+            form.fields['email'].widget.attrs['readonly'] = True
+            form.fields['email'].help_text = "Email is verified and cannot be changed."
     
     return render(request, 'firstApp/book_appointment.html', {'form': form})
 
@@ -296,180 +331,7 @@ def ajax_search(request):
     
     return JsonResponse({'results': results})
 
-# OTP Authentication Views
-from .otp_service import OTPService
-from .models import CustomUser, PhoneOTP, EmailOTP
-from .forms import EmailSignupForm, EmailLoginForm, OTPVerificationForm
-from .utils import send_otp_email
 
-def otp_login(request):
-    """Phone number input page for OTP login"""
-    if request.method == 'POST':
-        phone_number = request.POST.get('phone_number', '').strip()
-        
-        # Validate phone number
-        if not phone_number or len(phone_number) != 10 or not phone_number.isdigit():
-            messages.error(request, "Please enter a valid 10-digit phone number")
-            return render(request, 'firstApp/otp_login.html')
-        
-        # Check if user exists
-        if not CustomUser.objects.filter(phone_number=phone_number).exists():
-            messages.error(request, "No account found with this phone number. Please signup first.")
-            return render(request, 'firstApp/otp_login.html')
-        
-        # Send OTP
-        success, message, otp = OTPService.send_otp(phone_number)
-        
-        if success:
-            request.session['otp_phone'] = phone_number
-            request.session['otp_purpose'] = 'login'
-            messages.success(request, message)
-            return redirect('otp_verify')
-        else:
-            messages.error(request, message)
-    
-    return render(request, 'firstApp/otp_login.html')
-
-def otp_verify(request):
-    """OTP verification page"""
-    phone_number = request.session.get('otp_phone')
-    purpose = request.session.get('otp_purpose', 'login')
-    
-    if not phone_number:
-        messages.error(request, "Session expired. Please try again.")
-        return redirect('otp_login')
-    
-    if request.method == 'POST':
-        otp_code = request.POST.get('otp', '').strip()
-        
-        if not otp_code or len(otp_code) != 6:
-            messages.error(request, "Please enter a valid 6-digit OTP")
-            return render(request, 'firstApp/otp_verify.html', {'phone_number': phone_number})
-        
-        # Verify OTP
-        success, message = OTPService.verify_otp(phone_number, otp_code)
-        
-        if success:
-            if purpose == 'login':
-                # Login the user
-                try:
-                    user = CustomUser.objects.get(phone_number=phone_number)
-                    login(request, user, backend='django.contrib.auth.backends.ModelBackend')
-                    messages.success(request, "Login successful!")
-                    
-                    # Clear session
-                    del request.session['otp_phone']
-                    del request.session['otp_purpose']
-                    
-                    return redirect('home')
-                except CustomUser.DoesNotExist:
-                    messages.error(request, "User not found")
-            
-            elif purpose == 'signup':
-                messages.success(request, "Phone verified! Please complete your registration.")
-                return redirect('signup_complete')
-        else:
-            messages.error(request, message)
-    
-    return render(request, 'firstApp/otp_verify.html', {'phone_number': phone_number})
-
-def signup_otp(request):
-    """Signup with OTP - Step 1: Collect phone and basic info"""
-    if request.method == 'POST':
-        phone_number = request.POST.get('phone_number', '').strip()
-        email = request.POST.get('email', '').strip()
-        first_name = request.POST.get('first_name', '').strip()
-        last_name = request.POST.get('last_name', '').strip()
-        
-        # Validate
-        if not phone_number or len(phone_number) != 10 or not phone_number.isdigit():
-            messages.error(request, "Please enter a valid 10-digit phone number")
-            return render(request, 'firstApp/signup_otp.html')
-        
-        # Check if phone already exists
-        if CustomUser.objects.filter(phone_number=phone_number).exists():
-            messages.error(request, "This phone number is already registered. Please login.")
-            return redirect('otp_login')
-        
-        # Check if email already exists
-        if CustomUser.objects.filter(email=email).exists():
-            messages.error(request, "This email is already registered.")
-            return render(request, 'firstApp/signup_otp.html')
-        
-        # Send OTP
-        success, message, otp = OTPService.send_otp(phone_number)
-        
-        if success:
-            # Store data in session
-            request.session['otp_phone'] = phone_number
-            request.session['otp_purpose'] = 'signup'
-            request.session['signup_data'] = {
-                'email': email,
-                'first_name': first_name,
-                'last_name': last_name
-            }
-            messages.success(request, message)
-            return redirect('otp_verify')
-        else:
-            messages.error(request, message)
-    
-    return render(request, 'firstApp/signup_otp.html')
-
-def signup_complete(request):
-    """Complete signup after OTP verification"""
-    phone_number = request.session.get('otp_phone')
-    signup_data = request.session.get('signup_data')
-    
-    if not phone_number or not signup_data:
-        messages.error(request, "Session expired. Please start again.")
-        return redirect('signup_otp')
-    
-    if request.method == 'POST':
-        address = request.POST.get('address', '').strip()
-        
-        try:
-            # Create user
-            user = CustomUser.objects.create_user(
-                username=phone_number,  # Username same as phone
-                phone_number=phone_number,
-                email=signup_data['email'],
-                first_name=signup_data['first_name'],
-                last_name=signup_data['last_name'],
-                address=address
-            )
-            
-            # No password needed for OTP-based accounts
-            user.set_unusable_password()
-            user.save()
-            
-            # Auto-login
-            login(request, user, backend='django.contrib.auth.backends.ModelBackend')
-            
-            # Clear session
-            del request.session['otp_phone']
-            del request.session['otp_purpose']
-            del request.session['signup_data']
-            
-            messages.success(request, "Account created successfully!")
-            return redirect('home')
-            
-        except Exception as e:
-            messages.error(request, f"Error creating account: {str(e)}")
-    
-    return render(request, 'firstApp/signup_complete.html', {'signup_data': signup_data})
-
-def resend_otp(request):
-    """AJAX endpoint to resend OTP"""
-    if request.method == 'POST':
-        phone_number = request.session.get('otp_phone')
-        
-        if not phone_number:
-            return JsonResponse({'success': False, 'message': 'Session expired'})
-        
-        success, message, otp = OTPService.resend_otp(phone_number)
-        return JsonResponse({'success': success, 'message': message})
-    
-    return JsonResponse({'success': False, 'message': 'Invalid request'})
 
 def email_signup(request):
     if request.method == 'POST':
@@ -517,8 +379,12 @@ def email_signup_verify(request):
                         phone_number=data['phone'],
                         password=data['password'],
                         first_name=data['full_name'].split(' ')[0],
-                        last_name=' '.join(data['full_name'].split(' ')[1:]) if ' ' in data['full_name'] else ''
+                        last_name=' '.join(data['full_name'].split(' ')[1:]) if ' ' in data['full_name'] else '',
+                        address=data.get('address', ''),
+                        pincode=data.get('pincode', '')
                     )
+                    user.is_email_verified = True
+                    user.save()
                     login(request, user, backend='django.contrib.auth.backends.ModelBackend')
                     # Cleanup
                     del request.session['signup_data']
@@ -536,18 +402,44 @@ def email_signup_verify(request):
 
 def email_login(request):
     if request.method == 'POST':
-        form = EmailLoginForm(request.POST)
-        if form.is_valid():
-            email = form.cleaned_data['email']
-            otp = EmailOTP.generate_otp()
-            EmailOTP.objects.create(email=email, otp=otp)
-            if send_otp_email(email, otp):
-                request.session['otp_email'] = email
-                request.session['otp_purpose'] = 'login'
-                messages.success(request, f"OTP sent to {email}")
-                return redirect('email_login_verify')
+        login_type = request.POST.get('login_type')
+        
+        if login_type == 'password':
+            email = request.POST.get('email')
+            password = request.POST.get('password')
+            
+            if not email or not password:
+                messages.error(request, "Please enter both email and password.")
             else:
-                messages.error(request, "Failed to send OTP.")
+                try:
+                    user_obj = CustomUser.objects.get(email=email)
+                    user = authenticate(request, username=user_obj.phone_number, password=password)
+                    if user:
+                        login(request, user)
+                        messages.success(request, "Login successful!")
+                        return redirect('home')
+                    else:
+                        messages.error(request, "Invalid email or password.")
+                except CustomUser.DoesNotExist:
+                    messages.error(request, "No account found with this email.")
+            form = EmailLoginForm(initial={'email': email}) # Pre-fill email
+            
+        elif login_type == 'otp':
+            form = EmailLoginForm(request.POST)
+            if form.is_valid():
+                email = form.cleaned_data['email']
+                otp = EmailOTP.generate_otp()
+                EmailOTP.objects.create(email=email, otp=otp)
+                if send_otp_email(email, otp):
+                    request.session['otp_email'] = email
+                    request.session['otp_purpose'] = 'login'
+                    messages.success(request, f"OTP sent to {email}")
+                    return redirect('email_login_verify')
+                else:
+                    messages.error(request, "Failed to send OTP.")
+        else:
+             messages.error(request, "Invalid login method.")
+             form = EmailLoginForm()
     else:
         form = EmailLoginForm()
     return render(request, 'firstApp/login_email.html', {'form': form})
@@ -566,12 +458,19 @@ def email_login_verify(request):
                 otp_obj = EmailOTP.objects.filter(email=email).latest('created_at')
                 success, message = otp_obj.verify(otp_entered)
                 if success:
-                    user = CustomUser.objects.get(email=email)
-                    login(request, user, backend='django.contrib.auth.backends.ModelBackend')
-                    del request.session['otp_email']
-                    del request.session['otp_purpose']
-                    messages.success(request, "Login successful!")
-                    return redirect('home')
+                    try:
+                        user = CustomUser.objects.get(email=email)
+                        login(request, user, backend='django.contrib.auth.backends.ModelBackend')
+                        del request.session['otp_email']
+                        del request.session['otp_purpose']
+                        messages.success(request, "Login successful!")
+                        return redirect('home')
+                    except CustomUser.DoesNotExist:
+                        messages.error(request, "User account not found.")
+                    except CustomUser.MultipleObjectsReturned:
+                        messages.error(request, "Multiple accounts found with this email. Please contact support.")
+                    except Exception as e:
+                        messages.error(request, f"Login failed: {str(e)}")
                 else:
                     messages.error(request, message)
             except EmailOTP.DoesNotExist:
@@ -579,3 +478,111 @@ def email_login_verify(request):
     else:
         form = OTPVerificationForm()
     return render(request, 'firstApp/login_email_otp_verify.html', {'form': form, 'email': email})
+
+
+def forgot_password(request):
+    if request.method == 'POST':
+        form = ForgotPasswordForm(request.POST)
+        if form.is_valid():
+            email = form.cleaned_data['email']
+            otp = EmailOTP.generate_otp()
+            EmailOTP.objects.create(email=email, otp=otp)
+            if send_otp_email(email, otp):
+                request.session['otp_email'] = email
+                request.session['otp_purpose'] = 'reset_password'
+                messages.success(request, f"OTP sent to {email}")
+                return redirect('forgot_password_verify')
+            else:
+                messages.error(request, "Failed to send OTP. Please try again.")
+    else:
+        form = ForgotPasswordForm()
+    return render(request, 'firstApp/forgot_password.html', {'form': form})
+
+def forgot_password_verify(request):
+    email = request.session.get('otp_email')
+    purpose = request.session.get('otp_purpose')
+    
+    if not email or purpose != 'reset_password':
+        messages.error(request, "Session expired or invalid request.")
+        return redirect('forgot_password')
+        
+    if request.method == 'POST':
+        form = OTPVerificationForm(request.POST)
+        if form.is_valid():
+            otp_entered = form.cleaned_data['otp']
+            try:
+                otp_obj = EmailOTP.objects.filter(email=email).latest('created_at')
+                success, message = otp_obj.verify(otp_entered)
+                if success:
+                    request.session['reset_password_verified'] = True
+                    # Keep otp_email in session for the next step
+                    del request.session['otp_purpose']
+                    messages.success(request, "OTP verified. Please reset your password.")
+                    return redirect('reset_password')
+                else:
+                    messages.error(request, message)
+            except EmailOTP.DoesNotExist:
+                messages.error(request, "Invalid OTP request.")
+    else:
+        form = OTPVerificationForm()
+    return render(request, 'firstApp/forgot_password_verify.html', {'form': form, 'email': email})
+
+def reset_password(request):
+    email = request.session.get('otp_email')
+    verified = request.session.get('reset_password_verified')
+    
+    if not email or not verified:
+        messages.error(request, "Unauthorized access. Please verify OTP first.")
+        return redirect('forgot_password')
+        
+    if request.method == 'POST':
+        form = ResetPasswordForm(request.POST)
+        if form.is_valid():
+            new_password = form.cleaned_data['new_password']
+            try:
+                user = CustomUser.objects.get(email=email)
+                user.set_password(new_password)
+                user.save()
+                
+                # Cleanup session
+                del request.session['otp_email']
+                del request.session['reset_password_verified']
+                
+                messages.success(request, "Password reset successful! Please login with your new password.")
+                return redirect('email_login')
+            except CustomUser.DoesNotExist:
+                messages.error(request, "User account not found.")
+    else:
+        form = ResetPasswordForm()
+    return render(request, 'firstApp/reset_password.html', {'form': form})
+
+def fetch_google_reviews():
+    api_key = settings.GOOGLE_PLACES_API_KEY
+    place_id = "ChIJgfA7KTUDYzkR6n9gjeGDYoI"
+
+    if not api_key:
+        print("Google Places API Key is missing.")
+        return []
+
+    url = f"https://maps.googleapis.com/maps/api/place/details/json?place_id={place_id}&fields=name,rating,reviews&key={api_key}"
+
+    try:
+        response = requests.get(url)
+        if response.status_code != 200:
+            print(f"Google Places API Error: {response.status_code} - {response.text}")
+            return []
+            
+        result = response.json()
+        if "error_message" in result:
+             print(f"Google Places API Error: {result['error_message']}")
+             return []
+             
+        reviews = result.get("result", {}).get("reviews", [])
+        return reviews
+    except Exception as e:
+        print(f"Error fetching reviews: {e}")
+        return []
+
+def google_reviews(request):
+    reviews = fetch_google_reviews()
+    return render(request, "firstApp/reviews.html", {"reviews": reviews})

@@ -4,8 +4,35 @@
 <div class="card mb-3">
     <div class="row g-0">
         <div class="col-md-6">
+            {% if product.images.exists %}
+            <div id="productCarousel" class="carousel slide" data-bs-ride="carousel">
+                <div class="carousel-inner">
+                    <div class="carousel-item active">
+                        <img src="{{ product.image.url }}" class="d-block w-100" alt="{{ product.name }}"
+                            style="max-height: 500px; object-fit: cover;">
+                    </div>
+                    {% for img in product.images.all %}
+                    <div class="carousel-item">
+                        <img src="{{ img.image.url }}" class="d-block w-100" alt="{{ product.name }}"
+                            style="max-height: 500px; object-fit: cover;">
+                    </div>
+                    {% endfor %}
+                </div>
+                <button class="carousel-control-prev" type="button" data-bs-target="#productCarousel"
+                    data-bs-slide="prev">
+                    <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                    <span class="visually-hidden">Previous</span>
+                </button>
+                <button class="carousel-control-next" type="button" data-bs-target="#productCarousel"
+                    data-bs-slide="next">
+                    <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                    <span class="visually-hidden">Next</span>
+                </button>
+            </div>
+            {% else %}
             <img src="{{ product.image.url }}" class="img-fluid rounded-start w-100" alt="{{ product.name }}"
                 style="max-height: 500px; object-fit: cover;">
+            {% endif %}
         </div>
         <div class="col-md-6">
             <div class="card-body p-5">

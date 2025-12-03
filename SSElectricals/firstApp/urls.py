@@ -8,18 +8,18 @@ urlpatterns = [
     path('products/', views.product_list, name='product_list'),
     path('product/<int:pk>/', views.product_detail, name='product_detail'),
     
-    # OTP Authentication (Primary for users)
-    path('otp-login/', views.otp_login, name='otp_login'),
-    path('otp-verify/', views.otp_verify, name='otp_verify'),
-    path('signup-otp/', views.signup_otp, name='signup_otp'),
-    path('signup-complete/', views.signup_complete, name='signup_complete'),
-    path('resend-otp/', views.resend_otp, name='resend_otp'),
+
     
     # Email OTP Authentication
     path('signup-email/', views.email_signup, name='email_signup'),
     path('signup-email/verify/', views.email_signup_verify, name='email_signup_verify'),
     path('login-email/', views.email_login, name='email_login'),
     path('login-email/verify/', views.email_login_verify, name='email_login_verify'),
+    path('forgot-password/', views.forgot_password, name='forgot_password'),
+    path('forgot-password/verify/', views.forgot_password_verify, name='forgot_password_verify'),
+    path('reset-password/', views.reset_password, name='reset_password'),
+    
+
     
     # Password Authentication (For admins)
     path('signup/', views.signup, name='signup'),
@@ -56,5 +56,8 @@ urlpatterns = [
     # AJAX API endpoints
     path('api/cart/add/', views.ajax_add_to_cart, name='ajax_add_to_cart'),
     path('api/cart/update/', views.ajax_update_cart, name='ajax_update_cart'),
+    path('api/cart/update/', views.ajax_update_cart, name='ajax_update_cart'),
     path('api/search/', views.ajax_search, name='ajax_search'),
+    
+    path('reviews/', views.google_reviews, name='google_reviews'),
 ]

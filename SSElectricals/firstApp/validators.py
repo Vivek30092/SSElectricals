@@ -5,8 +5,8 @@ import re
 
 def validate_indian_phone(value):
     """Validate 10-digit Indian phone number."""
-    if not re.match(r'^\d{10}$', value):
-        raise ValidationError('Phone number must be exactly 10 digits.')
+    if not re.match(r'^[6-9]\d{9}$', value):
+        raise ValidationError('Phone number must be 10 digits and start with 6, 7, 8, or 9.')
     return value
 
 

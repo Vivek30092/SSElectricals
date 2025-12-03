@@ -1,0 +1,52 @@
+{% extends 'firstApp/base.html' %}
+{% block title %}Customer Reviews - SS Electricals{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <div class="text-center mb-5">
+        <h2 class="display-5 fw-bold">What Our Customers Say</h2>
+        <p class="lead text-muted">Real-time reviews from our Google Business Profile</p>
+    </div>
+
+    {% if reviews %}
+    <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+        {% for review in reviews %}
+        <div class="col">
+            <div class="card h-100 shadow-sm border-0">
+                <div class="card-body">
+                    <div class="d-flex align-items-center mb-3">
+                        <img src="{{ review.profile_photo_url }}" alt="{{ review.author_name }}"
+                            class="rounded-circle me-3" width="50" height="50"
+                            onerror="this.src='https://ui-avatars.com/api/?name={{ review.author_name }}&background=random'">
+                        <div>
+                            <h6 class="card-title mb-0 fw-bold">{{ review.author_name }}</h6>
+                            <small class="text-muted">{{ review.relative_time_description }}</small>
+                        </div>
+                    </div>
+                    <div class="mb-2">
+                        {% for i in "12345" %}
+                        {% if forloop.counter <= review.rating %} <i class="fas fa-star text-warning"></i>
+                            {% else %}
+                            <i class="far fa-star text-warning"></i>
+                            {% endif %}
+                            {% endfor %}
+                    </div>
+                    <p class="card-text text-secondary">{{ review.text|truncatewords:30 }}</p>
+                </div>
+                <div class="card-footer bg-transparent border-0 text-end">
+                    <a href="{{ review.author_url }}" target="_blank" class="text-decoration-none small">View on
+                        Google</a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="text-center py-5">
+        <div class="alert alert-info d-inline-block">
+            <i class="fas fa-info-circle me-2"></i> No reviews available at the moment.
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

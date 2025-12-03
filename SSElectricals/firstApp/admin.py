@@ -3,7 +3,7 @@ from django.contrib.auth.admin import UserAdmin
 from django.contrib.auth.signals import user_logged_in, user_logged_out
 from django.db.models.signals import post_save, post_delete, pre_save
 from django.dispatch import receiver
-from .models import CustomUser, Category, Product, Cart, CartItem, Order, OrderItem, AdminSession, AdminActivityLog, PhoneOTP, Appointment
+from .models import CustomUser, Category, Product, Cart, CartItem, Order, OrderItem, AdminSession, AdminActivityLog, Appointment
 
 class CustomUserAdmin(UserAdmin):
     fieldsets = UserAdmin.fieldsets + (
@@ -45,11 +45,7 @@ class AdminActivityLogAdmin(admin.ModelAdmin):
     def has_delete_permission(self, request, obj=None):
         return request.user.is_superuser  # Only superusers can delete logs
 
-class PhoneOTPAdmin(admin.ModelAdmin):
-    list_display = ('phone_number', 'otp', 'created_at', 'is_verified', 'retry_count')
-    list_filter = ('is_verified', 'created_at')
-    search_fields = ('phone_number',)
-    readonly_fields = ('otp', 'created_at', 'retry_count')
+
 
 admin.site.register(CustomUser, CustomUserAdmin)
 admin.site.register(Category)
@@ -60,7 +56,6 @@ admin.site.register(Order, OrderAdmin)
 admin.site.register(OrderItem)
 admin.site.register(AdminSession, AdminSessionAdmin)
 admin.site.register(AdminActivityLog, AdminActivityLogAdmin)
-admin.site.register(PhoneOTP, PhoneOTPAdmin)
 
 class AppointmentAdmin(admin.ModelAdmin):
     list_display = ('id', 'customer_name', 'service_type', 'date', 'time', 'status', 'total_charge')
