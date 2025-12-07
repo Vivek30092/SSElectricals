@@ -1,0 +1,21 @@
+# General Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Django
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+media/
+staticfiles/
+
+
+# Environment Variables
+.env
+.env.*
+
+# OS
+.DS_Store
+Thumbs.db
