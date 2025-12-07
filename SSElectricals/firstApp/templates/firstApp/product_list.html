@@ -17,12 +17,10 @@
                     <label class="form-label">Category</label>
                     <select name="category" class="form-select">
                         <option value="">All Categories</option>
-
                         {% for cat in categories %}
                         <option value="{{ cat.id }}" {% if
-                            request.GET.category|stringformat:"s"==cat.id|stringformat:"s" %}selected{% endif %}>
-                            {{ cat.name }}
-                        </option>
+                            request.GET.category|stringformat:"s"==cat.id|stringformat:"s" %}selected{% endif %}>{{
+                            cat.name }}</option>
                         {% endfor %}
                     </select>
                 </div>
@@ -68,6 +66,7 @@
                                 View Product
                             </a>
                         </div>
+
                         <p class="mt-2 small text-muted text-center">
                             You can buy this product by visiting our shop or enquire online.
                         </p>

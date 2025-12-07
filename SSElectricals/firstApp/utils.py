@@ -108,64 +108,86 @@ Shiv Shakti Electrical, Indore (M.P.)
         print(f"Error sending email: {e}")
         return False
 
-import requests
+from geopy.geocoders import Nominatim
+from geopy.distance import geodesic
 from django.conf import settings
+import requests
 
-# Approximate location for Shiv Shakti Electrical, Indore (using Indore center if exact lat/lng unknown)
-# Or use the Place ID to get it, but hardcoding is faster for now.
-# 22.7533° N, 75.8937° E (Example near Vijay Nagar/Sukhliya where many areas are listed)
+# Approximate location for Shiv Shakti Electrical, Indore
 SHOP_LAT = 22.7533
 SHOP_LNG = 75.8937
 
 def calculate_distance_and_price(user_address):
     """
-    Calculate distance using Google Maps API and determine delivery price.
+    Calculate distance using Google Maps API, falling back to Geopy (OpenStreetMap) if necessary.
     Returns: (distance_km, price, error_message)
     """
     api_key = getattr(settings, 'GOOGLE_PLACES_API_KEY', None)
-    if not api_key:
-        # Fallback or dev mode: return mock
-        # Assuming user entered a text address strings, we can't easily guess distance without API
-        # For dev, we might return a default 5km
-        return 5.0, 70.0, None 
-        
-    origin = f"{SHOP_LAT},{SHOP_LNG}"
-    destination = user_address
     
-    url = f"https://maps.googleapis.com/maps/api/distancematrix/json?origins={origin}&destinations={destination}&key={api_key}"
-    
-    try:
-        response = requests.get(url)
-        data = response.json()
-        
-        if data['status'] == 'OK':
-            element = data['rows'][0]['elements'][0]
-            if element['status'] == 'OK':
-                distance_text = element['distance']['text']
-                distance_value = element['distance']['value'] # in meters
-                distance_km = distance_value / 1000.0
-                
-                # Pricing Logic
-                # Within 3 KM -> 50
-                # Within 7 KM -> 70
-                # > 7 KM -> No delivery
-                
-                price = 0
-                if distance_km <= 3:
-                    price = 50
-                elif distance_km <= 7:
-                    price = 70
+    # Try Google Maps API first if key exists
+    if api_key:
+        try:
+            origin = f"{SHOP_LAT},{SHOP_LNG}"
+            destination = user_address
+            url = f"https://maps.googleapis.com/maps/api/distancematrix/json?origins={origin}&destinations={destination}&key={api_key}"
+            
+            response = requests.get(url)
+            data = response.json()
+            
+            if data['status'] == 'OK':
+                if 'rows' in data and data['rows']:
+                    element = data['rows'][0]['elements'][0]
+                    if element['status'] == 'OK':
+                        distance_value = element['distance']['value']
+                        distance_km = distance_value / 1000.0
+                        return _calculate_price(distance_km)
+                    else:
+                        # Fallback to Geopy below if Google fails to locate
+                        pass
                 else:
-                    return distance_km, 0, "Delivery not available for distances greater than 7 KMs."
-                
-                return distance_km, price, None
+                    # Fallback to Geopy
+                    pass
+            elif data['status'] == 'REQUEST_DENIED':
+                print("Google Maps API Request Denied. Falling back to Geopy.")
+                # Fallback to Geopy
             else:
-                return 0, 0, f"Address could not be located: {element['status']}"
+                 return 0, 0, f"Distance API Error: {data['status']}"
+        except Exception as e:
+            print(f"Google Maps API Error: {e}")
+            # Fallback to Geopy
+
+    # Fallback: Geopy (Nominatim)
+    try:
+        geolocator = Nominatim(user_agent="sselectricals_app")
+        # Try to clean address or append city context if missing
+        search_address = user_address
+        if "indore" not in search_address.lower():
+            search_address += ", Indore, Madhya Pradesh, India"
+            
+        location = geolocator.geocode(search_address)
+        
+        if location:
+            user_coords = (location.latitude, location.longitude)
+            shop_coords = (SHOP_LAT, SHOP_LNG)
+            distance_km = geodesic(shop_coords, user_coords).km
+            return _calculate_price(distance_km)
         else:
-            return 0, 0, f"Distance API Error: {data['status']}"
+            return 0, 0, "Address could not be located. Please make sure to include a valid area/landmark in Indore."
             
     except Exception as e:
         return 0, 0, f"Error calculating distance: {str(e)}"
+
+def _calculate_price(distance_km):
+    distance_km = round(distance_km, 2)
+    price = 0
+    if distance_km <= 3:
+        price = 50
+    elif distance_km <= 7:
+        price = 70
+    else:
+        return distance_km, 0, f"Delivery available only within 7 KM. Your distance: {distance_km} KM."
+    
+    return distance_km, price, None
 
 
 

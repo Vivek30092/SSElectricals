@@ -45,6 +45,7 @@ urlpatterns = [
     path('admin/dashboard/', admin_views.admin_dashboard, name='admin_dashboard'),
     path('admin/activity-log/', admin_views.admin_activity_log_view, name='admin_activity_log'),
     path('admin/terminate-session/<int:session_id>/', admin_views.terminate_session, name='terminate_session'),
+    path('admin/analytics/', admin_views.admin_analytics, name='admin_analytics'),
     
     # Appointment URLs
     path('book-appointment/', views.book_appointment, name='book_appointment'),

@@ -179,12 +179,7 @@
                                 href="{% url 'product_detail' product.pk %}" class="text-dark text-decoration-none">{{
                                 product.name }}</a></h5>
                         <div class="mb-2">
-                            {% if product.discount_price %}
-                            <span class="text-danger fw-bold fs-5">₹{{ product.discount_price }}</span>
-                            <small class="text-muted text-decoration-line-through ms-1">₹{{ product.price }}</small>
-                            {% else %}
-                            <span class="fw-bold fs-5 text-dark">₹{{ product.price }}</span>
-                            {% endif %}
+                            <!-- Price Removed -->
                         </div>
                     </div>
                 </div>

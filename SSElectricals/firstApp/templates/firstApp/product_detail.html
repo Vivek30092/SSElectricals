@@ -41,12 +41,7 @@
                 <p class="card-text">{{ product.description }}</p>
 
                 <div class="mb-4">
-                    {% if product.discount_price %}
-                    <span class="text-danger fw-bold display-6">₹{{ product.discount_price }}</span>
-                    <small class="text-muted text-decoration-line-through fs-4">₹{{ product.price }}</small>
-                    {% else %}
-                    <span class="fw-bold display-6">₹{{ product.price }}</span>
-                    {% endif %}
+                    <!-- Price Removed -->
                 </div>
 
                 <p class="card-text">
@@ -74,7 +69,7 @@
                     <a href="tel:+919827012345" class="btn btn-outline-success">
                         <i class="fas fa-phone-alt me-2"></i>Call: +91 98270 12345
                     </a>
-                    <a href="mailto:shivshaktielectrical1430@gmail.com?subject=Enquiry for {{ product.name }}" class="btn btn-outline-danger">
+                    <a href="{% url 'contact' %}?subject=Enquiry for {{ product.name }}" class="btn btn-outline-danger">
                         <i class="fas fa-envelope me-2"></i>Email Enquiry
                     </a>
                 </div>

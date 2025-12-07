@@ -12,6 +12,8 @@ from .utils import send_otp_email, calculate_distance_and_price
 import requests
 from django.conf import settings
 
+from decimal import Decimal
+
 @login_required
 def checkout(request):
     cart, created = Cart.objects.get_or_create(user=request.user)
@@ -48,6 +50,8 @@ def checkout(request):
                     'total_amount': cart.total_price
                 })
             
+            # Convert float to Decimal for math operations
+            delivery_charge = Decimal(str(delivery_charge))
             total_amount = cart.total_price + delivery_charge
 
             # Create Order
@@ -305,12 +309,6 @@ def book_appointment(request):
             full_address = f"{appointment.house_number}, {appointment.address_line1}, {appointment.city}"
             distance_km, _, error_msg = calculate_distance_and_price(full_address)
             
-            # Allow "Other" region to bypass this if logic allows, but requirement says "Service location check strictly allows Indore only" and "Only allow requests within 3 KM radius".
-            # The dropdown for "Other" exists, assuming manual override or specific handling. 
-            # However, prompt says "Only allow requests within 3 KM radius". 
-            # If distance > 3 and area is not manually "Other", block it.
-            # But the 'area' field is just a choice.
-            
             if distance_km > 3:
                 # Strictly fail if > 3km
                 messages.error(request, f"Service available only within 3 KM. Your distance: {distance_km} KM.")
@@ -320,6 +318,8 @@ def book_appointment(request):
                  # If we can't calculate, maybe warn but allow? Or Block? 
                  # Strict requirement implies blocking, but let's be safe.
                  pass
+
+            try:
                 appointment.save()
                 
                 # Store ID for success page

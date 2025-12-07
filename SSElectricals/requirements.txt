@@ -1,0 +1,6 @@
+Django
+geopy
+requests
+pandas
+openpyxl
+Pillow
