@@ -58,6 +58,7 @@ urlpatterns = [
     path('admin/appointments/delete/<int:pk>/', admin_views.admin_appointment_delete, name='admin_appointment_delete'),
 
     path('confirm-delivery/', views.confirm_delivery_otp, name='confirm_delivery_otp'),
+    path('order/receipt/<int:order_id>/', views.order_receipt, name='order_receipt'),
     
     # AJAX API endpoints
     path('api/cart/add/', views.ajax_add_to_cart, name='ajax_add_to_cart'),

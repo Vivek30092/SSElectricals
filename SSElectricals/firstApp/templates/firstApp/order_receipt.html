@@ -1,0 +1,120 @@
+{% extends 'firstApp/base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container my-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card shadow" id="receipt-card">
+                <div class="card-body p-5">
+                    <!-- Header -->
+                    <div class="row mb-5">
+                        <div class="col-6">
+                            <h2 class="text-warning fw-bold">Shiv Shakti Electrical</h2>
+                            <p class="mb-1">123, Example Address, Indore (M.P.)</p>
+                            <p class="mb-1">Phone: +91-9876543210</p>
+                            <p class="mb-0">GSTIN: 23ABCDE1234F1Z5</p>
+                        </div>
+                        <div class="col-6 text-end">
+                            <h3 class="mb-3">ORDER RECEIPT</h3>
+                            <p class="mb-1"><strong>Order ID:</strong> #{{ order.id }}</p>
+                            <p class="mb-1"><strong>Date:</strong> {{ order.created_at|date:"d M Y" }}</p>
+                            <p class="mb-0"><strong>Time:</strong> {{ order.created_at|time:"H:i A" }}</p>
+                        </div>
+                    </div>
+
+                    <!-- Customer Info -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h5 class="border-bottom pb-2">Customer Details</h5>
+                            <p class="mb-1"><strong>Name:</strong> {{ order.user.first_name }} {{ order.user.last_name
+                                }}</p>
+                            <p class="mb-1"><strong>Phone:</strong> {{ order.user.phone_number }}</p>
+                            <p class="mb-0"><strong>Address:</strong> {{ order.address }}</p>
+                        </div>
+                    </div>
+
+                    <!-- Order Items -->
+                    <div class="table-responsive mb-4">
+                        <table class="table table-bordered">
+                            <thead class="bg-light">
+                                <tr>
+                                    <th>Product</th>
+                                    <th class="text-center">Quantity</th>
+                                    <th class="text-end">Price</th>
+                                    <th class="text-end">Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in order.items.all %}
+                                <tr>
+                                    <td>{{ item.product.name }}</td>
+                                    <td class="text-center">{{ item.quantity }}</td>
+                                    <td class="text-end">₹{{ item.price }}</td>
+                                    <td class="text-end">₹{{ item.total_price }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                            <tfoot class="fw-bold">
+                                <tr>
+                                    <td colspan="3" class="text-end">Subtotal:</td>
+                                    <td class="text-end">₹{{ order.total_price }}</td>
+                                </tr>
+                                <tr>
+                                    <td colspan="3" class="text-end">Delivery Charge ({{ order.distance_km }} KM):</td>
+                                    <td class="text-end">₹{{ order.delivery_charge }}</td>
+                                </tr>
+                                <tr class="bg-light fs-5">
+                                    <td colspan="3" class="text-end">Grand Total:</td>
+                                    <td class="text-end text-success">₹{{
+                                        order.final_price|default:order.total_price|add:order.delivery_charge }}</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+
+                    <!-- Footer -->
+                    <div class="row mt-5">
+                        <div class="col-8">
+                            <p class="text-muted small">
+                                * This is a computer generated receipt.<br>
+                                * Goods once sold will not be taken back.<br>
+                                * Subject to Indore Jurisdiction.
+                            </p>
+                        </div>
+                        <div class="col-4 text-center">
+                            <div class="border-bottom mb-2" style="height: 50px;"></div>
+                            <p class="fw-bold">Authorized Signature</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="text-center mt-4 mb-5 no-print">
+                <button onclick="window.print()" class="btn btn-primary btn-lg me-2">
+                    <i class="fas fa-print me-2"></i> Print Receipt
+                </button>
+                <a href="{% url 'order_history' %}" class="btn btn-outline-secondary btn-lg">Back to Orders</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    @media print {
+        .no-print {
+            display: none !important;
+        }
+
+        body {
+            background-color: white !important;
+        }
+
+        .card {
+            box-shadow: none !important;
+            border: none !important;
+        }
+    }
+</style>
+{% endblock %}
