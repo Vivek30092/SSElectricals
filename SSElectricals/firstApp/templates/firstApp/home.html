@@ -173,18 +173,22 @@
                         </div>
                     </div>
                     <div class="card-body text-center">
-                        <small class="text-muted text-uppercase fw-bold" style="font-size: 0.75rem;">{{
-                            product.category.name }}</small>
-                        <h5 class="card-title fw-bold text-truncate mt-1"><a
-                                href="{% url 'product_detail' product.pk %}" class="text-dark text-decoration-none">{{
-                                product.name }}</a></h5>
-                        <div class="mb-2">
-                            {% if product.discount_price %}
-                            <span class="text-danger fw-bold fs-5">₹{{ product.discount_price }}</span>
-                            <small class="text-muted text-decoration-line-through ms-1">₹{{ product.price }}</small>
-                            {% else %}
-                            <span class="fw-bold fs-5 text-dark">₹{{ product.price }}</span>
-                            {% endif %}
+                        <small class="text-muted text-uppercase fw-bold" style="font-size: 0.75rem;">
+                            {{ product.category.name|default:"Uncategorized" }}
+                        </small>
+                        <h5 class="card-title fw-bold text-truncate mt-1">
+                            <a href="{% url 'product_detail' product.pk %}" class="text-dark text-decoration-none">
+                                {{ product.name }}
+                            </a>
+                        </h5>
+
+                        <!-- Price hidden as per request -->
+
+                        <div class="mt-2">
+                            <a href="{% url 'add_to_cart' product.id %}"
+                                class="btn btn-sm btn-outline-warning w-100 rounded-pill">
+                                <i class="fas fa-shopping-cart me-1"></i> Add to Cart
+                            </a>
                         </div>
                     </div>
                 </div>

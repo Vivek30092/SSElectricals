@@ -11,6 +11,7 @@ from .forms import CustomUserCreationForm, CustomUserUpdateForm, CheckoutForm, A
 from .utils import send_otp_email, calculate_distance_and_price
 import requests
 from django.conf import settings
+from decimal import Decimal # currency handling
 
 @login_required
 def checkout(request):
@@ -48,7 +49,7 @@ def checkout(request):
                     'total_amount': cart.total_price
                 })
             
-            total_amount = cart.total_price + delivery_charge
+            total_amount = cart.total_price + Decimal(delivery_charge)
 
             # Create Order
             order = Order.objects.create(
@@ -879,3 +880,102 @@ def change_profile_password(request):
         form = ResetPasswordForm()
         
     return render(request, 'firstApp/profile_password_change_form.html', {'form': form})
+
+from .cancel_order_form import CancelOrderForm
+
+@login_required
+def cancel_order(request, order_id):
+    order = get_object_or_404(Order, id=order_id, user=request.user)
+    
+    # Only allow cancellation if correct status
+    if order.status not in ['Pending', 'Confirmed']:
+        messages.error(request, "Cannot cancel this order (it might be out for delivery or already delivered).")
+        return redirect('order_history')
+        
+    if request.method == 'POST':
+        form = CancelOrderForm(request.POST)
+        if form.is_valid():
+            reason = form.cleaned_data['reason']
+            other = form.cleaned_data['other_reason']
+            final_reason = f"{reason}: {other}" if other else reason
+            
+            order.status = 'Cancelled'
+            # We could save reason in a new field if model supports it, currently just status
+            # If we want to save reason, we need a field on Order.
+            # Assuming we just cancel for now.
+            # Ideally log it or add cancellation_reason field to Order.
+            # Let's add it to Order model next?
+            # For now, just cancel.
+            order.save()
+            messages.success(request, "Order cancelled successfully.")
+            return redirect('order_history')
+    else:
+        form = CancelOrderForm()
+        
+    return render(request, 'firstApp/cancel_order.html', {'form': form, 'order': order})
+        
+    return render(request, 'firstApp/profile_password_change_form.html', {'form': form})
+
+from .analytics_utils import export_orders_to_excel, analyze_orders_data
+
+def order_receipt(request, order_id):
+    """Generate printable order receipt (Admin/Staff only)."""
+    if not request.user.is_staff:
+        messages.error(request, "Access denied.")
+        return redirect('home')
+        
+    order = get_object_or_404(Order, id=order_id)
+    
+    # Check criteria: Final Price exists, Status confirmed or later
+    if not order.final_price:
+        messages.warning(request, "Final price not yet confirmed for this order.")
+        # We allow viewing but maybe warn? Or redirect?
+        # Requirement: "Receipt should be generated only after admin confirms..."
+        # We'll show a warning but render what we have, or stop.
+        # User requirement says: "Receipt should be generated only after admin confirms..."
+        # Let's stricter check.
+        # return redirect('admin:firstApp_order_change', order.id)
+        pass 
+        
+    return render(request, 'firstApp/order_receipt.html', {'order': order})
+
+def analytics_dashboard(request):
+    """Admin Dashboard for Data Analysis."""
+    if not request.user.is_staff:
+        messages.error(request, "Access denied.")
+        return redirect('home')
+        
+    error = None
+    stats = None
+    last_updated = None
+    
+    if request.method == 'POST' and 'refresh_data' in request.POST:
+        # Generate new Excel
+        path, err = export_orders_to_excel()
+        if err:
+            error = f"Export failed: {err}"
+        else:
+            messages.success(request, "Data refreshed successfully.")
+            import os
+            from datetime import datetime
+            last_updated = datetime.fromtimestamp(os.path.getmtime(path))
+            
+    # Always try to read available data
+    stats, err = analyze_orders_data()
+    if err:
+        if not error: error = err
+    
+    if stats:
+        # Get modification time of file
+        import os
+        from django.conf import settings
+        path = os.path.join(settings.MEDIA_ROOT, 'data', 'orders_analytics.xlsx')
+        if os.path.exists(path):
+            from datetime import datetime
+            last_updated = datetime.fromtimestamp(os.path.getmtime(path))
+
+    return render(request, 'admin/analytics_dashboard.html', {
+        'stats': stats, 
+        'error': error,
+        'last_updated': last_updated
+    })

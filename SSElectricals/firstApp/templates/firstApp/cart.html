@@ -13,9 +13,7 @@
                         <thead>
                             <tr>
                                 <th>Product</th>
-                                <th>Price</th>
                                 <th>Quantity</th>
-                                <th>Total</th>
                                 <th>Action</th>
                             </tr>
                         </thead>
@@ -33,21 +31,20 @@
                                         </div>
                                     </div>
                                 </td>
-                                <td>₹{{ item.product.final_price }}</td>
                                 <td>
                                     <form action="{% url 'update_cart' item.id %}" method="post" class="d-flex"
-                                        style="width: 100px;">
+                                        style="width: 200px;">
                                         {% csrf_token %}
-                                        <input type="number" name="quantity" value="{{ item.quantity }}" min="1"
-                                            class="form-control form-control-sm me-2">
-                                        <button type="submit" class="btn btn-sm btn-outline-secondary"><i
-                                                class="fas fa-sync"></i></button>
+                                        <div class="input-group input-group-sm">
+                                            <input type="number" name="quantity" value="{{ item.quantity }}" min="1"
+                                                class="form-control">
+                                            <button type="submit" class="btn btn-outline-secondary">Update</button>
+                                        </div>
                                     </form>
                                 </td>
-                                <td>₹{{ item.total_price }}</td>
                                 <td>
                                     <a href="{% url 'remove_from_cart' item.id %}" class="btn btn-sm btn-danger"><i
-                                            class="fas fa-trash"></i></a>
+                                            class="fas fa-trash"></i> Remove</a>
                                 </td>
                             </tr>
                             {% endfor %}
@@ -63,15 +60,12 @@
                 <h5 class="mb-0">Order Summary</h5>
             </div>
             <div class="card-body">
-                <div class="d-flex justify-content-between mb-3">
-                    <span>Subtotal</span>
-                    <strong>₹{{ cart.total_price }}</strong>
+                <div class="alert alert-info border-0 bg-light">
+                    <i class="fas fa-info-circle me-1"></i>
+                    <strong>Note:</strong> Final prices including delivery charges will be confirmed by our team after
+                    you place the order.
                 </div>
-                <hr>
-                <div class="d-flex justify-content-between mb-3">
-                    <span class="fs-5">Total</span>
-                    <strong class="fs-5">₹{{ cart.total_price }}</strong>
-                </div>
+
                 <a href="{% url 'checkout' %}" class="btn btn-success w-100 btn-lg">Proceed to Checkout</a>
             </div>
         </div>
