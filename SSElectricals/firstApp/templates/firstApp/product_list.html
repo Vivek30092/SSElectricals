@@ -10,7 +10,7 @@
                 <div class="mb-3">
                     <label class="form-label">Search</label>
                     <input type="text" name="q" class="form-control" placeholder="Search products..."
-                           value="{{ request.GET.q }}">
+                        value="{{ request.GET.q }}">
                 </div>
 
                 <div class="mb-3">
@@ -19,13 +19,10 @@
                         <option value="">All Categories</option>
 
                         {% for cat in categories %}
-                            <option value="{{ cat.id }}"
-                                {% if request.GET.category == cat.id|stringformat:"s" %}
-                                    selected
-                                {% endif %}
-                            >
-                                {{ cat.name }}
-                            </option>
+                        <option value="{{ cat.id }}" {% if
+                            request.GET.category|stringformat:"s"==cat.id|stringformat:"s" %}selected{% endif %}>
+                            {{ cat.name }}
+                        </option>
                         {% endfor %}
                     </select>
                 </div>
@@ -34,18 +31,8 @@
                     <label class="form-label">Sort By</label>
                     <select name="sort" class="form-select">
                         <option value="">Default</option>
-
-                        <option value="price_low" 
-                            {% if request.GET.sort == 'price_low' %}selected{% endif %}
-                        >Price : Low to High</option>
-
-                        <option value="price_high" 
-                            {% if request.GET.sort == 'price_high' %}selected{% endif %}
-                        >Price : High to Low</option>
-
-                        <option value="newest" 
-                            {% if request.GET.sort == 'newest' %}selected{% endif %}
-                        >Newest First</option>
+                        <option value="newest" {% if request.GET.sort=='newest' %}selected{% endif %}>Newest First
+                        </option>
                     </select>
                 </div>
 
@@ -63,25 +50,27 @@
 
                     {% if product.image %}
                     <img src="{{ product.image.url }}" class="card-img-top" alt="{{ product.name }}"
-                         style="height: 200px; object-fit: cover;">
+                        style="height: 200px; object-fit: cover;">
                     {% endif %}
 
                     <div class="card-body">
                         <h5 class="card-title">{{ product.name }}</h5>
                         <p class="card-text text-truncate">{{ product.description }}</p>
 
-                        <div class="mb-2">
-                            {% if product.discount_price %}
-                                <span class="text-danger fw-bold fs-5">₹{{ product.discount_price }}</span>
-                                <small class="text-muted text-decoration-line-through">₹{{ product.price }}</small>
-                            {% else %}
-                                <span class="fw-bold fs-5">₹{{ product.price }}</span>
-                            {% endif %}
-                        </div>
+                        <p class="card-text"><small class="text-muted">Brand: {{ product.brand }}</small></p>
 
-                        <a href="{% url 'product_detail' product.pk %}" class="btn btn-primary w-100">
-                            View Details
-                        </a>
+                        <div class="d-grid gap-2">
+                            <a href="{% url 'contact' %}?subject=Enquiry for {{ product.name }}"
+                                class="btn btn-outline-primary">
+                                Enquire Now
+                            </a>
+                            <a href="{% url 'product_detail' product.pk %}" class="btn btn-outline-secondary">
+                                View Product
+                            </a>
+                        </div>
+                        <p class="mt-2 small text-muted text-center">
+                            You can buy this product by visiting our shop or enquire online.
+                        </p>
                     </div>
                 </div>
             </div>

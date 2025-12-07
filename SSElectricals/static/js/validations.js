@@ -137,7 +137,7 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     // Password confirmation matching
-    const confirmPasswordInputs = document.querySelectorAll('input[name*="confirm"], input[name$="2"]');
+    const confirmPasswordInputs = document.querySelectorAll('input[type="password"][name*="confirm"], input[type="password"][name="password2"]');
     confirmPasswordInputs.forEach(input => {
         input.addEventListener('blur', function () {
             const passwordField = document.querySelector('input[name*="password1"], input[name="password"]');

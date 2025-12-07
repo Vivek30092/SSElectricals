@@ -1,10 +1,15 @@
 /* Custom Styles for SSElectricals */
+body {
+    font-family: 'Outfit', sans-serif;
+}
+
 
 /* Responsive Navigation */
 @media (max-width: 768px) {
     .navbar-nav {
         text-align: center;
     }
+
     .navbar-brand {
         font-size: 1.2rem;
     }
@@ -19,7 +24,7 @@
 
 .product-card:hover {
     transform: translateY(-10px);
-    box-shadow: 0 10px 25px rgba(0,0,0,0.15)!important;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15) !important;
 }
 
 .product-card img {
@@ -48,7 +53,7 @@
     position: relative;
 }
 
-.form-floating > label {
+.form-floating>label {
     position: absolute;
     top: 0;
     left: 0;
@@ -60,10 +65,10 @@
     transition: opacity 0.1s ease-in-out, transform 0.1s ease-in-out;
 }
 
-.form-floating > .form-control:focus ~ label,
-.form-floating > .form-control:not(:placeholder-shown) ~ label,
-.form-floating > .form-select ~ label,
-.form-floating.focused > label {
+.form-floating>.form-control:focus~label,
+.form-floating>.form-control:not(:placeholder-shown)~label,
+.form-floating>.form-select~label,
+.form-floating.focused>label {
     opacity: 0.65;
     transform: scale(0.85) translateY(-0.5rem) translateX(0.15rem);
 }
@@ -73,11 +78,13 @@
     transition: all 0.2s ease;
 }
 
-a, button {
+a,
+button {
     transition: background-color 0.2s, color 0.2s, transform 0.1s;
 }
 
-a:hover, button:hover {
+a:hover,
+button:hover {
     transform: translateY(-2px);
 }
 
@@ -87,7 +94,7 @@ a:hover, button:hover {
 
 .btn:hover {
     transform: translateY(-3px);
-    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 }
 
 /* Modal Animations */
@@ -125,8 +132,13 @@ a:hover, button:hover {
 }
 
 @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
 }
 
 /* Toast Notifications */
@@ -144,7 +156,7 @@ a:hover, button:hover {
 
 .hover-lift:hover {
     transform: translateY(-5px);
-    box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.15)!important;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
 }
 
 /* Responsive Images */
@@ -159,11 +171,19 @@ img {
         padding-left: 10px;
         padding-right: 10px;
     }
-    
-    h1 { font-size: 1.75rem; }
-    h2 { font-size: 1.5rem; }
-    h3 { font-size: 1.25rem; }
-    
+
+    h1 {
+        font-size: 1.75rem;
+    }
+
+    h2 {
+        font-size: 1.5rem;
+    }
+
+    h3 {
+        font-size: 1.25rem;
+    }
+
     .btn-lg {
         padding: 0.5rem 1rem;
         font-size: 1rem;
@@ -172,11 +192,11 @@ img {
 
 /* Validation States */
 .is-invalid {
-    border-color: #dc3545!important;
+    border-color: #dc3545 !important;
 }
 
 .is-valid {
-    border-color: #28a745!important;
+    border-color: #28a745 !important;
 }
 
 .invalid-feedback {
@@ -197,8 +217,13 @@ body {
 }
 
 @keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
 }
 
 /* Smooth Scroll */
@@ -245,7 +270,7 @@ html {
 }
 
 .dashboard-card:hover {
-    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
 }
 
 /* Responsive Table */
@@ -268,13 +293,17 @@ html {
     outline-offset: 2px;
 }
 
-a:focus, button:focus {
+a:focus,
+button:focus {
     outline: 2px solid #ffc107;
 }
 
 /* Print Styles */
 @media print {
-    .navbar, footer, .back-to-top {
+
+    .navbar,
+    footer,
+    .back-to-top {
         display: none;
     }
 }

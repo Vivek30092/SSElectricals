@@ -58,16 +58,33 @@
                 </p>
 
                 {% if product.stock_quantity > 0 %}
-                <button class="btn btn-outline-primary btn-lg w-100" disabled>Available in Store Only</button>
+                <a href="{% url 'add_to_cart' product.id %}" class="btn btn-primary btn-lg w-100 mb-2">
+                    <i class="fas fa-shopping-cart me-2"></i>Add to Cart
+                </a>
                 {% else %}
-                <button class="btn btn-secondary btn-lg w-100" disabled>Out of Stock</button>
+                <button class="btn btn-secondary btn-lg w-100 mb-2" disabled>Out of Stock</button>
                 {% endif %}
+
+                <div class="alert alert-light border mt-3">
+                    <h6 class="alert-heading"><i class="fas fa-info-circle me-1"></i> Purchasing Options</h6>
+                    <p class="mb-0 small">You can buy this product by visiting our shop or enquire online.</p>
+                </div>
+
+                <div class="d-grid gap-2 mt-3">
+                    <a href="tel:+919827012345" class="btn btn-outline-success">
+                        <i class="fas fa-phone-alt me-2"></i>Call: +91 98270 12345
+                    </a>
+                    <a href="mailto:shivshaktielectrical1430@gmail.com?subject=Enquiry for {{ product.name }}" class="btn btn-outline-danger">
+                        <i class="fas fa-envelope me-2"></i>Email Enquiry
+                    </a>
+                </div>
 
                 <hr class="my-4">
                 <h5>Product Details</h5>
                 <ul>
                     <li>Brand: {{ product.brand|default:"Generic" }}</li>
                     <li>Category: {{ product.category.name }}</li>
+                    <!-- Add more details if available -->
                 </ul>
             </div>
         </div>

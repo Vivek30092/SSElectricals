@@ -63,17 +63,22 @@ class CustomUserCreationForm(UserCreationForm):
 class CustomUserUpdateForm(forms.ModelForm):
     class Meta:
         model = CustomUser
-        fields = ('first_name', 'last_name', 'email', 'phone_number', 'address', 'pincode', 'profile_picture')
+        fields = ('first_name', 'last_name', 'email', 'phone_number', 'house_number', 'address_line1', 'city', 'landmark', 'pincode', 'profile_picture')
         widgets = {
-            'first_name': forms.TextInput(attrs={'class': 'form-control'}),
-            'last_name': forms.TextInput(attrs={'class': 'form-control'}),
-            'email': forms.EmailInput(attrs={'class': 'form-control'}),
+            'first_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'First Name'}),
+            'last_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Last Name'}),
+            'email': forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'Email Address'}),
             'phone_number': forms.TextInput(attrs={
                 'class': 'form-control',
                 'pattern': '[0-9]{10}',
-                'maxlength': '10'
+                'maxlength': '10',
+                'placeholder': 'Phone Number'
             }),
-            'address': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+            'house_number': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'House Number', 'autocomplete': 'off'}),
+            'address_line1': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Address Line 1', 'autocomplete': 'off'}),
+            'city': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'City', 'autocomplete': 'off'}),
+            'landmark': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Near Landmark (Optional)', 'autocomplete': 'off'}),
+            'pincode': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Pincode', 'autocomplete': 'off'}),
             'profile_picture': forms.FileInput(attrs={'class': 'form-control'})
         }
 
@@ -91,9 +96,7 @@ class CheckoutForm(forms.Form):
     
     payment_method = forms.ChoiceField(
         choices=[
-            ('COD', 'Cash on Delivery'),
-            ('UPI', 'UPI Payment'),
-            ('Card', 'Credit/Debit Card')
+            ('COD', 'Cash on Delivery (COD) Only'),
         ],
         widget=forms.RadioSelect(attrs={'class': 'payment-method-radio'}),
         initial='COD',
@@ -125,37 +128,66 @@ class CheckoutForm(forms.Form):
         return cleaned_data
 
 class AppointmentForm(forms.ModelForm):
+    other_area = forms.CharField(required=False, widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Enter your area name', 'id': 'id_other_area', 'style': 'display:none;'}))
+
     class Meta:
         model = Appointment
-        fields = ['customer_name', 'phone', 'email', 'address', 'city', 'service_type', 'date', 'time', 'problem_description']
+        fields = ['customer_name', 'phone', 'email', 'pincode', 'house_number', 'address_line1', 'address_line2', 'landmark', 'city', 'area', 'service_type', 'date', 'time', 'problem_description', 'visiting_charge']
         widgets = {
             'customer_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Full Name'}),
             'phone': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '10-digit Phone Number'}),
             'email': forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'Email Address'}),
-            'address': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Complete Address'}),
+            'pincode': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Pincode', 'id': 'id_pincode'}),
+            'house_number': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'House Number', 'id': 'id_house_number'}),
+            'address_line1': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Address Line 1', 'id': 'id_address_line1'}),
+            'address_line2': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Address Line 2', 'id': 'id_address_line2'}),
+            'landmark': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Near Landmark (Optional)', 'id': 'id_landmark'}),
             'city': forms.Select(attrs={'class': 'form-select', 'readonly': 'readonly'}),
+            'area': forms.Select(choices=Appointment.AREA_CHOICES, attrs={'class': 'form-select', 'id': 'id_area', 'onchange': 'toggleOtherArea(this)'}),
             'service_type': forms.Select(attrs={'class': 'form-select'}),
             'date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
             'time': forms.TimeInput(attrs={'class': 'form-control', 'type': 'time', 'min': '09:00', 'max': '20:00'}),
             'problem_description': forms.Textarea(attrs={'class': 'form-control', 'rows': 4, 'placeholder': 'Describe the issue...'}),
+            'visiting_charge': forms.HiddenInput(),
         }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Force city to be Indore and readonly-ish (HTML readonly doesn't stop submission, but choice limits it)
+        # Force city to be Indore and readonly-ish
         self.fields['city'].initial = 'Indore'
+        self.fields['landmark'].required = False
         # Add validators
         self.fields['phone'].validators.append(validate_indian_phone)
-        self.fields['city'].disabled = True # This makes it read-only in Django form logic
+        self.fields['city'].disabled = True 
+        # Manually set choices for area since we removed them from model
+        self.fields['area'].widget.choices = Appointment.AREA_CHOICES
 
     def clean_city(self):
-        # Even if disabled, we want to ensure it's Indore
         return 'Indore'
 
     def clean_phone(self):
         phone = self.cleaned_data.get('phone')
         validate_indian_phone(phone)
         return phone
+
+    def clean_pincode(self):
+        pincode = self.cleaned_data.get('pincode')
+        if pincode and not str(pincode).startswith('452'):
+            raise forms.ValidationError("Service is available only in Indore (Pincode starting with 452).")
+        return pincode
+
+    def clean(self):
+        cleaned_data = super().clean()
+        area = cleaned_data.get('area')
+        other_area = cleaned_data.get('other_area')
+
+        if area == 'Other':
+            if not other_area:
+                self.add_error('other_area', 'Please specify your area.')
+            else:
+                cleaned_data['area'] = other_area
+        
+        return cleaned_data
 
 class AdminAppointmentForm(forms.ModelForm):
     class Meta:
@@ -210,13 +242,25 @@ class AccountDeletionForm(forms.Form):
     password = forms.CharField(widget=forms.PasswordInput(attrs={'class': 'form-control', 'placeholder': 'Enter your password to confirm'}), label="Confirm Password")
 
 class EmailLoginForm(forms.Form):
-    email = forms.EmailField(widget=forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'Enter your email'}))
+    identifier = forms.CharField(widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Enter your email or phone number'}))
 
-    def clean_email(self):
-        email = self.cleaned_data.get('email')
-        if not CustomUser.objects.filter(email=email).exists():
-            raise forms.ValidationError("No account found with this email.")
-        return email
+    def clean_identifier(self):
+        identifier = self.cleaned_data.get('identifier')
+        if not identifier:
+            raise forms.ValidationError("This field is required.")
+        
+        # Check if it's an email
+        if '@' in identifier:
+            if not CustomUser.objects.filter(email=identifier).exists():
+                raise forms.ValidationError("No account found with this email.")
+        # Check if it's a phone number
+        elif identifier.isdigit() and len(identifier) == 10:
+             if not CustomUser.objects.filter(phone_number=identifier).exists():
+                raise forms.ValidationError("No account found with this phone number.")
+        else:
+             raise forms.ValidationError("Enter a valid email or 10-digit phone number.")
+             
+        return identifier
 
 class OTPVerificationForm(forms.Form):
     otp = forms.CharField(max_length=6, widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Enter 6-digit OTP', 'style': 'text-align: center; letter-spacing: 5px;'}))
@@ -243,4 +287,18 @@ class ResetPasswordForm(forms.Form):
             self.add_error('confirm_password', "Passwords do not match.")
         return cleaned_data
 
+class ContactForm(forms.Form):
+    name = forms.CharField(max_length=100, widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Your Name'}))
+    email = forms.EmailField(widget=forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'Your Email'}))
+    message = forms.CharField(widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 5, 'placeholder': 'Your Message'}))
 
+class CancelAppointmentForm(forms.Form):
+    REASON_CHOICES = [
+        ('Changed my mind', 'Changed my mind'),
+        ('Found another service', 'Found another service'),
+        ('Scheduling conflict', 'Scheduling conflict'),
+        ('Service no longer needed', 'Service no longer needed'),
+        ('Other', 'Other'),
+    ]
+    reason = forms.ChoiceField(choices=REASON_CHOICES, widget=forms.Select(attrs={'class': 'form-select'}))
+    other_reason = forms.CharField(required=False, widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Please specify if other...'}))

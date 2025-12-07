@@ -1,4 +1,6 @@
 from django.shortcuts import render, redirect, get_object_or_404
+from django.core.mail import send_mail
+from django.utils import timezone
 from django.contrib.auth import login, logout, authenticate
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
@@ -6,9 +8,118 @@ from django.db.models import Q
 from django.http import JsonResponse
 from .models import Product, Category, Cart, CartItem, Order, OrderItem, Appointment, EmailOTP, CustomUser
 from .forms import CustomUserCreationForm, CustomUserUpdateForm, CheckoutForm, AppointmentForm, EmailSignupForm, EmailLoginForm, OTPVerificationForm, AccountDeletionForm, ForgotPasswordForm, ResetPasswordForm
-from .utils import send_otp_email
+from .utils import send_otp_email, calculate_distance_and_price
 import requests
 from django.conf import settings
+
+@login_required
+def checkout(request):
+    cart, created = Cart.objects.get_or_create(user=request.user)
+    if not cart.items.exists():
+        messages.warning(request, "Your cart is empty.")
+        return redirect('product_list')
+
+    # Initial estimates
+    delivery_charge = 0 # Will be calculated on POST
+    total_amount = cart.total_price 
+    dist_km = 0
+
+    if request.method == 'POST':
+        form = CheckoutForm(request.POST)
+        if form.is_valid():
+            address = form.cleaned_data['address']
+            payment_method = 'COD' # Fixed as per requirement
+            
+            # Check stock availability
+            for item in cart.items.all():
+                if item.product.stock_quantity < item.quantity:
+                    messages.error(request, f"{item.product.name} is out of stock or insufficient quantity available.")
+                    return redirect('view_cart')
+            
+            # Calculate Delivery Charge
+            dist_km, delivery_charge, error_msg = calculate_distance_and_price(address)
+            
+            if error_msg:
+                messages.error(request, f"Delivery Error: {error_msg}")
+                return render(request, 'firstApp/checkout.html', {
+                    'form': form, 
+                    'cart': cart, 
+                    'delivery_charge': 0, 
+                    'total_amount': cart.total_price
+                })
+            
+            total_amount = cart.total_price + delivery_charge
+
+            # Create Order
+            order = Order.objects.create(
+                user=request.user,
+                address=address,
+                total_price=cart.total_price, # Base product price
+                delivery_charge=delivery_charge,
+                distance_km=dist_km,
+                final_price=None, # To be confirmed by Admin
+                status='Pending',
+                payment_method=payment_method
+            )
+            
+            # Create Order Items
+            for item in cart.items.all():
+                OrderItem.objects.create(
+                    order=order,
+                    product=item.product,
+                    quantity=item.quantity,
+                    price=item.product.final_price
+                )
+                # Reduce Stock
+                item.product.stock_quantity -= item.quantity
+                item.product.save()
+            
+            # Clear Cart
+            cart.items.all().delete()
+            
+            messages.success(request, f"Order placed successfully! Delivery distance: {dist_km} KM. Admin will contact you for final confirmation.")
+            return redirect('order_history')
+    else:
+        # Pre-fill address from user profile
+        initial_data = {}
+        if request.user.house_number:
+             full_address = f"{request.user.house_number}, {request.user.address_line1}, {request.user.city} - {request.user.pincode}"
+             initial_data['address'] = full_address
+        else:
+             initial_data['address'] = request.user.address
+
+        form = CheckoutForm(initial=initial_data)
+        
+    return render(request, 'firstApp/checkout.html', {
+        'form': form, 
+        'cart': cart, 
+        'delivery_charge': "Calculated at checkout", 
+        'total_amount': "Calculated at checkout"
+    })
+
+@login_required
+def confirm_delivery_otp(request):
+    """View for delivery person to enter OTP for an order."""
+    if not request.user.is_staff:
+        messages.error(request, "Access denied.")
+        return redirect('home')
+        
+    if request.method == 'POST':
+        order_id = request.POST.get('order_id')
+        otp = request.POST.get('otp')
+        
+        try:
+            order = Order.objects.get(id=order_id, status='Out for Delivery')
+            if order.delivery_otp and order.delivery_otp == otp.strip():
+                order.status = 'Delivered'
+                order.save()
+                messages.success(request, f"Order #{order_id} marked as Delivered.")
+            else:
+                messages.error(request, "Invalid OTP or Order not ready for delivery.")
+        except Order.DoesNotExist:
+            messages.error(request, "Order not found or invalid status.")
+            
+    return render(request, 'firstApp/delivery_confirmation.html')
 
 def home(request):
     categories = Category.objects.all()
@@ -128,65 +239,7 @@ def remove_from_cart(request, item_id):
     messages.success(request, "Item removed from cart.")
     return redirect('view_cart')
 
-@login_required
-def checkout(request):
-    cart, created = Cart.objects.get_or_create(user=request.user)
-    if not cart.items.exists():
-        messages.warning(request, "Your cart is empty.")
-        return redirect('product_list')
 
-    delivery_charge = 50
-    total_amount = cart.total_price + delivery_charge
-
-    if request.method == 'POST':
-        form = CheckoutForm(request.POST)
-        if form.is_valid():
-            address = form.cleaned_data['address']
-            payment_method = form.cleaned_data['payment_method']
-            upi_id = form.cleaned_data.get('upi_id', '')
-            
-            # Check stock availability
-            for item in cart.items.all():
-                if item.product.stock_quantity < item.quantity:
-                    messages.error(request, f"{item.product.name} is out of stock or insufficient quantity available.")
-                    return redirect('view_cart')
-            
-            # Create Order
-            order = Order.objects.create(
-                user=request.user,
-                address=address,
-                total_price=total_amount,
-                status='Pending',
-                payment_method=payment_method
-            )
-            
-            # Create Order Items
-            for item in cart.items.all():
-                OrderItem.objects.create(
-                    order=order,
-                    product=item.product,
-                    quantity=item.quantity,
-                    price=item.product.final_price
-                )
-                # Reduce Stock
-                item.product.stock_quantity -= item.quantity
-                item.product.save()
-            
-            # Clear Cart
-            cart.items.all().delete()
-            
-            messages.success(request, "Order placed successfully!")
-            return redirect('order_history')
-    else:
-        initial_data = {'address': request.user.address}
-        form = CheckoutForm(initial=initial_data)
-        
-    return render(request, 'firstApp/checkout.html', {
-        'form': form, 
-        'cart': cart, 
-        'delivery_charge': delivery_charge, 
-        'total_amount': total_amount
-    })
 
 @login_required
 def order_history(request):
@@ -197,8 +250,42 @@ def about(request):
     reviews = fetch_google_reviews()
     return render(request, 'firstApp/about.html', {'reviews': reviews})
 
+from .forms import CustomUserCreationForm, CustomUserUpdateForm, CheckoutForm, AppointmentForm, EmailSignupForm, EmailLoginForm, OTPVerificationForm, AccountDeletionForm, ForgotPasswordForm, ResetPasswordForm, ContactForm, CancelAppointmentForm
+
+# ... (rest of imports)
+
 def contact(request):
-    return render(request, 'firstApp/contact.html')
+    if request.method == 'POST':
+        form = ContactForm(request.POST)
+        if form.is_valid():
+            name = form.cleaned_data['name']
+            email = form.cleaned_data['email']
+            message = form.cleaned_data['message']
+            
+            # Send Email to Admin
+            try:
+                send_mail(
+                    subject=f"New Contact Inquiry from {name}",
+                    message=f"Name: {name}\nEmail: {email}\n\nMessage:\n{message}",
+                    from_email=settings.DEFAULT_FROM_EMAIL,
+                    recipient_list=['shivshaktielectrical1430@gmail.com'],
+                    fail_silently=False,
+                )
+                messages.success(request, "Your message has been sent successfully!")
+                return redirect('contact')
+            except Exception as e:
+                print(f"Contact Email Error: {e}")
+                messages.error(request, "Failed to send message. Please try again later.")
+    else:
+        initial_data = {}
+        if request.user.is_authenticated:
+            initial_data = {
+                'name': request.user.first_name + ' ' + request.user.last_name if request.user.first_name else request.user.username,
+                'email': request.user.email
+            }
+        form = ContactForm(initial=initial_data)
+        
+    return render(request, 'firstApp/contact.html', {'form': form})
 
 # Appointment Views
 @login_required
@@ -212,9 +299,57 @@ def book_appointment(request):
                 # If verified, force the email to be the user's email
                 if request.user.is_email_verified:
                     appointment.email = request.user.email
-            appointment.save()
-            messages.success(request, "Appointment booked successfully!")
-            return redirect('appointment_success')
+            try:
+                appointment.save()
+                
+                # Store ID for success page
+                request.session['booked_appointment_id'] = appointment.id
+
+                # --- Notification Logic ---
+                try:
+                    # 1. Collect Details
+                    details = f"""
+New Service Request Received
+
+Full Name: {appointment.customer_name}
+Mobile Number: {appointment.phone}
+Email: {appointment.email if appointment.email else 'Not Provided'}
+Address: {appointment.house_number}, {appointment.address_line1}, {appointment.address_line2 if appointment.address_line2 else ''}, {appointment.landmark if appointment.landmark else ''}, {appointment.city} - {appointment.pincode}
+Service Type: {appointment.get_service_type_display()}
+Date: {appointment.date}
+Time: {appointment.time}
+Description: {appointment.problem_description}
+Timestamp: {timezone.now().strftime('%Y-%m-%d %H:%M:%S')}
+
+Regards,
+Shiv Shakti Electrical
+"""
+                    
+                    # 2. Send Email to Admin
+                    send_mail(
+                        subject="New Service Request Received – Shiv Shakti Electrical",
+                        message=details,
+                        from_email=settings.DEFAULT_FROM_EMAIL,
+                        recipient_list=['shivshaktielectrical1430@gmail.com'],
+                        fail_silently=False,
+                    )
+                except Exception as e:
+                    print(f"Notification Error: {e}")
+                    # Log error but don't stop the user flow
+                
+                messages.success(request, "Your service request has been submitted successfully. Our team will contact you soon.")
+                return redirect('appointment_success')
+            except Exception as e:
+                print(f"Appointment Save Error: {e}")
+                messages.error(request, "Your request could not be processed. We will contact you soon.")
+                return redirect('book_appointment')
+        else:
+            # Debugging: Print errors to console and show user
+            print("Form Errors:", form.errors)
+            messages.error(request, "Please correct the errors in the form.")
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, f"{field}: {error}")
     else:
         initial_data = {}
         if request.user.is_authenticated:
@@ -222,23 +357,84 @@ def book_appointment(request):
                 'customer_name': request.user.first_name + ' ' + request.user.last_name if request.user.first_name else request.user.username,
                 'phone': request.user.phone_number,
                 'email': request.user.email,
-                'address': request.user.address,
-                'city': 'Indore'
+                'house_number': request.user.house_number,
+                'address_line1': request.user.address_line1 if request.user.address_line1 else request.user.address, # Fallback to old address field
+                'city': request.user.city if request.user.city else 'Indore',
+                'landmark': request.user.landmark,
+                'pincode': request.user.pincode,
             }
         form = AppointmentForm(initial=initial_data)
-        if request.user.is_authenticated and request.user.is_email_verified:
-            form.fields['email'].widget.attrs['readonly'] = True
-            form.fields['email'].help_text = "Email is verified and cannot be changed."
+        if request.user.is_authenticated:
+            if request.user.is_email_verified:
+                form.fields['email'].widget.attrs['readonly'] = True
+                form.fields['email'].help_text = "Email is verified and cannot be changed."
+            if request.user.pincode:
+                form.fields['pincode'].widget.attrs['readonly'] = True
+                form.fields['pincode'].help_text = "Pincode from your profile."
+            if request.user.address_line1 or request.user.address:
+                form.fields['address_line1'].widget.attrs['readonly'] = True
+                form.fields['address_line1'].help_text = "Address from your profile."
+            if request.user.house_number:
+                form.fields['house_number'].widget.attrs['readonly'] = True
+            if request.user.city:
+                 # City is already readonly and set to Indore in form __init__, but we can ensure it matches
+                 pass 
+            if request.user.landmark:
+                form.fields['landmark'].widget.attrs['readonly'] = True
     
     return render(request, 'firstApp/book_appointment.html', {'form': form})
 
 def appointment_success(request):
-    return render(request, 'firstApp/appointment_success.html')
+    appointment_id = request.session.get('booked_appointment_id')
+    appointment = None
+    if appointment_id:
+        try:
+            appointment = Appointment.objects.get(id=appointment_id)
+        except Appointment.DoesNotExist:
+            pass
+            
+    return render(request, 'firstApp/appointment_success.html', {'appointment': appointment})
 
 @login_required
 def my_appointments(request):
     appointments = Appointment.objects.filter(user=request.user).order_by('-created_at')
     return render(request, 'firstApp/my_appointments.html', {'appointments': appointments})
+
+@login_required
+def cancel_appointment(request, pk):
+    appointment = get_object_or_404(Appointment, pk=pk, user=request.user)
+    
+    if appointment.status == 'Cancelled':
+        messages.warning(request, "This appointment is already cancelled.")
+        return redirect('my_appointments')
+
+    if request.method == 'POST':
+        form = CancelAppointmentForm(request.POST)
+        if form.is_valid():
+            reason = form.cleaned_data['reason']
+            other_reason = form.cleaned_data['other_reason']
+            final_reason = f"{reason}: {other_reason}" if reason == 'Other' and other_reason else reason
+            
+            appointment.status = 'Cancelled'
+            appointment.cancellation_reason = final_reason
+            appointment.save()
+            
+            # Send Email to Admin
+            try:
+                send_mail(
+                    subject=f"Service Cancellation - {appointment.customer_name}",
+                    message=f"Appointment ID: {appointment.id}\nCustomer: {appointment.customer_name}\nReason: {final_reason}\nDate: {appointment.date}",
+                    from_email=settings.DEFAULT_FROM_EMAIL,
+                    recipient_list=['shivshaktielectrical1430@gmail.com'],
+                    fail_silently=False,
+                )
+            except Exception as e:
+                print(f"Cancellation Email Error: {e}")
+
+            messages.success(request, "Appointment cancelled successfully.")
+            return redirect('my_appointments')
+    
+    return redirect('my_appointments')
 
 
 # AJAX API Endpoints
@@ -405,29 +601,53 @@ def email_login(request):
         login_type = request.POST.get('login_type')
         
         if login_type == 'password':
-            email = request.POST.get('email')
+            identifier = request.POST.get('identifier')
             password = request.POST.get('password')
             
-            if not email or not password:
-                messages.error(request, "Please enter both email and password.")
+            if not identifier or not password:
+                messages.error(request, "Please enter both identifier and password.")
             else:
                 try:
-                    user_obj = CustomUser.objects.get(email=email)
+                    # Determine if identifier is email or phone
+                    if '@' in identifier:
+                        user_obj = CustomUser.objects.get(email=identifier)
+                    else:
+                        user_obj = CustomUser.objects.get(phone_number=identifier)
+                        
                     user = authenticate(request, username=user_obj.phone_number, password=password)
                     if user:
                         login(request, user)
                         messages.success(request, "Login successful!")
                         return redirect('home')
                     else:
-                        messages.error(request, "Invalid email or password.")
+                        messages.error(request, "Invalid credentials.")
                 except CustomUser.DoesNotExist:
-                    messages.error(request, "No account found with this email.")
-            form = EmailLoginForm(initial={'email': email}) # Pre-fill email
+                    messages.error(request, "No account found.")
+            form = EmailLoginForm(initial={'identifier': identifier}) 
             
         elif login_type == 'otp':
+            # OTP login currently only supports email as per previous implementation, 
+            # but we can extend it if needed. For now, let's keep it email-based or update form.
+            # The user request specifically mentioned "Enable login using either email or phone number".
+            # Assuming this applies to password login primarily. 
+            # If OTP login is also needed for phone, we'd need SMS integration.
+            # Let's stick to email for OTP for now as per existing code, or update if requested.
+            # Actually, let's update the form usage here too.
             form = EmailLoginForm(request.POST)
             if form.is_valid():
-                email = form.cleaned_data['email']
+                identifier = form.cleaned_data['identifier']
+                
+                if '@' in identifier:
+                     email = identifier
+                else:
+                     # If phone, we need to find the email associated to send OTP (since we only have email OTP)
+                     try:
+                         user = CustomUser.objects.get(phone_number=identifier)
+                         email = user.email
+                     except CustomUser.DoesNotExist:
+                         messages.error(request, "User not found.")
+                         return render(request, 'firstApp/login_email.html', {'form': form})
+
                 otp = EmailOTP.generate_otp()
                 EmailOTP.objects.create(email=email, otp=otp)
                 if send_otp_email(email, otp):
@@ -586,3 +806,76 @@ def fetch_google_reviews():
 def google_reviews(request):
     reviews = fetch_google_reviews()
     return render(request, "firstApp/reviews.html", {"reviews": reviews})
+
+# --- Profile Password Change Views ---
+
+@login_required
+def initiate_profile_password_change(request):
+    user = request.user
+    if not user.email:
+        messages.error(request, "Please add an email address to your profile to change password.")
+        return redirect('profile')
+        
+    otp = EmailOTP.generate_otp()
+    EmailOTP.objects.create(email=user.email, otp=otp)
+    
+    if send_otp_email(user.email, otp):
+        request.session['password_change_otp_email'] = user.email
+        request.session['password_change_verified'] = False
+        messages.success(request, f"OTP sent to {user.email}")
+        return redirect('verify_profile_password_change_otp')
+    else:
+        messages.error(request, "Failed to send OTP. Please try again.")
+        return redirect('profile')
+
+@login_required
+def verify_profile_password_change_otp(request):
+    email = request.session.get('password_change_otp_email')
+    if not email or email != request.user.email:
+        messages.error(request, "Invalid session. Please try again.")
+        return redirect('profile')
+        
+    if request.method == 'POST':
+        form = OTPVerificationForm(request.POST)
+        if form.is_valid():
+            otp_entered = form.cleaned_data['otp']
+            try:
+                otp_obj = EmailOTP.objects.filter(email=email).latest('created_at')
+                success, message = otp_obj.verify(otp_entered)
+                if success:
+                    request.session['password_change_verified'] = True
+                    return redirect('change_profile_password')
+                else:
+                    messages.error(request, message)
+            except EmailOTP.DoesNotExist:
+                messages.error(request, "Invalid OTP request.")
+    else:
+        form = OTPVerificationForm()
+    return render(request, 'firstApp/profile_password_change_otp.html', {'form': form})
+
+@login_required
+def change_profile_password(request):
+    if not request.session.get('password_change_verified'):
+        messages.error(request, "Please verify OTP first.")
+        return redirect('profile')
+        
+    if request.method == 'POST':
+        form = ResetPasswordForm(request.POST) 
+        if form.is_valid():
+            user = request.user
+            user.set_password(form.cleaned_data['new_password'])
+            user.save()
+            
+            # Cleanup
+            del request.session['password_change_otp_email']
+            del request.session['password_change_verified']
+            
+            # Keep user logged in
+            login(request, user)
+            
+            messages.success(request, "Password changed successfully!")
+            return redirect('profile')
+    else:
+        form = ResetPasswordForm()
+        
+    return render(request, 'firstApp/profile_password_change_form.html', {'form': form})

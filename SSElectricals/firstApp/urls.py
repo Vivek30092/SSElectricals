@@ -26,6 +26,9 @@ urlpatterns = [
     path('login/', auth_views.LoginView.as_view(template_name='firstApp/login.html'), name='login'),
     path('logout/', auth_views.LogoutView.as_view(next_page='login'), name='logout'),
     path('profile/', views.profile, name='profile'),
+    path('profile/change-password/', views.initiate_profile_password_change, name='initiate_profile_password_change'),
+    path('profile/change-password/verify/', views.verify_profile_password_change_otp, name='verify_profile_password_change_otp'),
+    path('profile/change-password/confirm/', views.change_profile_password, name='change_profile_password'),
     
     path('cart/', views.view_cart, name='view_cart'),
     path('add-to-cart/<int:product_id>/', views.add_to_cart, name='add_to_cart'),
@@ -47,15 +50,17 @@ urlpatterns = [
     path('book-appointment/', views.book_appointment, name='book_appointment'),
     path('appointment-success/', views.appointment_success, name='appointment_success'),
     path('my-appointments/', views.my_appointments, name='my_appointments'),
+    path('cancel-appointment/<int:pk>/', views.cancel_appointment, name='cancel_appointment'),
     
     # Admin Appointment URLs
     path('admin/appointments/', admin_views.admin_appointment_list, name='admin_appointment_list'),
     path('admin/appointments/update/<int:pk>/', admin_views.admin_appointment_update, name='admin_appointment_update'),
     path('admin/appointments/delete/<int:pk>/', admin_views.admin_appointment_delete, name='admin_appointment_delete'),
 
+    path('confirm-delivery/', views.confirm_delivery_otp, name='confirm_delivery_otp'),
+    
     # AJAX API endpoints
     path('api/cart/add/', views.ajax_add_to_cart, name='ajax_add_to_cart'),
-    path('api/cart/update/', views.ajax_update_cart, name='ajax_update_cart'),
     path('api/cart/update/', views.ajax_update_cart, name='ajax_update_cart'),
     path('api/search/', views.ajax_search, name='ajax_search'),
     

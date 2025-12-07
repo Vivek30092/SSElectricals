@@ -12,10 +12,19 @@
             <span class="text-muted ms-2">{{ order.created_at|date:"F j, Y" }}</span>
         </div>
         <div>
-            <span
-                class="badge bg-{% if order.status == 'Delivered' %}success{% elif order.status == 'Pending' %}warning{% else %}secondary{% endif %}">
-                {{ order.status }}
-            </span>
+            {% if order.status == 'Delivered' %}
+            <span class="badge bg-success">Delivered</span>
+            {% elif order.status == 'Pending' %}
+            <span class="badge bg-warning text-dark">Pending</span>
+            {% elif order.status == 'Confirmed' %}
+            <span class="badge bg-primary">Confirmed</span>
+            {% elif order.status == 'Out for Delivery' %}
+            <span class="badge bg-info text-dark">Out for Delivery</span>
+            {% elif order.status == 'Cancelled' %}
+            <span class="badge bg-danger">Cancelled</span>
+            {% else %}
+            <span class="badge bg-secondary">{{ order.status }}</span>
+            {% endif %}
         </div>
     </div>
     <div class="card-body">
@@ -25,7 +34,13 @@
                     <tr>
                         <th>Product</th>
                         <th>Quantity</th>
+                        <!-- Price Column hidden if pending? Or show estimated? 
+                             Let's show estimated/product price, but total as TBD if pending. -->
+                        {% if order.final_price %}
                         <th>Price</th>
+                        {% else %}
+                        <th>Est. Price</th>
+                        {% endif %}
                     </tr>
                 </thead>
                 <tbody>
@@ -39,14 +54,43 @@
                 </tbody>
                 <tfoot>
                     <tr class="border-top">
+                        <td colspan="2" class="text-end fw-bold">Delivery Charge:</td>
+                        <td class="fw-bold">
+                            {% if order.delivery_charge %}
+                            ₹{{ order.delivery_charge }}
+                            {% else %}
+                            TBD
+                            {% endif %}
+                        </td>
+                    </tr>
+                    <tr>
                         <td colspan="2" class="text-end fw-bold">Total:</td>
-                        <td class="fw-bold">₹{{ order.total_price }}</td>
+                        <td class="fw-bold">
+                            {% if order.final_price %}
+                            ₹{{ order.final_price }}
+                            {% else %}
+                            <span class="text-muted">Pending Confirmation</span>
+                            {% endif %}
+                        </td>
                     </tr>
                 </tfoot>
             </table>
         </div>
-        <p class="mb-0"><strong>Payment Method:</strong> {{ order.get_payment_method_display }}</p>
-        <p class="mb-0"><strong>Shipping Address:</strong> {{ order.address }}</p>
+        <div class="row">
+            <div class="col-md-6">
+                <p class="mb-0"><strong>Payment Method:</strong> {{ order.get_payment_method_display }}</p>
+                <p class="mb-0"><strong>Status:</strong> {{ order.get_status_display }}</p>
+            </div>
+            <div class="col-md-6">
+                <p class="mb-0"><strong>Shipping Address:</strong><br>{{ order.address }}</p>
+            </div>
+        </div>
+
+        {% if order.status == 'Pending' %}
+        <div class="alert alert-warning mt-3 mb-0 p-2 small">
+            <i class="fas fa-clock"></i> Waiting for admin confirmation. You will receive a call/SMS shortly.
+        </div>
+        {% endif %}
     </div>
 </div>
 {% endfor %}

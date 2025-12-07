@@ -26,9 +26,9 @@
                                 {% csrf_token %}
                                 <input type="hidden" name="login_type" value="password">
                                 <div class="mb-3">
-                                    <label class="form-label">Email Address</label>
-                                    <input type="email" name="email" class="form-control" placeholder="Enter your email"
-                                        required>
+                                    <label class="form-label">Email or Phone Number</label>
+                                    <input type="text" name="identifier" class="form-control"
+                                        placeholder="Enter your email or phone number" required>
                                 </div>
                                 <div class="mb-3">
                                     <label class="form-label">Password</label>
@@ -51,9 +51,9 @@
                                 {% csrf_token %}
                                 <input type="hidden" name="login_type" value="otp">
                                 <div class="mb-3">
-                                    <label class="form-label">Email Address</label>
-                                    <input type="email" name="email" class="form-control" placeholder="Enter your email"
-                                        required>
+                                    <label class="form-label">Email or Phone Number</label>
+                                    <input type="text" name="identifier" class="form-control"
+                                        placeholder="Enter your email or phone number" required>
                                 </div>
                                 <div class="d-grid">
                                     <button type="submit" class="btn btn-warning">Send OTP</button>

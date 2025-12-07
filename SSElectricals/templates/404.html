@@ -1,0 +1,38 @@
+{% extends 'firstApp/base.html' %}
+
+{% block title %}Page Not Found - SS Electricals{% endblock %}
+
+{% block content %}
+<div class="container py-5 text-center">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="mb-4">
+                <i class="fas fa-exclamation-triangle fa-5x text-warning mb-3"></i>
+                <h1 class="display-4 fw-bold">404</h1>
+                <h2 class="mb-4">Page Not Found</h2>
+                <p class="lead text-muted">The page you are looking for might have been removed, had its name changed,
+                    or is temporarily unavailable.</p>
+            </div>
+
+            <div class="d-grid gap-2 d-sm-flex justify-content-sm-center mb-5">
+                <a href="{% url 'home' %}" class="btn btn-primary btn-lg px-4 gap-3">Go Home</a>
+                <a href="{% url 'contact' %}" class="btn btn-outline-secondary btn-lg px-4">Contact Support</a>
+            </div>
+
+            <div class="card shadow-sm border-0 bg-light">
+                <div class="card-body">
+                    <h5 class="card-title">Report this issue</h5>
+                    <p class="card-text small text-muted">Help us improve by describing what you were trying to do.</p>
+                    <form action="{% url 'contact' %}" method="get"> <!-- Redirect to contact for now -->
+                        <div class="input-group mb-3">
+                            <input type="text" class="form-control" placeholder="Describe the error..."
+                                aria-label="Error description">
+                            <button class="btn btn-outline-secondary" type="submit">Report</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

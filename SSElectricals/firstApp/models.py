@@ -5,7 +5,11 @@ from django.conf import settings
 # 1. Authentication System
 class CustomUser(AbstractUser):
     phone_number = models.CharField(max_length=15, unique=True)
-    address = models.TextField(blank=True, null=True)
+    address = models.TextField(blank=True, null=True) # Keeping for backward compatibility
+    house_number = models.CharField(max_length=50, blank=True, null=True)
+    address_line1 = models.CharField(max_length=255, blank=True, null=True)
+    city = models.CharField(max_length=100, blank=True, null=True, default='Indore')
+    landmark = models.CharField(max_length=255, blank=True, null=True)
     pincode = models.CharField(max_length=6, blank=True, null=True)
     profile_picture = models.ImageField(upload_to='profile_pics/', blank=True, null=True)
     is_email_verified = models.BooleanField(default=False)
@@ -48,6 +52,20 @@ class Product(models.Model):
     image = models.ImageField(upload_to='product_images/')
     created_at = models.DateTimeField(auto_now_add=True)
 
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        
+        if self.image:
+            try:
+                from PIL import Image
+                img = Image.open(self.image.path)
+                if img.height > 800 or img.width > 800:
+                    output_size = (800, 800)
+                    img.thumbnail(output_size)
+                    img.save(self.image.path)
+            except Exception as e:
+                pass
+
     def __str__(self):
         return self.name
 
@@ -59,6 +77,20 @@ class ProductImage(models.Model):
     product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='images')
     image = models.ImageField(upload_to='product_gallery/')
     created_at = models.DateTimeField(auto_now_add=True)
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        
+        if self.image:
+            try:
+                from PIL import Image
+                img = Image.open(self.image.path)
+                if img.height > 800 or img.width > 800:
+                    output_size = (800, 800)
+                    img.thumbnail(output_size)
+                    img.save(self.image.path)
+            except Exception as e:
+                pass
 
     def __str__(self):
         return f"Image for {self.product.name}"
@@ -92,20 +124,30 @@ class CartItem(models.Model):
 class Order(models.Model):
     STATUS_CHOICES = [
         ('Pending', 'Pending'),
-        ('Shipped', 'Shipped'),
+        ('Confirmed', 'Confirmed'),
+        ('Out for Delivery', 'Out for Delivery'),
         ('Delivered', 'Delivered'),
         ('Cancelled', 'Cancelled'),
     ]
     
     PAYMENT_CHOICES = [
         ('COD', 'Cash on Delivery'),
-        ('UPI', 'UPI'),
-        ('Card', 'Credit/Debit Card'),
     ]
 
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='orders')
     address = models.TextField()
-    total_price = models.DecimalField(max_digits=10, decimal_places=2)
+    latitude = models.FloatField(blank=True, null=True)
+    longitude = models.FloatField(blank=True, null=True)
+    
+    # Pricing
+    total_price = models.DecimalField(max_digits=10, decimal_places=2, help_text="Sum of product prices")
+    delivery_charge = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    final_price = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True, help_text="Final price confirmed by admin")
+    
+    # Delivery Info
+    distance_km = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    delivery_otp = models.CharField(max_length=6, blank=True, null=True)
+    
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Pending')
     payment_method = models.CharField(max_length=20, choices=PAYMENT_CHOICES, default='COD')
     created_at = models.DateTimeField(auto_now_add=True)
@@ -223,13 +265,16 @@ class EmailOTP(models.Model):
 # 6. Appointment System
 class Appointment(models.Model):
     SERVICE_CHOICES = [
-        ('Fridge Repair', 'Fridge Repair'),
-        ('Washing Machine Repair', 'Washing Machine Repair'),
-        ('Geyser Repair', 'Geyser Repair'),
+        ('CCTV Installation', 'CCTV Installation'),
         ('Electrical Wiring / Short Circuit', 'Electrical Wiring / Short Circuit'),
         ('Fan / Motor Repair', 'Fan / Motor Repair'),
+        ('Fridge Repair', 'Fridge Repair'),
+        ('Geyser Repair', 'Geyser Repair'),
         ('LED / Tube Light Repair', 'LED / Tube Light Repair'),
+        ('Underground Wiring', 'Underground Wiring'),
+        ('Washing Machine Repair', 'Washing Machine Repair'),
         ('Other Appliance Repair', 'Other Appliance Repair'),
+
     ]
 
     STATUS_CHOICES = [
@@ -243,14 +288,48 @@ class Appointment(models.Model):
         ('Indore', 'Indore'),
     ]
 
+    AREA_CHOICES = [
+        ('Abhinandan Nagar', 'Abhinandan Nagar'),
+        ('Bapat Square', 'Bapat Square'),
+        ('Bhawarkua', 'Bhawarkua'),
+        ('Gauri Nagar', 'Gauri Nagar'),
+        ('Khajrana', 'Khajrana'),
+        ('LIG Colony', 'LIG Colony'),
+        ('Luv Kush', 'Luv Kush'),
+        ('MR10', 'MR10'),
+        ('Malwa Mill', 'Malwa Mill'),
+        ('Nehru Nagar', 'Nehru Nagar'),
+        ('Nipania', 'Nipania'),
+        ('Palasia', 'Palasia'),
+        ('Pardesipura', 'Pardesipura'),
+        ('Prime City', 'Prime City'),
+        ('Rajendra Nagar', 'Rajendra Nagar'),
+        ('Rajwada', 'Rajwada'),
+        ('Royal Bungalow City', 'Royal Bungalow City'),
+        ('Scheme No. 74', 'Scheme No. 74'),
+        ('Sukhliya', 'Sukhliya'),
+        ('Sundar Nagar', 'Sundar Nagar'),
+        ('Veena Nagar', 'Veena Nagar'),
+        ('Vijay Nagar', 'Vijay Nagar'),
+        ('Other', 'Other region'),
+    ]
+
     # Link to user if logged in (optional but good for history)
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
     
     customer_name = models.CharField(max_length=100)
     phone = models.CharField(max_length=15)
     email = models.EmailField()
-    address = models.TextField()
+    # Detailed Address Fields
+    pincode = models.CharField(max_length=6, default='452001')
+    house_number = models.CharField(max_length=50, default='')
+    address_line1 = models.CharField(max_length=255, default='')
+    address_line2 = models.CharField(max_length=255, blank=True, null=True)
+    landmark = models.CharField(max_length=255, blank=True, null=True)
+    # Keeping original address field for backward compatibility or full address storage if needed
+    address = models.TextField(blank=True, null=True)
     city = models.CharField(max_length=50, choices=CITY_CHOICES, default='Indore')
+    area = models.CharField(max_length=50, default='Other')
     
     service_type = models.CharField(max_length=100, choices=SERVICE_CHOICES)
     date = models.DateField()
@@ -261,6 +340,7 @@ class Appointment(models.Model):
     extra_charge = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Pending')
+    cancellation_reason = models.CharField(max_length=255, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

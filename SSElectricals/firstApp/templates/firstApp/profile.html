@@ -23,6 +23,14 @@
                         {% endif %}
                     </div>
 
+                    {% if form.non_field_errors %}
+                    <div class="alert alert-danger">
+                        {% for error in form.non_field_errors %}
+                        {{ error }}
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label class="form-label">First Name</label>
@@ -48,8 +56,23 @@
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label">Address</label>
-                        {{ form.address }}
+                        <label class="form-label">House Number</label>
+                        {{ form.house_number }}
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Address Line 1</label>
+                        {{ form.address_line1 }}
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">City</label>
+                        {{ form.city }}
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Near Landmark (Optional)</label>
+                        {{ form.landmark }}
                     </div>
 
                     <div class="mb-3">
@@ -63,7 +86,11 @@
                     </div>
 
                     <div class="d-flex justify-content-between align-items-center mt-4">
-                        <button type="submit" class="btn btn-primary">Update Profile</button>
+                        <div>
+                            <button type="submit" class="btn btn-primary me-2">Update Profile</button>
+                            <a href="{% url 'initiate_profile_password_change' %}"
+                                class="btn btn-outline-warning">Change Password</a>
+                        </div>
                         <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal"
                             data-bs-target="#deleteAccountModal">
                             Delete Account

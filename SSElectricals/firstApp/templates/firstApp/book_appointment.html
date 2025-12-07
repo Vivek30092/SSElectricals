@@ -4,118 +4,383 @@
 {% block content %}
 <div class="container my-5">
     <div class="row justify-content-center">
-        <div class="col-md-8">
-            <div class="card shadow-lg border-0 rounded-3">
-                <div class="card-header bg-warning text-dark p-4">
-                    <h2 class="mb-0 fw-bold"><i class="fas fa-calendar-check me-2"></i>Book a Service Appointment</h2>
+        <div class="col-lg-10">
+            <div class="card shadow-lg border-0 rounded-4 overflow-hidden">
+                <div
+                    class="card-header bg-gradient bg-warning text-dark p-4 d-flex align-items-center justify-content-between">
+                    <h2 class="mb-0 fw-bold h3"><i class="fas fa-calendar-check me-2"></i>Book a Service</h2>
+                    <span class="badge bg-dark text-warning fs-6 rounded-pill px-3 py-2">Quick & Reliable</span>
                 </div>
-                <div class="card-body p-4">
-                    <div class="alert alert-info border-0 shadow-sm mb-4">
-                        <div class="d-flex">
-                            <div class="me-3">
-                                <i class="fas fa-info-circle fa-2x text-info"></i>
-                            </div>
-                            <div>
-                                <h5 class="alert-heading fw-bold">Service Charges</h5>
-                                <p class="mb-0">Home service visiting charge is <strong>₹200</strong>. Additional
-                                    material cost will be charged based on the repair.</p>
-                            </div>
-                        </div>
-                    </div>
+                <div class="card-body p-5 bg-light">
 
-                    <form method="post" novalidate>
+                    <form method="post" novalidate id="bookingForm">
                         {% csrf_token %}
+                        {{ form.visiting_charge }}
 
-                        <h5 class="mb-3 border-bottom pb-2">Customer Details</h5>
-                        <div class="row g-3 mb-4">
+                        {% if form.non_field_errors %}
+                        <div class="alert alert-danger rounded-3 shadow-sm">
+                            {% for error in form.non_field_errors %}
+                            {{ error }}
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+
+                        <div class="row g-4">
+                            <!-- Left Column: Customer & Address -->
                             <div class="col-md-6">
-                                <label for="{{ form.customer_name.id_for_label }}" class="form-label">Full Name</label>
-                                {{ form.customer_name }}
-                                {% if form.customer_name.errors %}
-                                <div class="text-danger small">{{ form.customer_name.errors.0 }}</div>
-                                {% endif %}
+                                <div class="bg-white p-4 rounded-3 shadow-sm h-100">
+                                    <h5 class="mb-3 text-primary border-bottom pb-2"><i
+                                            class="fas fa-user me-2"></i>Customer Details</h5>
+                                    <div class="mb-3">
+                                        <label for="{{ form.customer_name.id_for_label }}"
+                                            class="form-label fw-semibold">Full Name</label>
+                                        {{ form.customer_name }}
+                                        {% if form.customer_name.errors %}
+                                        <div class="text-danger small mt-1">{{ form.customer_name.errors.0 }}</div>
+                                        {% endif %}
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="{{ form.phone.id_for_label }}" class="form-label fw-semibold">Phone
+                                            Number</label>
+                                        {{ form.phone }}
+                                        {% if form.phone.errors %}
+                                        <div class="text-danger small mt-1">{{ form.phone.errors.0 }}</div>
+                                        {% endif %}
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="{{ form.email.id_for_label }}" class="form-label fw-semibold">Email
+                                            Address</label>
+                                        {{ form.email }}
+                                        {% if form.email.errors %}
+                                        <div class="text-danger small mt-1">{{ form.email.errors.0 }}</div>
+                                        {% endif %}
+                                    </div>
+
+                                    <h5 class="mb-3 mt-4 text-primary border-bottom pb-2"><i
+                                            class="fas fa-map-marker-alt me-2"></i>Location</h5>
+                                    <div class="mb-3">
+                                        <button class="btn btn-outline-primary w-100 mb-2" type="button"
+                                            id="detectLocationBtn">
+                                            <i class="fas fa-crosshairs me-1"></i> Auto-fill Address using GPS
+                                        </button>
+                                        <div id="locationMsg" class="form-text small"></div>
+                                    </div>
+                                    <div class="row g-2">
+                                        <div class="col-4">
+                                            <label for="{{ form.house_number.id_for_label }}"
+                                                class="form-label small text-muted">House No.</label>
+                                            {{ form.house_number }}
+                                        </div>
+                                        <div class="col-8">
+                                            <label for="{{ form.address_line1.id_for_label }}"
+                                                class="form-label small text-muted">Address Line 1</label>
+                                            {{ form.address_line1 }}
+                                        </div>
+                                    </div>
+                                    <div class="mt-2">
+                                        <label for="{{ form.address_line2.id_for_label }}"
+                                            class="form-label small text-muted">Address Line 2 (Optional)</label>
+                                        {{ form.address_line2 }}
+                                    </div>
+                                    <div class="row g-2 mt-1">
+                                        <div class="col-6">
+                                            <label for="{{ form.landmark.id_for_label }}"
+                                                class="form-label small text-muted">Landmark</label>
+                                            {{ form.landmark }}
+                                        </div>
+                                        <div class="col-6">
+                                            <label for="{{ form.pincode.id_for_label }}"
+                                                class="form-label small text-muted">Pincode</label>
+                                            {{ form.pincode }}
+                                        </div>
+                                    </div>
+                                    <div class="row g-2 mt-1">
+                                        <div class="col-6">
+                                            <label for="{{ form.city.id_for_label }}"
+                                                class="form-label small text-muted">City</label>
+                                            {{ form.city }}
+                                        </div>
+                                        <div class="col-6">
+                                            <label for="{{ form.area.id_for_label }}"
+                                                class="form-label small text-muted">Area</label>
+                                            {{ form.area }}
+                                            {{ form.other_area }}
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
+
+                            <!-- Right Column: Service & Summary -->
                             <div class="col-md-6">
-                                <label for="{{ form.phone.id_for_label }}" class="form-label">Phone Number</label>
-                                {{ form.phone }}
-                                {% if form.phone.errors %}
-                                <div class="text-danger small">{{ form.phone.errors.0 }}</div>
-                                {% endif %}
-                            </div>
-                            <div class="col-md-6">
-                                <label for="{{ form.email.id_for_label }}" class="form-label">Email Address</label>
-                                {{ form.email }}
-                                {% if form.email.errors %}
-                                <div class="text-danger small">{{ form.email.errors.0 }}</div>
-                                {% endif %}
-                            </div>
-                            <div class="col-md-6">
-                                <label for="{{ form.city.id_for_label }}" class="form-label">City</label>
-                                {{ form.city }}
-                                <div class="form-text">Service available only in Indore.</div>
-                                {% if form.city.errors %}
-                                <div class="text-danger small">{{ form.city.errors.0 }}</div>
-                                {% endif %}
-                            </div>
-                            <div class="col-12">
-                                <label for="{{ form.address.id_for_label }}" class="form-label">Complete Address</label>
-                                {{ form.address }}
-                                {% if form.address.errors %}
-                                <div class="text-danger small">{{ form.address.errors.0 }}</div>
-                                {% endif %}
+                                <div class="bg-white p-4 rounded-3 shadow-sm h-100 d-flex flex-column">
+                                    <h5 class="mb-3 text-primary border-bottom pb-2"><i
+                                            class="fas fa-tools me-2"></i>Service Request</h5>
+
+                                    <div class="mb-3">
+                                        <label for="{{ form.service_type.id_for_label }}"
+                                            class="form-label fw-semibold">Select Service</label>
+                                        {{ form.service_type }}
+                                        {% if form.service_type.errors %}
+                                        <div class="text-danger small mt-1">{{ form.service_type.errors.0 }}</div>
+                                        {% endif %}
+                                    </div>
+
+                                    <div class="row g-2 mb-3">
+                                        <div class="col-6">
+                                            <label for="{{ form.date.id_for_label }}"
+                                                class="form-label fw-semibold">Date</label>
+                                            {{ form.date }}
+                                        </div>
+                                        <div class="col-6">
+                                            <label for="{{ form.time.id_for_label }}"
+                                                class="form-label fw-semibold">Time</label>
+                                            {{ form.time }}
+                                        </div>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label for="{{ form.problem_description.id_for_label }}"
+                                            class="form-label fw-semibold">Describe Issue</label>
+                                        {{ form.problem_description }}
+                                    </div>
+
+                                    <!-- Cost Summary Section (Moved here)-->
+                                    <div class="mt-auto pt-4">
+                                        <div id="costSummaryCard" class="card border-warning bg-warning bg-opacity-10">
+                                            <div class="card-body">
+                                                <h6 class="card-title fw-bold text-dark"><i
+                                                        class="fas fa-file-invoice-dollar me-2"></i>Estimated Cost</h6>
+                                                <div id="chargeDisplay">
+                                                    <p class="mb-1 text-muted small">Please detect your location to
+                                                        calculate visiting charges.</p>
+                                                    <p class="mb-0 fw-bold text-dark fs-5">₹0</p>
+                                                </div>
+                                                <p class="mt-2 mb-0 text-muted" style="font-size: 0.75rem;">* Service
+                                                    charge includes only the visit fee. Material costs are extra. </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
-
-                        <h5 class="mb-3 border-bottom pb-2">Service Details</h5>
-                        <div class="row g-3 mb-4">
-                            <div class="col-md-12">
-                                <label for="{{ form.service_type.id_for_label }}" class="form-label">Select
-                                    Service</label>
-                                {{ form.service_type }}
-                                {% if form.service_type.errors %}
-                                <div class="text-danger small">{{ form.service_type.errors.0 }}</div>
-                                {% endif %}
-                            </div>
-                            <div class="col-md-6">
-                                <label for="{{ form.date.id_for_label }}" class="form-label">Preferred Date</label>
-                                {{ form.date }}
-                                {% if form.date.errors %}
-                                <div class="text-danger small">{{ form.date.errors.0 }}</div>
-                                {% endif %}
-                            </div>
-                            <div class="col-md-6">
-                                <label for="{{ form.time.id_for_label }}" class="form-label">Preferred Time (9 AM - 8
-                                    PM)</label>
-                                {{ form.time }}
-                                {% if form.time.errors %}
-                                <div class="text-danger small">{{ form.time.errors.0 }}</div>
-                                {% endif %}
-                            </div>
-                            <div class="col-12">
-                                <label for="{{ form.problem_description.id_for_label }}" class="form-label">Describe the
-                                    Issue</label>
-                                {{ form.problem_description }}
-                                {% if form.problem_description.errors %}
-                                <div class="text-danger small">{{ form.problem_description.errors.0 }}</div>
-                                {% endif %}
-                            </div>
-                        </div>
-
-                        <div class="d-grid gap-2">
-                            <button type="submit" class="btn btn-dark btn-lg fw-bold">Book Appointment</button>
-                        </div>
-                    </form>
                 </div>
             </div>
         </div>
+
+        <div class="d-grid gap-2 mt-4 pt-2">
+            <button type="submit"
+                class="btn btn-dark btn-lg py-3 rounded-3 fw-bold shadow-sm transition-all hover-lift">
+                <i class="fas fa-check-circle me-2"></i>Confirm Booking
+            </button>
+        </div>
+        </form>
     </div>
 </div>
+</div>
+</div>
+</div>
+
+<style>
+    .hover-lift:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 .5rem 1rem rgba(0, 0, 0, .15) !important;
+    }
+
+    .transition-all {
+        transition: all 0.3s ease;
+    }
+</style>
 
 <script>
     // Simple client-side validation for date (disable past dates)
     document.addEventListener('DOMContentLoaded', function () {
         var today = new Date().toISOString().split('T')[0];
-        document.querySelector('input[type="date"]').setAttribute('min', today);
+        var dateInput = document.querySelector('input[type="date"]');
+        if (dateInput) {
+            dateInput.setAttribute('min', today);
+        }
+
+        // Initialize other area visibility
+        var areaSelect = document.getElementById('id_area');
+        if (areaSelect) toggleOtherArea(areaSelect);
+
+        // Check if profile data is present and locked
+        var pincodeInput = document.getElementById('id_pincode');
+        var detectBtn = document.getElementById('detectLocationBtn');
+        if (pincodeInput && pincodeInput.hasAttribute('readonly')) {
+            if (detectBtn) {
+                // Do NOT disable the button, just update text to indicate it's for cost calculation
+                detectBtn.innerHTML = '<i class="fas fa-calculator me-1"></i> Calculate Visiting Charge';
+                detectBtn.title = "Address is locked. Click to calculate visiting charge based on current location.";
+                detectBtn.classList.remove('btn-outline-primary');
+                detectBtn.classList.add('btn-outline-success');
+            }
+        }
     });
+
+    document.getElementById('detectLocationBtn').addEventListener('click', function () {
+        var msgDiv = document.getElementById('locationMsg');
+        var btn = this;
+
+        if (btn.disabled) return;
+
+        msgDiv.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Detecting location...';
+        msgDiv.className = 'form-text text-info fw-bold';
+
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(function (position) {
+                var lat = position.coords.latitude;
+                var lng = position.coords.longitude;
+
+                // Shop Location: Shiv Shakti Electricals, Indore (Vijay Nagar)
+                var shopLat = 22.75981523457073;
+                var shopLng = 75.86526508628523;
+
+                // Calculate distance (Haversine formula)
+                var R = 6371; // Radius of the earth in km
+                var dLat = deg2rad(lat - shopLat);
+                var dLon = deg2rad(lng - shopLng);
+                var a =
+                    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                    Math.cos(deg2rad(shopLat)) * Math.cos(deg2rad(lat)) *
+                    Math.sin(dLon / 2) * Math.sin(dLon / 2)
+                    ;
+                var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+                var d = R * c; // Distance in km
+
+                console.log("Distance: " + d.toFixed(2) + " km");
+
+                // Pricing Logic
+                var charge = 0;
+                var message = "";
+                var isOutOfRange = false;
+
+                if (d <= 3) {
+                    charge = 200;
+                    message = "Distance: " + d.toFixed(1) + " KM (Within 3 KM)";
+                } else if (d > 3 && d <= 7) {
+                    charge = 250;
+                    message = "Distance: " + d.toFixed(1) + " KM (3-7 KM Range)";
+                } else {
+                    isOutOfRange = true;
+                    message = "Distance: " + d.toFixed(1) + " KM (Out of Quick Service Range)";
+                }
+
+                updateServiceChargeUI(charge, message, isOutOfRange);
+
+                msgDiv.innerHTML = '<i class="fas fa-check-circle"></i> Location verified.';
+                msgDiv.className = 'form-text text-success fw-bold';
+
+                // Fetch address details using Nominatim API
+                fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`, {
+                    headers: {
+                        'User-Agent': 'SSElectricals/1.0'
+                    }
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data && data.address) {
+                            var addr = data.address;
+
+                            // Validate Pincode for Indore (Starts with 452)
+                            if (addr.postcode && !addr.postcode.startsWith('452')) {
+                                alert("Service is available only in Indore (Pincode starting with 452). Detected: " + addr.postcode);
+                                msgDiv.innerHTML = '<i class="fas fa-times-circle"></i> Location outside Indore service area.';
+                                msgDiv.className = 'form-text text-danger fw-bold';
+                                return; // Stop processing
+                            }
+
+                            // Auto-fill fields ONLY if not locked
+                            var pincodeInput = document.getElementById('id_pincode');
+                            if (pincodeInput && !pincodeInput.hasAttribute('readonly')) {
+                                if (addr.postcode) {
+                                    pincodeInput.value = addr.postcode;
+                                    pincodeInput.setAttribute('readonly', true);
+                                }
+
+                                // Construct Address Line 1
+                                var line1 = [];
+                                if (addr.road) line1.push(addr.road);
+                                if (addr.suburb) line1.push(addr.suburb);
+                                if (addr.neighbourhood) line1.push(addr.neighbourhood);
+                                var line1Field = document.getElementById('id_address_line1');
+                                if (line1Field) {
+                                    line1Field.value = line1.join(', ');
+                                    line1Field.setAttribute('readonly', true);
+                                }
+
+                                // Construct Address Line 2 / Landmark
+                                var line2 = [];
+                                if (addr.city_district) line2.push(addr.city_district);
+                                if (addr.state_district) line2.push(addr.state_district);
+                                var line2Field = document.getElementById('id_address_line2');
+                                if (line2Field) line2Field.value = line2.join(', ');
+
+                                // Landmark
+                                if (addr.amenity || addr.shop || addr.building) {
+                                    var landmarkField = document.getElementById('id_landmark');
+                                    if (landmarkField) landmarkField.value = addr.amenity || addr.shop || addr.building;
+                                }
+                            } else {
+                                console.log("Address fields are locked. Skipping auto-fill.");
+                            }
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error fetching address:', error);
+                    });
+
+            }, function (error) {
+                msgDiv.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Location access denied. Please enter manually.';
+                msgDiv.className = 'form-text text-warning';
+            });
+        } else {
+            msgDiv.innerHTML = "Geolocation is not supported by this browser.";
+        }
+    });
+
+    function deg2rad(deg) {
+        return deg * (Math.PI / 180)
+    }
+
+    function toggleOtherArea(select) {
+        var otherInput = document.getElementById('id_other_area');
+        if (select.value === 'Other') {
+            otherInput.style.display = 'block';
+            otherInput.required = true;
+        } else {
+            otherInput.style.display = 'none';
+            otherInput.required = false;
+            otherInput.value = '';
+        }
+    }
+
+    function updateServiceChargeUI(charge, message, isOutOfRange) {
+        var chargeDisplay = document.getElementById('chargeDisplay');
+        var card = document.getElementById('costSummaryCard');
+
+        // Update hidden field
+        var chargeInput = document.getElementById('id_visiting_charge');
+        if (chargeInput) {
+            chargeInput.value = charge;
+        }
+
+        if (isOutOfRange) {
+            card.className = 'card border-danger bg-danger bg-opacity-10';
+            chargeDisplay.innerHTML = `
+                <p class="mb-1 text-danger fw-bold">${message}</p>
+                <p class="mb-0 text-danger small">Please contact us directly for service availability.</p>
+            `;
+        } else {
+            card.className = 'card border-success bg-success bg-opacity-10';
+            chargeDisplay.innerHTML = `
+                <p class="mb-1 text-success fw-bold">${message}</p>
+                <div class="d-flex align-items-baseline">
+                    <span class="fs-6 text-muted me-2">Visiting Charge:</span>
+                    <span class="fs-3 fw-bold text-success">₹${charge}</span>
+                </div>
+            `;
+        }
+    }
 </script>
 {% endblock %}

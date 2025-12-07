@@ -8,18 +8,19 @@
             <div class="card h-100 shadow">
                 <div class="card-body">
                     <h3 class="card-title mb-4">Get in Touch</h3>
-                    <form>
+                    <form method="post">
+                        {% csrf_token %}
                         <div class="mb-3">
                             <label class="form-label">Name</label>
-                            <input type="text" class="form-control" placeholder="Your Name">
+                            {{ form.name }}
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Email</label>
-                            <input type="email" class="form-control" placeholder="Your Email">
+                            {{ form.email }}
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Message</label>
-                            <textarea class="form-control" rows="5" placeholder="Your Message"></textarea>
+                            {{ form.message }}
                         </div>
                         <button type="submit" class="btn btn-primary">Send Message</button>
                     </form>
@@ -32,20 +33,46 @@
                     <h3 class="card-title mb-4">Contact Information</h3>
                     <div class="mb-4">
                         <h5><i class="fas fa-map-marker-alt me-2 text-warning"></i> Address</h5>
-                        <p>123 Electrical Market, Main Road,<br>City Name, State, ZIP Code</p>
+                        <p>B-115, Abhinandan Nagar, main road, indore</p>
                     </div>
                     <div class="mb-4">
                         <h5><i class="fas fa-phone me-2 text-warning"></i> Phone</h5>
-                        <p>+91 98765 43210</p>
+                        <p>+91 9993149226</p>
+                        <p>+91 7828659551</p>
                     </div>
                     <div class="mb-4">
                         <h5><i class="fas fa-envelope me-2 text-warning"></i> Email</h5>
-                        <p>info@sselectricals.com</p>
+                        <p>shivshaktielectrical3014@gmail.com</p>
                     </div>
                     <div>
                         <h5><i class="fas fa-clock me-2 text-warning"></i> Opening Hours</h5>
-                        <p>Mon - Sat: 9:00 AM - 9:00 PM<br>Sun: Closed</p>
+                        <p>Mon - Sun: 9:00 AM - 10:00 PM</p>
                     </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Map Section -->
+    <div class="row mt-5">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="card-title mb-0"><i class="fas fa-map-marked-alt me-2"></i> Find Us on Map</h3>
+                </div>
+                <div class="card-body p-0">
+                    <div class="ratio ratio-21x9">
+                        <iframe
+                            src="https://maps.google.com/maps?q=Shiv%20Shakti%20Electrical%20B-115%20Abhinandan%20Nagar%20Indore&t=&z=15&ie=UTF8&iwloc=&output=embed"
+                            style="border:0;" allowfullscreen="" loading="lazy">
+                        </iframe>
+                    </div>
+                </div>
+                <div class="card-footer text-center p-3">
+                    <a href="https://www.google.com/maps/dir//Shiv+Shakti+Electrical+B-115+Abhinandan+Nagar+Indore"
+                        target="_blank" class="btn btn-lg btn-success">
+                        <i class="fas fa-location-arrow me-2"></i> Get Directions
+                    </a>
                 </div>
             </div>
         </div>

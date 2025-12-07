@@ -3,7 +3,7 @@ from django.contrib.auth.admin import UserAdmin
 from django.contrib.auth.signals import user_logged_in, user_logged_out
 from django.db.models.signals import post_save, post_delete, pre_save
 from django.dispatch import receiver
-from .models import CustomUser, Category, Product, Cart, CartItem, Order, OrderItem, AdminSession, AdminActivityLog, Appointment
+from .models import CustomUser, Category, Product, ProductImage, Cart, CartItem, Order, OrderItem, AdminSession, AdminActivityLog, Appointment
 
 class CustomUserAdmin(UserAdmin):
     fieldsets = UserAdmin.fieldsets + (
@@ -13,19 +13,38 @@ class CustomUserAdmin(UserAdmin):
         (None, {'fields': ('phone_number', 'address', 'profile_picture')}),
     )
 
+class ProductImageInline(admin.TabularInline):
+    model = ProductImage
+    extra = 1
+
 class ProductAdmin(admin.ModelAdmin):
     list_display = ('name', 'category', 'price', 'stock_quantity')
     search_fields = ('name', 'category__name')
     list_filter = ('category',)
+    inlines = [ProductImageInline]
 
 class OrderItemInline(admin.TabularInline):
     model = OrderItem
     extra = 0
 
 class OrderAdmin(admin.ModelAdmin):
-    list_display = ('id', 'user', 'total_price', 'status', 'created_at')
+    list_display = ('id', 'user', 'total_price', 'status', 'final_price', 'delivery_otp', 'created_at')
     list_filter = ('status', 'created_at')
     inlines = [OrderItemInline]
+    actions = ['generate_delivery_otp']
+
+    @admin.action(description='Generate Delivery OTP')
+    def generate_delivery_otp(self, request, queryset):
+        import random
+        count = 0
+        for order in queryset:
+            if order.status in ['Confirmed', 'Out for Delivery']:
+                otp = str(random.randint(100000, 999999))
+                order.delivery_otp = otp
+                order.save()
+                count += 1
+        
+        self.message_user(request, f"Generated OTP for {count} orders.")
 
 class AdminSessionAdmin(admin.ModelAdmin):
     list_display = ('user', 'ip_address', 'login_time', 'is_active', 'last_activity')

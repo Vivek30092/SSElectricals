@@ -1,0 +1,22 @@
+{% extends 'firstApp/base.html' %}
+
+{% block title %}Bad Request - SS Electricals{% endblock %}
+
+{% block content %}
+<div class="container py-5 text-center">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="mb-4">
+                <i class="fas fa-exclamation-circle fa-5x text-warning mb-3"></i>
+                <h1 class="display-4 fw-bold">400</h1>
+                <h2 class="mb-4">Bad Request</h2>
+                <p class="lead text-muted">The server could not understand the request due to invalid syntax.</p>
+            </div>
+
+            <div class="d-grid gap-2 d-sm-flex justify-content-sm-center mb-5">
+                <a href="{% url 'home' %}" class="btn btn-primary btn-lg px-4 gap-3">Go Home</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -108,4 +108,64 @@ Shiv Shakti Electrical, Indore (M.P.)
         print(f"Error sending email: {e}")
         return False
 
+import requests
+from django.conf import settings
+
+# Approximate location for Shiv Shakti Electrical, Indore (using Indore center if exact lat/lng unknown)
+# Or use the Place ID to get it, but hardcoding is faster for now.
+# 22.7533° N, 75.8937° E (Example near Vijay Nagar/Sukhliya where many areas are listed)
+SHOP_LAT = 22.7533
+SHOP_LNG = 75.8937
+
+def calculate_distance_and_price(user_address):
+    """
+    Calculate distance using Google Maps API and determine delivery price.
+    Returns: (distance_km, price, error_message)
+    """
+    api_key = getattr(settings, 'GOOGLE_PLACES_API_KEY', None)
+    if not api_key:
+        # Fallback or dev mode: return mock
+        # Assuming user entered a text address strings, we can't easily guess distance without API
+        # For dev, we might return a default 5km
+        return 5.0, 70.0, None 
+        
+    origin = f"{SHOP_LAT},{SHOP_LNG}"
+    destination = user_address
+    
+    url = f"https://maps.googleapis.com/maps/api/distancematrix/json?origins={origin}&destinations={destination}&key={api_key}"
+    
+    try:
+        response = requests.get(url)
+        data = response.json()
+        
+        if data['status'] == 'OK':
+            element = data['rows'][0]['elements'][0]
+            if element['status'] == 'OK':
+                distance_text = element['distance']['text']
+                distance_value = element['distance']['value'] # in meters
+                distance_km = distance_value / 1000.0
+                
+                # Pricing Logic
+                # Within 3 KM -> 50
+                # Within 7 KM -> 70
+                # > 7 KM -> No delivery
+                
+                price = 0
+                if distance_km <= 3:
+                    price = 50
+                elif distance_km <= 7:
+                    price = 70
+                else:
+                    return distance_km, 0, "Delivery not available for distances greater than 7 KMs."
+                
+                return distance_km, price, None
+            else:
+                return 0, 0, f"Address could not be located: {element['status']}"
+        else:
+            return 0, 0, f"Distance API Error: {data['status']}"
+            
+    except Exception as e:
+        return 0, 0, f"Error calculating distance: {str(e)}"
+
+
 

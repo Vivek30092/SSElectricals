@@ -1,0 +1,37 @@
+{% extends 'firstApp/base.html' %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card shadow">
+                <div class="card-header bg-warning text-dark">
+                    <h4 class="mb-0"><i class="fas fa-truck"></i> Delivery Confirmation</h4>
+                </div>
+                <div class="card-body">
+                    <p>Enter the Order ID and the OTP provided by the customer to confirm delivery.</p>
+
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label for="order_id" class="form-label">Order ID</label>
+                            <input type="number" class="form-control" id="order_id" name="order_id" required
+                                placeholder="Enter Order ID">
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="otp" class="form-label">Delivery OTP</label>
+                            <input type="text" class="form-control text-center" id="otp" name="otp" required
+                                maxlength="6" placeholder="******" style="font-size: 24px; letter-spacing: 5px;">
+                        </div>
+
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-success btn-lg">Confirm Delivery</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

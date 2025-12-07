@@ -13,9 +13,23 @@
                     Thank you for booking a service with SS Electricals. Our technician will contact you shortly to
                     confirm the appointment.
                 </p>
+
+                {% if appointment %}
+                <div class="alert alert-info d-inline-block text-start">
+                    <h5 class="alert-heading"><i class="fas fa-file-invoice-dollar me-2"></i>Estimated Charges</h5>
+                    <hr>
+                    <p class="mb-1"><strong>Visiting Charge:</strong> ₹{{ appointment.visiting_charge }}</p>
+                    {% if appointment.extra_charge > 0 %}
+                    <p class="mb-1"><strong>Extra Charge:</strong> ₹{{ appointment.extra_charge }}</p>
+                    {% endif %}
+                    <p class="mb-0 fs-5"><strong>Total: ₹{{ appointment.total_charge }}</strong></p>
+                </div>
+                {% else %}
                 <div class="alert alert-warning d-inline-block">
                     <strong>Note:</strong> Visiting charge of ₹200 is applicable.
                 </div>
+                {% endif %}
+
                 <div class="mt-4">
                     <a href="{% url 'my_appointments' %}" class="btn btn-outline-dark me-2">View My Appointments</a>
                     <a href="{% url 'home' %}" class="btn btn-warning fw-bold">Back to Home</a>
