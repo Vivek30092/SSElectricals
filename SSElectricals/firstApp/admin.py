@@ -28,19 +28,10 @@ class OrderItemInline(admin.TabularInline):
     extra = 0
 
 class OrderAdmin(admin.ModelAdmin):
-    list_display = ('id', 'user', 'total_price', 'status', 'final_price', 'delivery_person', 'delivery_otp', 'print_receipt_link', 'created_at')
-    list_filter = ('status', 'delivery_person', 'created_at')
+    list_display = ('id', 'user', 'total_price', 'status', 'final_price', 'delivery_otp', 'created_at')
+    list_filter = ('status', 'created_at')
     inlines = [OrderItemInline]
     actions = ['generate_delivery_otp']
-    
-    def print_receipt_link(self, obj):
-        from django.utils.html import format_html
-        from django.urls import reverse
-        if obj.final_price and obj.status in ['Confirmed', 'Out for Delivery', 'Delivered']:
-            url = reverse('order_receipt', args=[obj.id])
-            return format_html('<a class="button" href="{}" target="_blank">Print Receipt</a>', url)
-        return "-"
-    print_receipt_link.short_description = 'Receipt'
 
     @admin.action(description='Generate Delivery OTP')
     def generate_delivery_otp(self, request, queryset):

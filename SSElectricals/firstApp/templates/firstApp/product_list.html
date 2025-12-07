@@ -19,10 +19,8 @@
                         <option value="">All Categories</option>
 
                         {% for cat in categories %}
-                        <option value="{{ cat.id }}"
-                            {% if request.GET.category == cat.id|stringformat:"s" %}
-                            selected
-                            {% endif %}>
+                        <option value="{{ cat.id }}" {% if
+                            request.GET.category|stringformat:"s"==cat.id|stringformat:"s" %}selected{% endif %}>
                             {{ cat.name }}
                         </option>
                         {% endfor %}
@@ -33,13 +31,8 @@
                     <label class="form-label">Sort By</label>
                     <select name="sort" class="form-select">
                         <option value="">Default</option>
-                        <option value="newest" 
-                        {% if request.GET.sort == "newest" %}
-                        selected
-                        {% endif %}>
-                        Newest First
-                    </option>
-
+                        <option value="newest" {% if request.GET.sort=='newest' %}selected{% endif %}>Newest First
+                        </option>
                     </select>
                 </div>
 
@@ -67,14 +60,6 @@
                         <p class="card-text"><small class="text-muted">Brand: {{ product.brand }}</small></p>
 
                         <div class="d-grid gap-2">
-                            {% if product.stock_quantity > 0 %}
-                            <a href="{% url 'add_to_cart' product.id %}" class="btn btn-primary">
-                                <i class="fas fa-shopping-cart me-2"></i>Add to Cart
-                            </a>
-                            {% else %}
-                            <button class="btn btn-secondary" disabled>Out of Stock</button>
-                            {% endif %}
-
                             <a href="{% url 'contact' %}?subject=Enquiry for {{ product.name }}"
                                 class="btn btn-outline-primary">
                                 Enquire Now

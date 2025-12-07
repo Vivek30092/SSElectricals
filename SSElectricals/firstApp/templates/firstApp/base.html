@@ -296,12 +296,7 @@
                     </li>
 
                     {% if user.is_authenticated %}
-                    <li class="nav-item">
-                        <a class="nav-link position-relative" href="{% url 'view_cart' %}">
-                            <i class="fas fa-shopping-cart"></i> Cart
-                            <!-- Badge can be added here if we have a context processor for cart count -->
-                        </a>
-                    </li>
+                    <!-- Cart link removed -->
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button"
                             data-bs-toggle="dropdown">

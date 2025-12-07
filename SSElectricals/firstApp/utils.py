@@ -161,9 +161,6 @@ def calculate_distance_and_price(user_address):
                 return distance_km, price, None
             else:
                 return 0, 0, f"Address could not be located: {element['status']}"
-        elif data['status'] == 'REQUEST_DENIED':
-             # Fallback for dev/demo if API key is invalid or restricted
-             return 5.0, 70.0, None 
         else:
             return 0, 0, f"Distance API Error: {data['status']}"
             
