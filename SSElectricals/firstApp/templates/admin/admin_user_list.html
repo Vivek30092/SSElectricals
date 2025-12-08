@@ -1,0 +1,107 @@
+{% extends 'admin/base_admin.html' %}
+
+{% block title %}User Management - Admin{% endblock %}
+
+{% block content %}
+<div class="row mb-4 align-items-center animate__animated animate__fadeIn">
+    <div class="col">
+        <h2 class="fw-bold text-dark"><i class="fas fa-users text-primary me-2"></i> User Management</h2>
+        <p class="text-muted">Manage registered customers and view their details.</p>
+    </div>
+</div>
+
+<div class="card shadow-sm mb-4 animate__animated animate__fadeInUp">
+    <div class="card-header bg-white py-3">
+        <h5 class="card-title mb-0 text-dark">Registered Users</h5>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="bg-light text-secondary">
+                    <tr>
+                        <th scope="col" class="ps-4">User Info</th>
+                        <th scope="col">Contact</th>
+                        <th scope="col">Location</th>
+                        <th scope="col">Joined Date</th>
+                        <th scope="col" class="text-end pe-4">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in users %}
+                    <tr>
+                        <td class="ps-4">
+                            <div class="d-flex align-items-center">
+                                {% if user.profile_picture %}
+                                <img src="{{ user.profile_picture.url }}" class="rounded-circle me-3 border" width="40"
+                                    height="40" alt="Avatar">
+                                {% else %}
+                                <div class="rounded-circle me-3 bg-secondary text-white d-flex align-items-center justify-content-center"
+                                    style="width: 40px; height: 40px; font-size: 1.2rem;">
+                                    {{ user.first_name|first|default:user.username|first|upper }}
+                                </div>
+                                {% endif %}
+                                <div>
+                                    <div class="fw-bold text-dark">{{ user.get_full_name|default:"No Name" }}</div>
+                                    <div class="small text-muted">@{{ user.username }}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <div><i class="fas fa-envelope text-primary me-2"></i>{{ user.email }}</div>
+                            <div><i class="fas fa-phone text-success me-2"></i>{{ user.phone_number }}</div>
+                        </td>
+                        <td>
+                            {% if user.city %}{{ user.city }}{% else %}<span class="text-muted">-</span>{% endif %}
+                        </td>
+                        <td>{{ user.date_joined|date:"M d, Y" }}</td>
+                        <td class="text-end pe-4">
+                            <a href="{% url 'admin_user_detail' user.id %}"
+                                class="btn btn-sm btn-outline-primary rounded-pill">
+                                <i class="fas fa-eye me-1"></i> View Details
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="text-center py-5 text-muted">
+                            <i class="fas fa-users-slash fa-3x mb-3"></i>
+                            <p>No registered users found.</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Pagination -->
+    {% if users.has_other_pages %}
+    <div class="card-footer bg-white">
+        <nav>
+            <ul class="pagination justify-content-center mb-0">
+                {% if users.has_previous %}
+                <li class="page-item"><a class="page-link" href="?page={{ users.previous_page_number }}">&laquo;</a>
+                </li>
+                {% else %}
+                <li class="page-item disabled"><span class="page-link">&laquo;</span></li>
+                {% endif %}
+
+                {% for i in users.paginator.page_range %}
+                {% if users.number == i %}
+                <li class="page-item active"><span class="page-link">{{ i }}</span></li>
+                {% else %}
+                <li class="page-item"><a class="page-link" href="?page={{ i }}">{{ i }}</a></li>
+                {% endif %}
+                {% endfor %}
+
+                {% if users.has_next %}
+                <li class="page-item"><a class="page-link" href="?page={{ users.next_page_number }}">&raquo;</a></li>
+                {% else %}
+                <li class="page-item disabled"><span class="page-link">&raquo;</span></li>
+                {% endif %}
+            </ul>
+        </nav>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

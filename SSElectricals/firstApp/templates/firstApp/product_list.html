@@ -19,9 +19,9 @@
                         <option value="">All Categories</option>
 
                         {% for cat in categories %}
-                        <option value="{{ cat.id }}" {% if request.GET.category==cat.id|stringformat:"s" %} selected {%
-                            endif %}>
-                            {{ cat.name }}
+                        <option value="{{ cat.id }}" {% if request.GET.category == cat.id|stringformat:"s" %} selected 
+                        {% endif %}>
+                        {{ cat.name }}
                         </option>
                         {% endfor %}
                     </select>
@@ -31,7 +31,7 @@
                     <label class="form-label">Sort By</label>
                     <select name="sort" class="form-select">
                         <option value="">Default</option>
-                        <option value="newest" {% if request.GET.sort=="newest" %}selected{% endif %}>
+                        <option value="newest" {% if request.GET.sort == "newest" %}selected{% endif %}>
                             Newest First
                         </option>
                     </select>

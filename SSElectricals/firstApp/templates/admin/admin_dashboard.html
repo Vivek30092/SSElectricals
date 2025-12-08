@@ -12,51 +12,66 @@
     <div class="col-md-3">
         <div class="card text-white bg-primary h-100">
             <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <h6 class="card-title mb-0">Total Revenue</h6>
-                        <h2 class="my-2">₹{{ total_revenue|stringformat:".2f" }}</h2>
-                    </div>
-                    <i class="fas fa-rupee-sign fa-2x opacity-50"></i>
-                </div>
+                <h6 class="card-title mb-0">Total Revenue</h6>
+                <h3 class="my-2">₹{{ total_revenue|stringformat:".2f" }}</h3>
+                <small class="text-white-50">Online: ₹{{ order_revenue }} | Shop: ₹{{ offline_sales }}</small>
             </div>
         </div>
     </div>
+
     <div class="col-md-3">
-        <div class="card text-white bg-success h-100">
+        <div class="card text-white bg-danger h-100">
             <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <h6 class="card-title mb-0">Total Orders</h6>
-                        <h2 class="my-2">{{ total_orders }}</h2>
-                    </div>
-                    <i class="fas fa-shopping-bag fa-2x opacity-50"></i>
-                </div>
+                <h6 class="card-title mb-0">Total Expenses</h6>
+                <h3 class="my-2">₹{{ total_expenses|stringformat:".2f" }}</h3>
+                <small class="text-white-50">Online: ₹{{ online_expenses }} | Cash: ₹{{ cash_expenses }}</small>
             </div>
         </div>
     </div>
+
     <div class="col-md-3">
-        <div class="card text-white bg-warning h-100">
+        <div class="card text-white bg-{% if profit_loss >= 0 %}success{% else %}warning{% endif %} h-100">
             <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <h6 class="card-title mb-0">Pending Orders</h6>
-                        <h2 class="my-2">{{ pending_orders }}</h2>
-                    </div>
-                    <i class="fas fa-clock fa-2x opacity-50"></i>
-                </div>
+                <h6 class="card-title mb-0">Net Profit/Loss</h6>
+                <h3 class="my-2">₹{{ profit_loss|stringformat:".2f" }}</h3>
             </div>
         </div>
     </div>
+
     <div class="col-md-3">
         <div class="card text-white bg-info h-100">
             <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <h6 class="card-title mb-0">New Appointments</h6>
-                        <h2 class="my-2">{{ pending_appointments }}</h2>
-                    </div>
-                    <i class="fas fa-calendar-alt fa-2x opacity-50"></i>
+                <h6 class="card-title mb-0">Pending Orders</h6>
+                <h3 class="my-2">{{ pending_orders }}</h3>
+                <small class="text-white-50">Appts: {{ pending_appointments }}</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+</div>
+
+<!-- Quick Actions -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card shadow-sm border-0">
+            <div class="card-body p-3">
+                <h5 class="card-title mb-3 fw-bold text-secondary text-uppercase small"><i
+                        class="fas fa-bolt me-2 text-warning"></i>Quick Actions</h5>
+                <div class="d-flex flex-wrap gap-2">
+                    <a href="{% url 'admin_category_add' %}" class="btn btn-success text-white shadow-sm">
+                        <i class="fas fa-plus-circle me-1"></i> Add Category
+                    </a>
+                    <a href="{% url 'admin_category_list' %}" class="btn btn-outline-secondary shadow-sm">
+                        <i class="fas fa-tags me-1"></i> Manage Categories
+                    </a>
+                    <div class="vr mx-2 text-muted d-none d-md-block"></div>
+                    <a href="{% url 'admin_upload_sales' %}" class="btn btn-outline-primary shadow-sm">
+                        <i class="fas fa-file-upload me-1"></i> Upload Sales
+                    </a>
+                    <a href="{% url 'admin_upload_expenses' %}" class="btn btn-outline-danger shadow-sm">
+                        <i class="fas fa-file-invoice-dollar me-1"></i> Upload Expenses
+                    </a>
                 </div>
             </div>
         </div>
@@ -67,19 +82,35 @@
 <div class="row mb-4">
     <div class="col-lg-8">
         <div class="card h-100">
-            <div class="card-header">
-                Daily Sales (Last 30 Days)
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span>Daily Sales Trend</span>
+
+                <form method="get" id="chartFilterForm" class="d-inline-block">
+                    <select name="range" class="form-select form-select-sm"
+                        onchange="document.getElementById('chartFilterForm').submit()">
+
+                        <option value="30" {% if current_range == "30" %}selected{% endif %}>Last 30 Days</option>
+                        <option value="90" {% if current_range == "90" %}selected{% endif %}>Last 3 Months</option>
+                        <option value="180" {% if current_range == "180" %}selected{% endif %}>Last 6 Months</option>
+                        <option value="270" {% if current_range == "270" %}selected{% endif %}>Last 9 Months</option>
+                        <option value="365" {% if current_range == "365" %}selected{% endif %}>Last 1 Year</option>
+                        <option value="730" {% if current_range == "730" %}selected{% endif %}>Last 2 Years</option>
+                        <option value="1095" {% if current_range == "1095" %}selected{% endif %}>Last 3 Years</option>
+                        <option value="all" {% if current_range == "all" %}selected{% endif %}>All Time</option>
+
+                    </select>
+                </form>
             </div>
+
             <div class="card-body" style="position: relative; height: 400px;">
                 <canvas id="salesChart"></canvas>
             </div>
         </div>
     </div>
+
     <div class="col-lg-4">
         <div class="card h-100">
-            <div class="card-header">
-                Order Status Distribution
-            </div>
+            <div class="card-header">Product Categories</div>
             <div class="card-body" style="position: relative; height: 400px;">
                 <canvas id="statusChart"></canvas>
             </div>
@@ -95,6 +126,7 @@
                 <span>Recent Orders</span>
                 <a href="{% url 'admin_order_list' %}" class="btn btn-sm btn-outline-primary">View All</a>
             </div>
+
             <div class="card-body p-0">
                 <table class="table table-hover mb-0">
                     <thead>
@@ -105,6 +137,7 @@
                             <th>Status</th>
                         </tr>
                     </thead>
+
                     <tbody>
                         {% for order in recent_orders %}
                         <tr>
@@ -128,12 +161,14 @@
             </div>
         </div>
     </div>
+
     <div class="col-lg-6">
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <span>Recent Appointments</span>
                 <a href="{% url 'admin_appointment_list' %}" class="btn btn-sm btn-outline-primary">View All</a>
             </div>
+
             <div class="card-body p-0">
                 <table class="table table-hover mb-0">
                     <thead>
@@ -144,6 +179,7 @@
                             <th>Status</th>
                         </tr>
                     </thead>
+
                     <tbody>
                         {% for appt in recent_appointments %}
                         <tr>
@@ -163,11 +199,13 @@
                         </tr>
                         {% endfor %}
                     </tbody>
+
                 </table>
             </div>
         </div>
     </div>
 </div>
+
 {% endblock %}
 
 {% block extra_js %}
@@ -187,42 +225,22 @@
                 tension: 0.1
             }]
         },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-                y: {
-                    beginAtZero: true
-                }
-            }
-        }
+        options: { responsive: true, maintainAspectRatio: false }
     });
 
-    // Status Chart
+    // Category Chart
     const statusCtx = document.getElementById('statusChart').getContext('2d');
     const statusChart = new Chart(statusCtx, {
         type: 'doughnut',
         data: {
-            labels: JSON.parse('{{ status_labels_json|escapejs }}'),
+            labels: JSON.parse('{{ cat_labels_json|escapejs }}'),
             datasets: [{
-                data: JSON.parse('{{ status_data_json|escapejs }}'),
-                backgroundColor: [
-                    '#ffc107', // Pending - Warning
-                    '#0dcaf0', // Confirmed - Info
-                    '#0d6efd', // Out for Delivery - Primary
-                    '#198754', // Delivered - Success
-                    '#dc3545'  // Cancelled - Danger
-                ]
+                data: JSON.parse('{{ cat_data_json|escapejs }}'),
             }]
         },
         options: {
             responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    position: 'bottom'
-                }
-            }
+            maintainAspectRatio: false
         }
     });
 </script>

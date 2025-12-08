@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.conf import settings
+from django.utils import timezone
 
 # 1. Authentication System
 class CustomUser(AbstractUser):
@@ -50,6 +51,8 @@ class Product(models.Model):
     stock_quantity = models.PositiveIntegerField(default=0)
     brand = models.CharField(max_length=100, blank=True, null=True)
     image = models.ImageField(upload_to='product_images/')
+    vendor = models.CharField(max_length=100, blank=True, null=True)
+    purchase_price = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def save(self, *args, **kwargs):
@@ -427,7 +430,7 @@ class DailyExpenditure(models.Model):
         ordering = ['-date']
 
     def save(self, *args, **kwargs):
-        if not self.day and self.date:
+        if self.date:
             self.day = self.date.strftime('%A')
         super().save(*args, **kwargs)
 
@@ -445,3 +448,22 @@ class Wishlist(models.Model):
 
     def __str__(self):
         return f"{self.user.username}'s wishlist: {self.product.name}"
+
+# 11. Purchase Entry (Inventory Update)
+class PurchaseEntry(models.Model):
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='purchase_entries')
+    vendor = models.CharField(max_length=100, blank=True, null=True)
+    quantity = models.PositiveIntegerField()
+    purchase_price = models.DecimalField(max_digits=10, decimal_places=2) # Cost per unit
+    total_cost = models.DecimalField(max_digits=12, decimal_places=2)
+    date = models.DateField(default=timezone.now)
+    admin = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def save(self, *args, **kwargs):
+        if not self.total_cost and self.quantity and self.purchase_price:
+            self.total_cost = self.quantity * self.purchase_price
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"Purchase: {self.product.name} ({self.quantity} qty)"

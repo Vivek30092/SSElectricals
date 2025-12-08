@@ -1,0 +1,201 @@
+{% extends 'admin/base_admin.html' %}
+
+{% block title %}User Details - Admin{% endblock %}
+
+{% block content %}
+<div class="row align-items-center mb-4">
+    <div class="col-md-6">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-1">
+                <li class="breadcrumb-item"><a href="{% url 'admin_dashboard' %}">Dashboard</a></li>
+                <li class="breadcrumb-item"><a href="{% url 'admin_user_list' %}">Users</a></li>
+                <li class="breadcrumb-item active" aria-current="page">User Details</li>
+            </ol>
+        </nav>
+        <h2 class="fw-bold mb-0 text-dark">
+            <i class="fas fa-user-circle text-primary me-2"></i> {{ customer.get_full_name|default:customer.username }}
+        </h2>
+    </div>
+    <div class="col-md-6 text-md-end mt-3 mt-md-0">
+        <a href="mailto:{{ customer.email }}" class="btn btn-outline-primary"><i class="fas fa-envelope me-2"></i>Email
+            User</a>
+        <a href="tel:{{ customer.phone_number }}" class="btn btn-outline-success ms-2"><i
+                class="fas fa-phone me-2"></i>Call User</a>
+    </div>
+</div>
+
+<div class="row">
+    <!-- User Info and Cart -->
+    <div class="col-lg-8">
+
+        <!-- Cart Section -->
+        <div class="card shadow-sm mb-4 animate__animated animate__fadeInUp">
+            <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                <h5 class="mb-0 text-dark"><i class="fas fa-shopping-cart text-warning me-2"></i>Current Cart</h5>
+                <span class="badge bg-primary rounded-pill">{{ cart_items|length }} Items</span>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table align-middle mb-0">
+                        <thead class="bg-light">
+                            <tr>
+                                <th class="ps-4">Product</th>
+                                <th class="text-center">Quantity</th>
+                                <th class="text-end pe-4">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in cart_items %}
+                            <tr>
+                                <td class="ps-4">
+                                    <div class="d-flex align-items-center">
+                                        <img src="{{ item.product.image.url }}" class="rounded me-3 border" width="50"
+                                            height="50" style="object-fit: cover;">
+                                        <div>
+                                            <div class="fw-bold text-dark">{{ item.product.name }}</div>
+                                            <div class="small text-muted">₹{{ item.product.final_price }} / unit</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="text-center">
+                                    <span class="badge bg-secondary">{{ item.quantity }}</span>
+                                </td>
+                                <td class="text-end pe-4 fw-bold">₹{{ item.total_price }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="3" class="text-center py-4 text-muted">
+                                    <i class="fas fa-shopping-cart fa-2x mb-2 text-black-50"></i>
+                                    <p class="mb-0">Cart is empty</p>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                        {% if cart_items %}
+                        <tfoot class="bg-light fw-bold">
+                            <tr>
+                                <td colspan="2" class="text-end pe-3">Cart Total:</td>
+                                <td class="text-end pe-4 text-primary">₹{{ cart_total }}</td>
+                            </tr>
+                        </tfoot>
+                        {% endif %}
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Orders -->
+        <div class="card shadow-sm mb-4 animate__animated animate__fadeInUp" style="animation-delay: 0.1s;">
+            <div class="card-header bg-white py-3">
+                <h5 class="mb-0 text-dark"><i class="fas fa-history text-info me-2"></i>Recent Orders</h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="list-group list-group-flush">
+                    {% for order in recent_orders %}
+                    <div class="list-group-item">
+                        <div class="d-flex w-100 justify-content-between align-items-center">
+                            <div>
+                                <h6 class="mb-1 text-dark">Order #{{ order.id }}</h6>
+                                <small class="text-muted">{{ order.created_at|date:"M d, Y h:i A" }}</small>
+                            </div>
+                            <div class="text-end">
+                                <span class="d-block fw-bold text-dark">₹{{ order.total_price }}</span>
+                                <span
+                                    class="badge bg-{% if order.status == 'Delivered' %}success{% elif order.status == 'Cancelled' %}danger{% else %}warning text-dark{% endif %}">
+                                    {{ order.status }}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="text-center py-4 text-muted">
+                        <p class="mb-0">No recent orders</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Sidebar Info -->
+    <div class="col-lg-4">
+
+        <!-- Customer Details Card -->
+        <div class="card shadow-sm mb-4 animate__animated animate__fadeInRight">
+            <div class="card-body text-center pt-4">
+                {% if customer.profile_picture %}
+                <img src="{{ customer.profile_picture.url }}" class="rounded-circle mb-3 border shadow-sm" width="100"
+                    height="100" style="object-fit: cover;">
+                {% else %}
+                <div class="rounded-circle bg-secondary text-white d-flex align-items-center justify-content-center mx-auto mb-3 shadow-sm"
+                    style="width: 100px; height: 100px; font-size: 2.5rem;">
+                    {{ customer.first_name|first|default:customer.username|first|upper }}
+                </div>
+                {% endif %}
+                <h5 class="fw-bold mb-1 text-dark">{{ customer.get_full_name }}</h5>
+                <p class="text-muted mb-3">@{{ customer.username }}</p>
+
+                <hr>
+
+                <div class="text-start">
+                    <div class="mb-2">
+                        <small class="text-muted d-block">Email</small>
+                        <span class="text-dark">{{ customer.email }}</span>
+                    </div>
+                    <div class="mb-2">
+                        <small class="text-muted d-block">Phone</small>
+                        <span class="text-dark">{{ customer.phone_number }}</span>
+                    </div>
+                    <div class="mb-2">
+                        <small class="text-muted d-block">Address</small>
+                        {% if customer.house_number or customer.address_line1 %}
+                        <span class="text-dark">
+                            {{ customer.house_number }}, {{ customer.address_line1 }}<br>
+                            {{ customer.city }} - {{ customer.pincode }}
+                        </span>
+                        {% else %}
+                        <span class="text-muted fst-italic">No address provided</span>
+                        {% endif %}
+                    </div>
+                    <div>
+                        <small class="text-muted d-block">Joined</small>
+                        <span class="text-dark">{{ customer.date_joined|date:"M d, Y" }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Wishlist Card -->
+        <div class="card shadow-sm mb-4 animate__animated animate__fadeInRight" style="animation-delay: 0.1s;">
+            <div class="card-header bg-white py-3">
+                <h5 class="mb-0 text-dark"><i class="fas fa-heart text-danger me-2"></i>Wishlist</h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="list-group list-group-flush">
+                    {% for item in wishlist_items %}
+                    <div class="list-group-item d-flex align-items-center">
+                        <img src="{{ item.product.image.url }}" class="rounded me-3 border" width="40" height="40"
+                            style="object-fit: cover;">
+                        <div class="flex-grow-1">
+                            <h6 class="mb-0 small fw-bold text-dark">{{ item.product.name }}</h6>
+                            <small class="text-primary fw-bold">₹{{ item.product.final_price }}</small>
+                        </div>
+                        <a href="{% url 'product_detail' item.product.id %}" target="_blank"
+                            class="btn btn-sm btn-light text-secondary">
+                            <i class="fas fa-external-link-alt"></i>
+                        </a>
+                    </div>
+                    {% empty %}
+                    <div class="text-center py-4 text-muted">
+                        <i class="far fa-heart fa-2x mb-2 text-black-50"></i>
+                        <p class="mb-0">Wishlist is empty</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}

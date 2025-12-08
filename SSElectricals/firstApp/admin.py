@@ -3,7 +3,7 @@ from django.contrib.auth.admin import UserAdmin
 from django.contrib.auth.signals import user_logged_in, user_logged_out
 from django.db.models.signals import post_save, post_delete, pre_save
 from django.dispatch import receiver
-from .models import CustomUser, Category, Product, ProductImage, Cart, CartItem, Order, OrderItem, AdminSession, AdminActivityLog, Appointment
+from .models import CustomUser, Category, Product, ProductImage, Cart, CartItem, Order, OrderItem, AdminSession, AdminActivityLog, Appointment, DailySales, DailyExpenditure, PurchaseEntry
 
 class CustomUserAdmin(UserAdmin):
     fieldsets = UserAdmin.fieldsets + (
@@ -83,6 +83,9 @@ class AppointmentAdmin(admin.ModelAdmin):
     readonly_fields = ('created_at',)
 
 admin.site.register(Appointment, AppointmentAdmin)
+admin.site.register(DailySales)
+admin.site.register(DailyExpenditure)
+admin.site.register(PurchaseEntry)
 
 
 # Signal Handlers for Session Tracking and Activity Logging

@@ -4,56 +4,131 @@
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h2>Daily Sales Records</h2>
     <div>
-        <a href="{% url 'admin_export_sales' %}" class="btn btn-success me-2"><i class="fas fa-file-csv"></i> Export
-            CSV</a>
+        <div class="btn-group me-2">
+            <button type="button" class="btn btn-success dropdown-toggle" data-bs-toggle="dropdown"
+                aria-expanded="false">
+                <i class="fas fa-download"></i> Export
+            </button>
+            <ul class="dropdown-menu">
+                <li><a class="dropdown-item" href="{% url 'admin_export_sales' %}?format=csv"><i
+                            class="fas fa-file-csv me-2"></i>CSV</a></li>
+                <li><a class="dropdown-item" href="{% url 'admin_export_sales' %}?format=tsv"><i
+                            class="fas fa-file-alt me-2"></i>TSV</a></li>
+                <li><a class="dropdown-item" href="{% url 'admin_export_sales' %}?format=pdf"><i
+                            class="fas fa-file-pdf me-2"></i>PDF</a></li>
+                <li><a class="dropdown-item" href="{% url 'admin_export_sales' %}?format=word"><i
+                            class="fas fa-file-word me-2"></i>Word</a></li>
+            </ul>
+        </div>
+        <a href="{% url 'admin_upload_sales' %}" class="btn btn-info me-2 text-white"><i class="fas fa-file-upload"></i>
+            Upload Bulk</a>
         <a href="{% url 'admin_add_daily_sales' %}" class="btn btn-primary"><i class="fas fa-plus"></i> Add Sales
             Entry</a>
     </div>
 </div>
 
 <!-- Filter Form -->
-<form method="get" class="mb-4 bg-light p-3 rounded">
-    <div class="row g-3 align-items-end">
-        <div class="col-md-4">
-            <label class="form-label">Date</label>
+<form method="get" class="mb-4 bg-white p-4 rounded shadow-sm border">
+    <div class="row g-3">
+        <div class="col-md-3">
+            <label class="form-label small text-muted">Specific Date</label>
             <input type="date" name="date" class="form-control" value="{{ request.GET.date }}">
         </div>
-        <div class="col-md-4">
-            <label class="form-label">Month</label>
+        <div class="col-md-3">
+            <label class="form-label small text-muted">Month</label>
             <input type="month" name="month" class="form-control" value="{{ request.GET.month }}">
         </div>
+        <div class="col-md-2">
+            <label class="form-label small text-muted">Year</label>
+            <input type="number" name="year" class="form-control" placeholder="YYYY" min="2000" max="2100"
+                value="{{ request.GET.year }}">
+        </div>
+        <div class="col-md-2">
+            <label class="form-label small text-muted">Day</label>
+            <select name="day_name" class="form-select">
+                <option value="">All Days</option>
+                <option value="Monday" {% if request.GET.day_name == "Monday" %}selected{% endif %}>Monday</option>
+                <option value="Tuesday" {% if request.GET.day_name == "Tuesday" %}selected{% endif %}>Tuesday</option>
+                <option value="Wednesday" {% if request.GET.day_name == "Wednesday" %}selected{% endif %}>Wednesday
+                </option>
+                <option value="Thursday" {% if request.GET.day_name == "Thursday" %}selected{% endif %}>Thursday</option>
+                <option value="Friday" {% if request.GET.day_name == "Friday" %}selected{% endif %}>Friday</option>
+                <option value="Saturday" {% if request.GET.day_name == "Saturday" %}selected{% endif %}>Saturday</option>
+                <option value="Sunday" {% if request.GET.day_name == "Sunday" %}selected{% endif %}>Sunday</option>
+            </select>
+        </div>
         <div class="col-md-4">
-            <button type="submit" class="btn btn-primary">Filter</button>
-            <a href="{% url 'admin_daily_sales' %}" class="btn btn-secondary">Clear</a>
+            <label class="form-label small text-muted">Date Range</label>
+            <div class="input-group">
+                <input type="date" name="start_date" class="form-control" placeholder="Start"
+                    value="{{ request.GET.start_date }}">
+                <span class="input-group-text">to</span>
+                <input type="date" name="end_date" class="form-control" placeholder="End"
+                    value="{{ request.GET.end_date }}">
+            </div>
+        </div>
+        <div class="col-12 text-end">
+            <button type="submit" class="btn btn-primary"><i class="fas fa-filter me-1"></i> Apply Filters</button>
+            <a href="{% url 'admin_daily_sales' %}" class="btn btn-secondary ms-2">Clear</a>
         </div>
     </div>
 </form>
 
-<div class="card shadow">
-    <div class="card-body">
+<!-- Summary Stats -->
+{% if total_sales > 0 %}
+<div class="row mb-4 g-3">
+    <div class="col-md-4">
+        <div class="card bg-primary text-white shadow-sm border-0">
+            <div class="card-body">
+                <h6 class="card-title text-uppercase small opacity-75">Total Sales (Filtered)</h6>
+                <h3 class="mb-0">₹{{ total_sales }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card bg-success text-white shadow-sm border-0">
+            <div class="card-body">
+                <h6 class="card-title text-uppercase small opacity-75">Online Received</h6>
+                <h3 class="mb-0">₹{{ total_online }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card bg-info text-white shadow-sm border-0">
+            <div class="card-body">
+                <h6 class="card-title text-uppercase small opacity-75">Cash Received</h6>
+                <h3 class="mb-0">₹{{ total_cash }}</h3>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<div class="card shadow border-0">
+    <div class="card-body p-0">
         <div class="table-responsive">
-            <table class="table table-hover table-bordered">
-                <thead class="table-dark">
+            <table class="table table-hover table-striped mb-0 align-middle">
+                <thead class="bg-light">
                     <tr>
-                        <th>Date</th>
-                        <th>Day</th>
-                        <th>Total Sales</th>
-                        <th>Online Received</th>
-                        <th>Cash Received</th>
-                        <th>Subtotal</th>
-                        <th>Remark</th>
-                        <th>Admin</th>
-                        <th>Actions</th>
+                        <th class="py-3 ps-3">Date</th>
+                        <th class="py-3">Day</th>
+                        <th class="py-3">Total Sales</th>
+                        <th class="py-3">Online Received</th>
+                        <th class="py-3">Cash Received</th>
+                        <th class="py-3">Subtotal</th>
+                        <th class="py-3">Remark</th>
+                        <th class="py-3">Admin</th>
+                        <th class="py-3 pe-3 text-end">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for sale in sales_records %}
                     <tr>
-                        <td>{{ sale.date }}</td>
+                        <td class="ps-3">{{ sale.date }}</td>
                         <td>{{ sale.day }}</td>
-                        <td>₹{{ sale.total_sales }}</td>
-                        <td>₹{{ sale.online_received }}</td>
-                        <td>₹{{ sale.cash_received }}</td>
+                        <td class="fw-bold text-primary">₹{{ sale.total_sales }}</td>
+                        <td class="text-success">₹{{ sale.online_received }}</td>
+                        <td class="text-info">₹{{ sale.cash_received }}</td>
                         <td><strong>₹{{ sale.subtotal }}</strong></td>
                         <td>
                             {{ sale.remark }}
@@ -61,17 +136,19 @@
                             <br><small class="text-muted">{{ sale.other_remark }}</small>
                             {% endif %}
                         </td>
-                        <td>{{ sale.admin.username }}</td>
-                        <td>
-                            <a href="{% url 'admin_edit_daily_sales' sale.id %}" class="btn btn-sm btn-primary"><i
-                                    class="fas fa-edit"></i></a>
-                            <a href="{% url 'admin_delete_daily_sales' sale.id %}" class="btn btn-sm btn-danger"
+                        <td><span class="badge bg-light text-dark border">{{ sale.admin.username }}</span></td>
+                        <td class="text-end pe-3">
+                            <a href="{% url 'admin_edit_daily_sales' sale.id %}"
+                                class="btn btn-sm btn-outline-primary border-0"><i class="fas fa-edit"></i></a>
+                            <a href="{% url 'admin_delete_daily_sales' sale.id %}"
+                                class="btn btn-sm btn-outline-danger border-0"
                                 onclick="return confirm('Delete this record?')"><i class="fas fa-trash"></i></a>
                         </td>
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="8" class="text-center">No sales records found.</td>
+                        <td colspan="9" class="text-center py-5 text-muted">No sales records found for the selected
+                            criteria.</td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -80,12 +157,12 @@
 
         <!-- Pagination -->
         {% if sales_records.has_other_pages %}
-        <nav aria-label="Page navigation" class="mt-4">
-            <ul class="pagination justify-content-center">
+        <nav aria-label="Page navigation" class="p-3 border-top">
+            <ul class="pagination justify-content-center mb-0">
                 {% if sales_records.has_previous %}
                 <li class="page-item">
                     <a class="page-link"
-                        href="?page={{ sales_records.previous_page_number }}&date={{ request.GET.date }}&month={{ request.GET.month }}">Previous</a>
+                        href="?page={{ sales_records.previous_page_number }}&date={{ request.GET.date }}&month={{ request.GET.month }}&year={{ request.GET.year }}&start_date={{ request.GET.start_date }}&end_date={{ request.GET.end_date }}">Previous</a>
                 </li>
                 {% else %}
                 <li class="page-item disabled"><span class="page-link">Previous</span></li>
@@ -96,7 +173,8 @@
                 <li class="page-item active"><span class="page-link">{{ i }}</span></li>
                 {% else %}
                 <li class="page-item"><a class="page-link"
-                        href="?page={{ i }}&date={{ request.GET.date }}&month={{ request.GET.month }}">{{ i }}</a></li>
+                        href="?page={{ i }}&date={{ request.GET.date }}&month={{ request.GET.month }}&year={{ request.GET.year }}&start_date={{ request.GET.start_date }}&end_date={{ request.GET.end_date }}">{{
+                        i }}</a></li>
                 {% endif %}
                 {% endfor %}
 

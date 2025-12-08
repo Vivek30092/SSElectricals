@@ -1,7 +1,8 @@
 from django.shortcuts import render, redirect, get_object_or_404
+from django.core.files.storage import FileSystemStorage
 from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib import messages
-from .models import Appointment, AdminActivityLog, AdminSession, Order, Product, Category, ProductImage, OrderItem, Review, DailySales, DailyExpenditure
+from .models import Appointment, AdminActivityLog, AdminSession, Order, Product, Category, ProductImage, OrderItem, Review, DailySales, DailyExpenditure, PurchaseEntry, CustomUser
 import os
 from django.conf import settings
 import pandas as pd
@@ -15,48 +16,102 @@ from django.core.paginator import Paginator
 import csv
 import datetime
 import json
+import numpy as np
 
 
 @staff_member_required
 def admin_dashboard(request):
     # 1. KPI Cards
-    total_revenue = Order.objects.filter(status='Delivered').aggregate(Sum('total_price'))['total_price__sum'] or 0
+    # Updated Dashboard Logic
+    
+    # Revenue from Orders
+    order_revenue = Order.objects.filter(status='Delivered').aggregate(Sum('total_price'))['total_price__sum'] or 0
+    # Revenue from Daily Sales (Offline)
+    offline_sales = DailySales.objects.aggregate(Sum('total_sales'))['total_sales__sum'] or 0
+    total_revenue = float(order_revenue) + float(offline_sales)
+
+    # Expenses
+    total_expenses = DailyExpenditure.objects.aggregate(Sum('amount'))['amount__sum'] or 0
+    online_expenses = DailyExpenditure.objects.filter(payment_method='Online').aggregate(Sum('amount'))['amount__sum'] or 0
+    cash_expenses = DailyExpenditure.objects.filter(payment_method='Cash').aggregate(Sum('amount'))['amount__sum'] or 0
+    
+    # Purchases (Inventory Cost)
+    total_purchases = PurchaseEntry.objects.aggregate(Sum('total_cost'))['total_cost__sum'] or 0
+
+    profit_loss = total_revenue - float(total_expenses) - float(total_purchases)
+
     total_orders = Order.objects.count()
     pending_orders = Order.objects.filter(status='Pending').count()
     pending_appointments = Appointment.objects.filter(status='Pending').count()
 
-    # 2. Charts Data
-    # Daily Sales (Last 30 Days)
-    thirty_days_ago = timezone.now() - datetime.timedelta(days=30)
-    daily_sales = Order.objects.filter(created_at__gte=thirty_days_ago, status='Delivered') \
-        .annotate(date=TruncDate('created_at')) \
-        .values('date') \
-        .annotate(sales=Sum('total_price')) \
-        .order_by('date')
+    # Charts Data
+    today = timezone.now().date()
     
-    dates = [str(x['date']) for x in daily_sales]
-    sales = [float(x['sales'] or 0) for x in daily_sales]
+    # Date Range Filter logic
+    range_option = request.GET.get('range', '30') # Default to 30 days
+    start_date = None
+    
+    if range_option == '30':
+        start_date = today - datetime.timedelta(days=30)
+    elif range_option == '90':
+         start_date = today - datetime.timedelta(days=90)
+    elif range_option == '180':
+         start_date = today - datetime.timedelta(days=180)
+    elif range_option == '270':
+         start_date = today - datetime.timedelta(days=270)
+    elif range_option == '365':
+         start_date = today - datetime.timedelta(days=365)
+    elif range_option == '730':
+         start_date = today - datetime.timedelta(days=730)
+    elif range_option == '1095':
+         start_date = today - datetime.timedelta(days=1095)
+    elif range_option == 'all':
+         start_date = None # All time
+    else:
+        start_date = today - datetime.timedelta(days=30)
+        
+    # Minimum date fallback if start_date is too recent (logic handled by start_date being None for ALL, or fixed range)
+    # However, user requested "minimum 15 days view". If data is sparse, chart just shows what there is.
+    
+    # Fetch DailySales
+    sales_qs = DailySales.objects.all()
+    if start_date:
+        sales_qs = sales_qs.filter(date__gte=start_date)
+        
+    daily_sales_data = sales_qs.values('date') \
+        .annotate(sales=Sum('total_sales')) \
+        .order_by('date')
 
-    # Order Status Distribution
-    status_counts = Order.objects.values('status').annotate(count=Count('id'))
-    status_labels = [x['status'] for x in status_counts]
-    status_data = [x['count'] for x in status_counts]
+    dates = [x['date'].strftime('%Y-%m-%d') for x in daily_sales_data]
+    sales = [float(x['sales'] or 0) for x in daily_sales_data]
 
-    # 3. Recent Tables
+    # Category Statistics
+    category_stats = Product.objects.values('category__name').annotate(count=Count('id')).order_by('-count')
+    cat_labels = [x['category__name'] or 'Uncategorized' for x in category_stats]
+    cat_data = [x['count'] for x in category_stats]
+
     recent_orders = Order.objects.select_related('user').order_by('-created_at')[:5]
     recent_appointments = Appointment.objects.order_by('-created_at')[:5]
 
     context = {
         'total_revenue': total_revenue,
+        'order_revenue': order_revenue,
+        'offline_sales': offline_sales,
+        'total_expenses': total_expenses,
+        'online_expenses': online_expenses,
+        'cash_expenses': cash_expenses,
+        'total_purchases': total_purchases,
+        'profit_loss': profit_loss,
         'total_orders': total_orders,
         'pending_orders': pending_orders,
         'pending_appointments': pending_appointments,
         'dates_json': json.dumps(dates),
         'sales_json': json.dumps(sales),
-        'status_labels_json': json.dumps(status_labels),
-        'status_data_json': json.dumps(status_data),
+        'cat_labels_json': json.dumps(cat_labels),
+        'cat_data_json': json.dumps(cat_data),
         'recent_orders': recent_orders,
         'recent_appointments': recent_appointments,
+        'current_range': range_option,
     }
     return render(request, 'admin/admin_dashboard.html', context)
 
@@ -133,16 +188,32 @@ def admin_analytics(request):
     data_dir = os.path.join(settings.MEDIA_ROOT, 'data')
     if not os.path.exists(data_dir):
         os.makedirs(data_dir)
-        
-    xlsx_files = [f for f in os.listdir(data_dir) if f.endswith('.xlsx')]
+
+    # Handle File Upload
+    if request.method == 'POST' and request.FILES.get('upload_file'):
+        uploaded_file = request.FILES['upload_file']
+        if uploaded_file.name.endswith(('.xlsx', '.tsv', '.csv')):
+            fs = FileSystemStorage(location=data_dir)
+            filename = fs.save(uploaded_file.name, uploaded_file)
+            messages.success(request, f"File '{filename}' uploaded successfully.")
+            return redirect('admin_analytics')
+        else:
+            messages.error(request, "Invalid file format. Please upload .xlsx, .tsv, or .csv.")
     
-    context = {'files': xlsx_files}
+    data_files = [f for f in os.listdir(data_dir) if f.endswith(('.xlsx', '.tsv', '.csv'))]
+    
+    context = {'files': data_files}
     
     selected_file = request.GET.get('file')
-    if selected_file and selected_file in xlsx_files:
+    if selected_file and selected_file in data_files:
         file_path = os.path.join(data_dir, selected_file)
         try:
-            df = pd.read_excel(file_path)
+            if selected_file.endswith('.tsv'):
+                df = pd.read_csv(file_path, sep='\t')
+            elif selected_file.endswith('.csv'):
+                df = pd.read_csv(file_path)
+            else:
+                df = pd.read_excel(file_path)
             
             # Basic Analysis Logic (Assuming standard columns: 'Product', 'Quantity', 'Price', 'Delivery', 'Distance')
             # Adjust column names based on actual file structure or requirement
@@ -184,8 +255,60 @@ def admin_analytics(request):
                analysis['product_sales'] = []
 
             # 5. Raw Data HTML
-            analysis['html_table'] = df.to_html(classes='table table-bordered table-hover', index=False)
+            analysis['html_table'] = df.to_html(classes='table table-bordered table-hover mb-0', index=False)
             
+            # 6. Trend Prediction (Linear Regression)
+            if 'date' in df.columns:
+                target_col = None
+                if 'price' in df.columns: target_col = 'price'
+                elif 'total' in df.columns: target_col = 'total'
+                elif 'sales' in df.columns: target_col = 'sales'
+                
+                if target_col:
+                    try:
+                        # Prepare data
+                        df_trend = df.copy()
+                        df_trend['date'] = pd.to_datetime(df_trend['date'])
+                        daily_data = df_trend.groupby('date')[target_col].sum().reset_index().sort_values('date')
+                        
+                        if len(daily_data) > 1:
+                            # Create ordinal dates for regression
+                            daily_data['ordinal'] = daily_data['date'].apply(lambda x: x.toordinal())
+                            
+                            X = daily_data['ordinal'].values
+                            y = daily_data[target_col].values
+                            
+                            # Linear Regression: y = mx + c
+                            slope, intercept = np.polyfit(X, y, 1)
+                            
+                            # Predictions for existing dates (Trend Line)
+                            trend_values = slope * X + intercept
+                            
+                            # Future Predictions (Next 7 days)
+                            last_date = daily_data['date'].max()
+                            future_dates = [last_date + datetime.timedelta(days=i) for i in range(1, 8)]
+                            future_ordinals = np.array([d.toordinal() for d in future_dates])
+                            future_predictions = slope * future_ordinals + intercept
+                            
+                            # Prepare Labels and Data for Chart
+                            # Labels: History + Future
+                            history_dates_str = [d.strftime('%Y-%m-%d') for d in daily_data['date']]
+                            future_dates_str = [d.strftime('%Y-%m-%d') for d in future_dates]
+                            all_labels = history_dates_str + future_dates_str
+                            
+                            actual_data = list(daily_data[target_col]) + [None] * len(future_dates)
+                            
+                            # Trend Data: History Trend + Future Predictions
+                            trend_line_data = list(trend_values) + list(future_predictions)
+                            
+                            analysis['chart_labels'] = json.dumps(all_labels)
+                            analysis['chart_actual'] = json.dumps(actual_data)
+                            analysis['chart_trend'] = json.dumps(trend_line_data)
+                            analysis['has_prediction'] = True
+                            
+                    except Exception as reg_err:
+                        print(f"Regression error: {reg_err}")
+                        
             context['analysis'] = analysis
             context['current_file'] = selected_file
             
@@ -193,6 +316,32 @@ def admin_analytics(request):
             context['error'] = f"Error processing file: {str(e)}"
             
     return render(request, 'admin/admin_analytics.html', context)
+
+@staff_member_required
+def admin_delete_analytics_file(request):
+    if request.method == 'POST':
+        filename = request.POST.get('filename')
+        if filename:
+            data_dir = os.path.join(settings.MEDIA_ROOT, 'data')
+            file_path = os.path.join(data_dir, filename)
+            
+            # Security check: ensure file is within data_dir
+            # Using abspath for safer comparison
+            abs_data_dir = os.path.abspath(data_dir)
+            abs_file_path = os.path.abspath(file_path)
+            
+            if abs_file_path.startswith(abs_data_dir) and os.path.exists(abs_file_path):
+                try:
+                    os.remove(abs_file_path)
+                    messages.success(request, f"File '{filename}' deleted successfully.")
+                except Exception as e:
+                    messages.error(request, f"Error deleting file: {e}")
+            else:
+                 messages.error(request, "Invalid file path.")
+        else:
+             messages.error(request, "No filename provided.")
+             
+    return redirect('admin_analytics')
 
 # ------------------------------------------------------------------
 # Product Management
@@ -396,17 +545,39 @@ def admin_daily_sales(request):
     # Filters
     month = request.GET.get('month') # standard format YYYY-MM
     date = request.GET.get('date')
+    year = request.GET.get('year')
+    start_date = request.GET.get('start_date')
+    end_date = request.GET.get('end_date')
+    day_name = request.GET.get('day_name')
     
     if month:
         sales_list = sales_list.filter(date__month=month.split('-')[1], date__year=month.split('-')[0])
     if date:
         sales_list = sales_list.filter(date=date)
+    if year:
+        sales_list = sales_list.filter(date__year=year)
+    if start_date and end_date:
+        sales_list = sales_list.filter(date__range=[start_date, end_date])
+    if day_name:
+        sales_list = sales_list.filter(day__iexact=day_name.strip())
+    
+    # Calculate Totals
+    total_sales = sales_list.aggregate(Sum('total_sales'))['total_sales__sum'] or 0
+    total_online = sales_list.aggregate(Sum('online_received'))['online_received__sum'] or 0
+    total_cash = sales_list.aggregate(Sum('cash_received'))['cash_received__sum'] or 0
 
     paginator = Paginator(sales_list, 20)
     page_number = request.GET.get('page')
     sales_records = paginator.get_page(page_number)
 
-    return render(request, 'admin/admin_daily_sales.html', {'sales_records': sales_records})
+    context = {
+        'sales_records': sales_records,
+        'total_sales': total_sales,
+        'total_online': total_online,
+        'total_cash': total_cash
+    }
+
+    return render(request, 'admin/admin_daily_sales.html', context)
 
 @staff_member_required
 def admin_add_daily_sales(request):
@@ -471,19 +642,41 @@ def admin_daily_expenses(request):
     expenses_list = DailyExpenditure.objects.all().order_by('-date')
     
     # Filters
-    month = request.GET.get('month') 
+    month = request.GET.get('month')
     date = request.GET.get('date')
+    year = request.GET.get('year')
+    start_date = request.GET.get('start_date')
+    end_date = request.GET.get('end_date')
+    day_name = request.GET.get('day_name')
     
     if month:
         expenses_list = expenses_list.filter(date__month=month.split('-')[1], date__year=month.split('-')[0])
     if date:
         expenses_list = expenses_list.filter(date=date)
+    if year:
+        expenses_list = expenses_list.filter(date__year=year)
+    if start_date and end_date:
+        expenses_list = expenses_list.filter(date__range=[start_date, end_date])
+    if day_name:
+        expenses_list = expenses_list.filter(day__iexact=day_name.strip())
+
+    # Calculate Totals
+    total_expenses = expenses_list.aggregate(Sum('amount'))['amount__sum'] or 0
+    total_online_expenses = expenses_list.filter(payment_method='Online').aggregate(Sum('amount'))['amount__sum'] or 0
+    total_cash_expenses = expenses_list.filter(payment_method='Cash').aggregate(Sum('amount'))['amount__sum'] or 0
 
     paginator = Paginator(expenses_list, 20)
     page_number = request.GET.get('page')
     expenses = paginator.get_page(page_number)
 
-    return render(request, 'admin/admin_daily_expenses.html', {'expenses': expenses})
+    context = {
+        'expenses': expenses,
+        'total_expenses': total_expenses,
+        'total_online_expenses': total_online_expenses,
+        'total_cash_expenses': total_cash_expenses
+    }
+
+    return render(request, 'admin/admin_daily_expenses.html', context)
 
 @staff_member_required
 def admin_add_daily_expense(request):
@@ -524,15 +717,374 @@ def admin_delete_daily_expense(request, pk):
     return redirect('admin_daily_expenses')
 
 @staff_member_required
-def admin_export_expenses(request):
-    response = HttpResponse(content_type='text/csv')
-    response['Content-Disposition'] = 'attachment; filename="daily_expenses.csv"'
+def admin_export_sales(request):
+    fmt = request.GET.get('format', 'csv')
+    sales = DailySales.objects.all().order_by('-date')
     
-    writer = csv.writer(response)
-    writer.writerow(['Date', 'Day', 'Amount', 'Payment Method', 'Description', 'Admin', 'Timestamp'])
-    
-    expenses = DailyExpenditure.objects.all().order_by('-date')
-    for ex in expenses:
-        writer.writerow([ex.date, ex.day, ex.amount, ex.payment_method, ex.description, ex.admin.username if ex.admin else 'Unknown', ex.created_at])
+    # Define columns
+    columns = ['Date', 'Day', 'Total Sales', 'Online', 'Cash', 'Remark', 'Admin']
+    data = []
+    for sale in sales:
+        data.append([
+            str(sale.date), 
+            sale.day, 
+            str(sale.total_sales), 
+            str(sale.online_received), 
+            str(sale.cash_received), 
+            sale.remark, 
+            sale.admin.username if sale.admin else 'Unknown'
+        ])
+
+    if fmt == 'tsv':
+        response = HttpResponse(content_type='text/tab-separated-values')
+        response['Content-Disposition'] = 'attachment; filename="daily_sales.tsv"'
+        writer = csv.writer(response, delimiter='\t')
+        writer.writerow(columns)
+        for row in data:
+            writer.writerow(row)
+        return response
+
+    elif fmt == 'pdf':
+        from reportlab.lib.pagesizes import letter
+        from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph
+        from reportlab.lib import colors
+        from reportlab.lib.styles import getSampleStyleSheet
         
-    return response
+        response = HttpResponse(content_type='application/pdf')
+        response['Content-Disposition'] = 'attachment; filename="daily_sales.pdf"'
+        
+        doc = SimpleDocTemplate(response, pagesize=letter)
+        elements = []
+        styles = getSampleStyleSheet()
+        
+        elements.append(Paragraph("Daily Sales Report", styles['Title']))
+        
+        table_data = [columns] + data
+        t = Table(table_data)
+        t.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black),
+            ('FONTSIZE', (0, 0), (-1, -1), 8),
+        ]))
+        elements.append(t)
+        doc.build(elements)
+        return response
+
+    elif fmt == 'word':
+        from docx import Document
+        
+        response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document')
+        response['Content-Disposition'] = 'attachment; filename="daily_sales.docx"'
+        
+        doc = Document()
+        doc.add_heading('Daily Sales Report', 0)
+        
+        table = doc.add_table(rows=1, cols=len(columns))
+        hdr_cells = table.rows[0].cells
+        for i, col in enumerate(columns):
+            hdr_cells[i].text = col
+            
+        for row in data:
+            row_cells = table.add_row().cells
+            for i, val in enumerate(row):
+                row_cells[i].text = str(val)
+                
+        doc.save(response)
+        return response
+
+    else: # Default CSV
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = 'attachment; filename="daily_sales.csv"'
+        writer = csv.writer(response)
+        writer.writerow(columns)
+        for row in data:
+            writer.writerow(row)
+        return response
+
+@staff_member_required
+def admin_export_expenses(request):
+    fmt = request.GET.get('format', 'csv')
+    expenses = DailyExpenditure.objects.all().order_by('-date')
+    
+    columns = ['Date', 'Day', 'Amount', 'Method', 'Description', 'Admin']
+    data = []
+    for ex in expenses:
+        data.append([
+            str(ex.date), 
+            ex.day, 
+            str(ex.amount), 
+            ex.payment_method, 
+            ex.description, 
+            ex.admin.username if ex.admin else 'Unknown'
+        ])
+
+    if fmt == 'tsv':
+        response = HttpResponse(content_type='text/tab-separated-values')
+        response['Content-Disposition'] = 'attachment; filename="daily_expenses.tsv"'
+        writer = csv.writer(response, delimiter='\t')
+        writer.writerow(columns)
+        for row in data:
+            writer.writerow(row)
+        return response
+        
+    elif fmt == 'pdf':
+        from reportlab.lib.pagesizes import letter
+        from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph
+        from reportlab.lib import colors
+        from reportlab.lib.styles import getSampleStyleSheet
+
+        response = HttpResponse(content_type='application/pdf')
+        response['Content-Disposition'] = 'attachment; filename="daily_expenses.pdf"'
+        
+        doc = SimpleDocTemplate(response, pagesize=letter)
+        elements = []
+        styles = getSampleStyleSheet()
+        elements.append(Paragraph("Daily Expenses Report", styles['Title']))
+        
+        table_data = [columns] + data
+        t = Table(table_data)
+        t.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black),
+            ('FONTSIZE', (0, 0), (-1, -1), 8),
+        ]))
+        elements.append(t)
+        doc.build(elements)
+        return response
+
+    elif fmt == 'word':
+        from docx import Document
+        
+        response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document')
+        response['Content-Disposition'] = 'attachment; filename="daily_expenses.docx"'
+        
+        doc = Document()
+        doc.add_heading('Daily Expenses Report', 0)
+        
+        table = doc.add_table(rows=1, cols=len(columns))
+        hdr_cells = table.rows[0].cells
+        for i, col in enumerate(columns):
+            hdr_cells[i].text = col
+            
+        for row in data:
+            row_cells = table.add_row().cells
+            for i, val in enumerate(row):
+                row_cells[i].text = str(val)
+                
+        doc.save(response)
+        return response
+
+    else: # Default CSV
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = 'attachment; filename="daily_expenses.csv"'
+        writer = csv.writer(response)
+        writer.writerow(columns)
+        for row in data:
+            writer.writerow(row)
+        return response
+
+# ------------------------------------------------------------------
+# Category Management
+# ------------------------------------------------------------------
+
+@staff_member_required
+def admin_category_list(request):
+    categories = Category.objects.annotate(product_count=Count('products')).all()
+    return render(request, 'admin/admin_category_list.html', {'categories': categories})
+
+@staff_member_required
+def admin_category_add(request):
+    if request.method == 'POST':
+        name = request.POST.get('name')
+        image = request.FILES.get('image')
+        
+        if name:
+            Category.objects.create(name=name, image=image)
+            messages.success(request, "Category created successfully.")
+            return redirect('admin_category_list')
+        
+    return render(request, 'admin/admin_category_form.html')
+
+@staff_member_required
+def admin_category_edit(request, pk):
+    category = get_object_or_404(Category, pk=pk)
+    if request.method == 'POST':
+        category.name = request.POST.get('name')
+        if request.FILES.get('image'):
+            category.image = request.FILES.get('image')
+        category.save()
+        messages.success(request, "Category updated successfully.")
+        return redirect('admin_category_list')
+        
+    return render(request, 'admin/admin_category_form.html', {'category': category})
+
+@staff_member_required
+def admin_category_delete(request, pk):
+    category = get_object_or_404(Category, pk=pk)
+    category.delete()
+    messages.success(request, "Category deleted.")
+    return redirect('admin_category_list')
+
+# ------------------------------------------------------------------
+# File Upload & Bulk Operations
+# ------------------------------------------------------------------
+
+def validate_columns(df, required):
+    # Normalize columns: strip, lower, replace space with underscore
+    df.columns = df.columns.astype(str).str.strip().str.lower().str.replace(' ', '_')
+    missing = [c for c in required if c not in df.columns]
+    return missing
+
+@staff_member_required
+def admin_upload_sales(request):
+    if request.method == 'POST' and request.FILES.get('file'):
+        file = request.FILES['file']
+        try:
+            if file.name.endswith('.csv'):
+                df = pd.read_csv(file)
+            elif file.name.endswith('.tsv'):
+                df = pd.read_csv(file, sep='\t')
+            elif file.name.endswith('.xlsx'):
+                df = pd.read_excel(file)
+            else:
+                messages.error(request, "Invalid file format. Please upload CSV, TSV, or XLSX.")
+                return redirect('admin_daily_sales')
+
+            required = ['date', 'total_sales']
+            missing = validate_columns(df, required)
+            if missing:
+                messages.error(request, f"Missing required columns: {', '.join(missing)}")
+                return redirect('admin_daily_sales')
+                
+            count = 0
+            for _, row in df.iterrows():
+                try:
+                    date_val = pd.to_datetime(row['date']).date()
+                    DailySales.objects.update_or_create(
+                        date=date_val,
+                        defaults={
+                            'total_sales': row.get('total_sales', 0),
+                            'online_received': row.get('online_received', 0),
+                            'cash_received': row.get('cash_received', 0),
+                            'remark': row.get('remark', 'Updated via Upload'),
+                            'admin': request.user
+                        }
+                    )
+                    count += 1
+                except Exception as row_err:
+                    print(f"Skipping row: {row_err}")
+
+            messages.success(request, f"Successfully processed {count} sales records.")
+            return redirect('admin_daily_sales')
+            
+        except Exception as e:
+            messages.error(request, f"Error processing file: {e}")
+            return redirect('admin_daily_sales')
+            
+    return render(request, 'admin/admin_upload_form.html', {'title': 'Upload Daily Sales (CSV/TSV/XLSX)'})
+
+@staff_member_required
+def admin_upload_expenses(request):
+    if request.method == 'POST' and request.FILES.get('file'):
+        file = request.FILES['file']
+        try:
+            if file.name.endswith('.csv'):
+                df = pd.read_csv(file)
+            elif file.name.endswith('.tsv'):
+                df = pd.read_csv(file, sep='\t')
+            elif file.name.endswith('.xlsx'):
+                df = pd.read_excel(file)
+            else:
+                messages.error(request, "Invalid file format. Please upload CSV, TSV, or XLSX.")
+                return redirect('admin_daily_expenses')
+
+            # Required: Date, Amount, Payment Method, Description
+            # Mappable column names
+            required = ['date', 'amount']
+            missing = validate_columns(df, required)
+            if missing:
+                messages.error(request, f"Missing required columns: {', '.join(missing)}")
+                return redirect('admin_daily_expenses')
+                
+            count = 0
+            for _, row in df.iterrows():
+                try:
+                    date_val = pd.to_datetime(row['date']).date()
+                    DailyExpenditure.objects.create(
+                        date=date_val,
+                        amount=row['amount'],
+                        payment_method=row.get('payment_method', 'Cash'), # Default to Cash if missing
+                        description=row.get('description', 'Imported Expense'),
+                        admin=request.user
+                    )
+                    count += 1
+                except Exception as row_err:
+                    print(f"Skipping row: {row_err}")
+                    
+            messages.success(request, f"Successfully imported {count} expense records.")
+            return redirect('admin_daily_expenses')
+            
+        except Exception as e:
+            messages.error(request, f"Error processing file: {e}")
+            return redirect('admin_daily_expenses')
+            
+    return render(request, 'admin/admin_upload_form.html', {'title': 'Upload Daily Expenses (CSV/TSV/XLSX)'})
+
+
+
+
+# ------------------------------------------------------------------
+# User Management
+# ------------------------------------------------------------------
+
+@staff_member_required
+def admin_user_list(request):
+    # Filter for regular users (not superusers or staff) if desired, or all
+    # Let's show all users but maybe visually distinguish
+    users_list = CustomUser.objects.filter(is_superuser=False, is_staff=False).order_by('-date_joined')
+    
+    paginator = Paginator(users_list, 20)
+    page_number = request.GET.get('page')
+    users = paginator.get_page(page_number)
+    
+    return render(request, 'admin/admin_user_list.html', {'users': users})
+
+@staff_member_required
+def admin_user_detail(request, user_id):
+    from .models import CustomUser 
+    user = get_object_or_404(CustomUser, id=user_id)
+    
+    # Cart
+    try:
+        cart_items = user.cart.items.all()
+        cart_total = user.cart.total_price
+    except:
+        cart_items = []
+        cart_total = 0
+        
+    # Wishlist
+    # Wishlist is ForeignKey in models.py: user = models.ForeignKey(..., related_name='wishlist')
+    wishlist_items = user.wishlist.all()
+    
+    # Orders (Optional but useful)
+    orders = user.orders.all().order_by('-created_at')[:5]
+    
+    context = {
+        'customer': user,
+        'cart_items': cart_items,
+        'cart_total': cart_total,
+        'wishlist_items': wishlist_items,
+        'recent_orders': orders
+    }
+    
+    return render(request, 'admin/admin_user_detail.html', context)

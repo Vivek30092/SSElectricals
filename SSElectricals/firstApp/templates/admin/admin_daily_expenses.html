@@ -4,49 +4,155 @@
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h2>Daily Expenditures</h2>
     <div>
-        <a href="{% url 'admin_export_expenses' %}" class="btn btn-success me-2"><i class="fas fa-file-csv"></i> Export
-            CSV</a>
+        <div class="btn-group me-2">
+            <button type="button" class="btn btn-success dropdown-toggle" data-bs-toggle="dropdown"
+                aria-expanded="false">
+                <i class="fas fa-download"></i> Export
+            </button>
+            <ul class="dropdown-menu">
+                <li><a class="dropdown-item" href="{% url 'admin_export_expenses' %}?format=csv"><i
+                            class="fas fa-file-csv me-2"></i>CSV</a></li>
+                <li><a class="dropdown-item" href="{% url 'admin_export_expenses' %}?format=tsv"><i
+                            class="fas fa-file-alt me-2"></i>TSV</a></li>
+                <li><a class="dropdown-item" href="{% url 'admin_export_expenses' %}?format=pdf"><i
+                            class="fas fa-file-pdf me-2"></i>PDF</a></li>
+                <li><a class="dropdown-item" href="{% url 'admin_export_expenses' %}?format=word"><i
+                            class="fas fa-file-word me-2"></i>Word</a></li>
+            </ul>
+        </div>
+        <a href="{% url 'admin_upload_expenses' %}" class="btn btn-info me-2 text-white"><i
+                class="fas fa-file-upload"></i> Upload Bulk</a>
         <a href="{% url 'admin_add_daily_expense' %}" class="btn btn-primary"><i class="fas fa-plus"></i> Add
             Expense</a>
     </div>
 </div>
 
 <!-- Filter Form -->
-<form method="get" class="mb-4 bg-light p-3 rounded">
-    <div class="row g-3 align-items-end">
-        <div class="col-md-4">
-            <label class="form-label">Date</label>
+<form method="get" class="mb-4 bg-white p-4 rounded shadow-sm border">
+    <div class="row g-3">
+        <div class="col-md-3">
+            <label class="form-label small text-muted">Specific Date</label>
             <input type="date" name="date" class="form-control" value="{{ request.GET.date }}">
         </div>
-        <div class="col-md-4">
-            <label class="form-label">Month</label>
+        <div class="col-md-3">
+            <label class="form-label small text-muted">Month</label>
             <input type="month" name="month" class="form-control" value="{{ request.GET.month }}">
         </div>
+        <div class="col-md-2">
+            <label class="form-label small text-muted">Year</label>
+            <input type="number" name="year" class="form-control" placeholder="YYYY" min="2000" max="2100"
+                value="{{ request.GET.year }}">
+        </div>
+        <div class="col-md-2">
+            <label class="form-label small text-muted">Day</label>
+            <select name="day_name" class="form-select">
+                <option value="">All Days</option>
+                <option value="Monday" {% if request.GET.day_name == "Monday" %}selected{% endif %}>Monday</option>
+                <option value="Tuesday" {% if request.GET.day_name == "Tuesday" %}selected{% endif %}>Tuesday</option>
+                <option value="Wednesday" {% if request.GET.day_name == "Wednesday" %}selected{% endif %}>Wednesday
+                </option>
+                <option value="Thursday" {% if request.GET.day_name == "Thursday" %}selected{% endif %}>Thursday</option>
+                <option value="Friday" {% if request.GET.day_name == "Friday" %}selected{% endif %}>Friday</option>
+                <option value="Saturday" {% if request.GET.day_name == "Saturday" %}selected{% endif %}>Saturday</option>
+                <option value="Sunday" {% if request.GET.day_name == "Sunday" %}selected{% endif %}>Sunday</option>
+            </select>
+        </div>
         <div class="col-md-4">
-            <button type="submit" class="btn btn-primary">Filter</button>
-            <a href="{% url 'admin_daily_expenses' %}" class="btn btn-secondary">Clear</a>
+            <label class="form-label small text-muted">Date Range</label>
+            <div class="input-group">
+                <input type="date" name="start_date" class="form-control" placeholder="Start"
+                    value="{{ request.GET.start_date }}">
+                <span class="input-group-text">to</span>
+                <input type="date" name="end_date" class="form-control" placeholder="End"
+                    value="{{ request.GET.end_date }}">
+            </div>
+        </div>
+        <div class="col-12 text-end">
+            <button type="submit" class="btn btn-primary"><i class="fas fa-filter me-1"></i> Apply Filters</button>
+            <a href="{% url 'admin_daily_expenses' %}" class="btn btn-secondary ms-2">Clear</a>
         </div>
     </div>
 </form>
 
-<div class="card shadow">
-    <div class="card-body">
+<!-- Summary Stats -->
+{% if total_expenses > 0 %}
+<div class="row mb-4 g-3">
+    <div class="col-md-4">
+        <div class="card bg-danger text-white shadow-sm border-0">
+            <div class="card-body">
+                <h6 class="card-title text-uppercase small opacity-75">Total Expenses (Filtered)</h6>
+                <h3 class="mb-0">₹{{ total_expenses }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card bg-success text-white shadow-sm border-0">
+            <div class="card-body">
+                <h6 class="card-title text-uppercase small opacity-75">Online Expenses</h6>
+                <h3 class="mb-0">₹{{ total_online_expenses }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card bg-warning text-dark shadow-sm border-0">
+            <div class="card-body">
+                <h6 class="card-title text-uppercase small opacity-75">Cash Expenses</h6>
+                <h3 class="mb-0">₹{{ total_cash_expenses }}</h3>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<div class="card shadow border-0">
+    <div class="card-body p-0">
         <div class="table-responsive">
-            <table class="table table-hover table-bordered">
-                <thead class="table-dark">
+            <table class="table table-hover table-striped mb-0 align-middle">
+                <thead class="bg-light">
                     <tr>
-                        </tbody>
+                        <th class="py-3 ps-3">Date</th>
+                        <th class="py-3">Day</th>
+                        <th class="py-3">Amount</th>
+                        <th class="py-3">Method</th>
+                        <th class="py-3">Description</th>
+                        <th class="py-3">Admin</th>
+                        <th class="py-3 pe-3 text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for expense in expenses %}
+                    <tr>
+                        <td class="ps-3">{{ expense.date }}</td>
+                        <td>{{ expense.day }}</td>
+                        <td class="fw-bold text-danger">₹{{ expense.amount }}</td>
+                        <td><span class="badge bg-secondary">{{ expense.payment_method }}</span></td>
+                        <td>{{ expense.description }}</td>
+                        <td><span class="badge bg-light text-dark border">{{ expense.admin.username }}</span></td>
+                        <td class="text-end pe-3">
+                            <a href="{% url 'admin_edit_daily_expense' expense.id %}"
+                                class="btn btn-sm btn-outline-primary border-0"><i class="fas fa-edit"></i></a>
+                            <a href="{% url 'admin_delete_daily_expense' expense.id %}"
+                                class="btn btn-sm btn-outline-danger border-0"
+                                onclick="return confirm('Delete this?')"><i class="fas fa-trash"></i></a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="text-center py-5 text-muted">No expenses found.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
             </table>
         </div>
 
         <!-- Pagination -->
         {% if expenses.has_other_pages %}
-        <nav aria-label="Page navigation" class="mt-4">
-            <ul class="pagination justify-content-center">
+        <nav aria-label="Page navigation" class="p-3 border-top">
+            <ul class="pagination justify-content-center mb-0">
                 {% if expenses.has_previous %}
                 <li class="page-item">
                     <a class="page-link"
-                        href="?page={{ expenses.previous_page_number }}&date={{ request.GET.date }}&month={{ request.GET.month }}">Previous</a>
+                        href="?page={{ expenses.previous_page_number }}&date={{ request.GET.date }}&month={{ request.GET.month }}&year={{ request.GET.year }}&start_date={{ request.GET.start_date }}&end_date={{ request.GET.end_date }}">Previous</a>
                 </li>
                 {% else %}
                 <li class="page-item disabled"><span class="page-link">Previous</span></li>
@@ -57,7 +163,8 @@
                 <li class="page-item active"><span class="page-link">{{ i }}</span></li>
                 {% else %}
                 <li class="page-item"><a class="page-link"
-                        href="?page={{ i }}&date={{ request.GET.date }}&month={{ request.GET.month }}">{{ i }}</a></li>
+                        href="?page={{ i }}&date={{ request.GET.date }}&month={{ request.GET.month }}&year={{ request.GET.year }}&start_date={{ request.GET.start_date }}&end_date={{ request.GET.end_date }}">{{
+                        i }}</a></li>
                 {% endif %}
                 {% endfor %}
 

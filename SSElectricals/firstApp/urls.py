@@ -51,12 +51,19 @@ urlpatterns = [
     path('shop-admin/activity-log/', admin_views.admin_activity_log_view, name='admin_activity_log'),
     path('shop-admin/terminate-session/<int:session_id>/', admin_views.terminate_session, name='terminate_session'),
     path('shop-admin/analytics/', admin_views.admin_analytics, name='admin_analytics'),
+    path('shop-admin/analytics/delete/', admin_views.admin_delete_analytics_file, name='admin_delete_analytics_file'),
     
     # Admin Product Management
     path('shop-admin/products/', admin_views.admin_product_list, name='admin_product_list'),
     path('shop-admin/products/add/', admin_views.admin_product_add, name='admin_product_add'),
     path('shop-admin/products/edit/<int:pk>/', admin_views.admin_product_edit, name='admin_product_edit'),
     path('shop-admin/products/delete/<int:pk>/', admin_views.admin_product_delete, name='admin_product_delete'),
+    
+    # Admin Category Management
+    path('shop-admin/categories/', admin_views.admin_category_list, name='admin_category_list'),
+    path('shop-admin/categories/add/', admin_views.admin_category_add, name='admin_category_add'),
+    path('shop-admin/categories/edit/<int:pk>/', admin_views.admin_category_edit, name='admin_category_edit'),
+    path('shop-admin/categories/delete/<int:pk>/', admin_views.admin_category_delete, name='admin_category_delete'),
     
     # Admin Order Management
     path('shop-admin/orders/', admin_views.admin_order_list, name='admin_order_list'),
@@ -72,6 +79,7 @@ urlpatterns = [
     path('shop-admin/sales/edit/<int:pk>/', admin_views.admin_edit_daily_sales, name='admin_edit_daily_sales'),
     path('shop-admin/sales/delete/<int:pk>/', admin_views.admin_delete_daily_sales, name='admin_delete_daily_sales'),
     path('shop-admin/sales/export/', admin_views.admin_export_sales, name='admin_export_sales'),
+    path('shop-admin/sales/upload/', admin_views.admin_upload_sales, name='admin_upload_sales'),
 
     # Admin Daily Expenses
     path('shop-admin/expenses/', admin_views.admin_daily_expenses, name='admin_daily_expenses'),
@@ -79,6 +87,7 @@ urlpatterns = [
     path('shop-admin/expenses/edit/<int:pk>/', admin_views.admin_edit_daily_expense, name='admin_edit_daily_expense'),
     path('shop-admin/expenses/delete/<int:pk>/', admin_views.admin_delete_daily_expense, name='admin_delete_daily_expense'),
     path('shop-admin/expenses/export/', admin_views.admin_export_expenses, name='admin_export_expenses'),
+    path('shop-admin/expenses/upload/', admin_views.admin_upload_expenses, name='admin_upload_expenses'),
     
     # Appointment URLs
     path('book-appointment/', views.book_appointment, name='book_appointment'),
@@ -90,6 +99,10 @@ urlpatterns = [
     path('shop-admin/appointments/', admin_views.admin_appointment_list, name='admin_appointment_list'),
     path('shop-admin/appointments/update/<int:pk>/', admin_views.admin_appointment_update, name='admin_appointment_update'),
     path('shop-admin/appointments/delete/<int:pk>/', admin_views.admin_appointment_delete, name='admin_appointment_delete'),
+
+    # Admin User Management
+    path('shop-admin/users/', admin_views.admin_user_list, name='admin_user_list'),
+    path('shop-admin/users/<int:user_id>/', admin_views.admin_user_detail, name='admin_user_detail'),
 
     path('confirm-delivery/', views.confirm_delivery_otp, name='confirm_delivery_otp'),
     path('order/receipt/<int:order_id>/', views.order_receipt, name='order_receipt'),

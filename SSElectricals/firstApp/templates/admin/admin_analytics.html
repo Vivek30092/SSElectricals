@@ -1,98 +1,245 @@
-{% extends 'firstApp/base.html' %}
+{% extends 'admin/base_admin.html' %}
 
 {% block content %}
-<div class="container my-5">
-    <h2 class="mb-4">Data Analytics (.xlsx)</h2>
-
-    {% if error %}
-    <div class="alert alert-danger">{{ error }}</div>
-    {% endif %}
-
-    <div class="card mb-4">
-        <div class="card-header bg-primary text-white">
-            Available Data Files
-        </div>
-        <div class="card-body">
-            {% if files %}
-            <ul class="list-group">
-                {% for file in files %}
-                <li class="list-group-item d-flex justify-content-between align-items-center">
-                    {{ file }}
-                    <a href="?file={{ file }}" class="btn btn-sm btn-outline-primary">Analyze</a>
-                </li>
-                {% endfor %}
-            </ul>
-            {% else %}
-            <p class="text-muted">No .xlsx files found in media/data/</p>
-            {% endif %}
-        </div>
-    </div>
-
-    {% if analysis %}
-    <div class="card">
-        <div class="card-header bg-success text-white">
-            Analysis Result: {{ current_file }}
-        </div>
-        <div class="card-body">
-            <div class="row mb-4">
-                <div class="col-md-4">
-                    <div class="card bg-light">
-                        <div class="card-body text-center">
-                            <h5>Total Revenue</h5>
-                            <h3>₹{{ analysis.total_revenue }}</h3>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="card bg-light">
-                        <div class="card-body text-center">
-                            <h5>Total Delivery Charges</h5>
-                            <h3>₹{{ analysis.total_delivery }}</h3>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="card bg-light">
-                        <div class="card-body text-center">
-                            <h5>Total Distance</h5>
-                            <h3>{{ analysis.total_distance }} KM</h3>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <h4>Product Sales</h4>
-            <div class="table-responsive">
-                <table class="table table-striped">
-                    <thead>
-                        <tr>
-                            <th>Product Name</th>
-                            <th>Quantity Sold</th>
-                            <th>Total Sales</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for product in analysis.product_sales %}
-                        <tr>
-                            <td>{{ product.name }}</td>
-                            <td>{{ product.quantity }}</td>
-                            <td>₹{{ product.sales }}</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-
-            <h4 class="mt-4">Raw Data Preview</h4>
-            <div class="table-responsive" style="max-height: 400px; overflow: auto;">
-                {{ analysis.html_table|safe }}
-            </div>
-        </div>
-    </div>
-    {% endif %}
-
-    <div class="mt-3">
-        <a href="{% url 'admin_dashboard' %}" class="btn btn-secondary">Back to Dashboard</a>
+<div class="row mb-4">
+    <div class="col-12">
+        <h2 class="mb-4">Advanced Data Analytics</h2>
     </div>
 </div>
+
+{% if error %}
+<div class="alert alert-danger shadow-sm border-0">{{ error }}</div>
+{% endif %}
+
+<div class="row">
+    <!-- Sidebar -->
+    <div class="col-md-3">
+        <!-- Text Upload Card -->
+        <div class="card shadow-sm border-0 mb-4">
+            <div class="card-header bg-white py-3">
+                <h6 class="mb-0 fw-bold text-success">
+                    <i class="fas fa-cloud-upload-alt me-2"></i>Upload New Data
+                </h6>
+            </div>
+            <div class="card-body">
+                <form method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label small text-muted">Select CSV, TSV or XLSX</label>
+                        <input type="file" name="upload_file" class="form-control form-control-sm"
+                            accept=".csv, .tsv, .xlsx" required>
+                    </div>
+                    <button type="submit" class="btn btn-sm btn-success w-100">
+                        <i class="fas fa-upload me-1"></i> Upload
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- File List Card -->
+        <div class="card shadow-sm border-0 mb-4">
+            <div class="card-header bg-white py-3">
+                <h6 class="mb-0 fw-bold text-primary">
+                    <i class="fas fa-folder-open me-2"></i>Data Files
+                </h6>
+            </div>
+            <div class="list-group list-group-flush">
+
+                {% if files %}
+                {% for file in files %}
+                <div
+                    class="list-group-item d-flex justify-content-between align-items-center {% if file == current_file %}bg-light{% endif %}">
+                    <a href="?file={{ file }}" class="text-decoration-none text-dark d-block text-truncate"
+                        style="max-width: 80%;">
+                        {% if file == current_file %}<strong>{{ file }}</strong>{% else %}{{ file }}{% endif %}
+                    </a>
+                    <form action="{% url 'admin_delete_analytics_file' %}" method="POST" class="d-inline"
+                        onsubmit="return confirm('Are you sure you want to delete {{ file }}?');">
+                        {% csrf_token %}
+                        <input type="hidden" name="filename" value="{{ file }}">
+                        <button type="submit" class="btn btn-sm btn-outline-danger border-0 p-1" title="Delete File">
+                            <i class="fas fa-trash-alt"></i>
+                        </button>
+                    </form>
+                </div>
+                {% endfor %}
+                {% else %}
+                <div class="p-3 text-muted">No files found.</div>
+                {% endif %}
+
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <div class="col-md-9">
+
+        {% if analysis %}
+        <div class="alert alert-success border-0 shadow-sm d-flex justify-content-between align-items-center">
+            <span>
+                <i class="fas fa-check-circle me-2"></i>
+                Analyzing: <strong>{{ current_file }}</strong>
+            </span>
+            <span class="badge bg-white text-success">
+                {{ analysis.total_revenue|floatformat:2 }} Total Sales
+            </span>
+        </div>
+
+        <!-- KPI Section -->
+        <div class="row g-3 mb-4">
+            <div class="col-md-4">
+                <div class="card shadow-sm border-0 h-100 border-start border-4 border-primary">
+                    <div class="card-body">
+                        <h6 class="text-muted mb-1">Revenue</h6>
+                        <h3>₹{{ analysis.total_revenue|floatformat:2 }}</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card shadow-sm border-0 h-100 border-start border-4 border-info">
+                    <div class="card-body">
+                        <h6 class="text-muted mb-1">Delivery Cost</h6>
+                        <h3>₹{{ analysis.total_delivery|floatformat:2 }}</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card shadow-sm border-0 h-100 border-start border-4 border-warning">
+                    <div class="card-body">
+                        <h6 class="text-muted mb-1">Coverage</h6>
+                        <h3>{{ analysis.total_distance|floatformat:1 }} km</h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Prediction Chart -->
+        {% if analysis.has_prediction %}
+        <div class="card shadow-sm border-0 mb-4">
+            <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                <h6 class="fw-bold text-dark">
+                    <i class="fas fa-chart-line me-2 text-success"></i>
+                    Trend Analysis & Forecast
+                </h6>
+                <span class="badge bg-light text-dark border">Polynomial Regression (Degree 1)</span>
+            </div>
+            <div class="card-body">
+                <div style="height: 350px;">
+                    <canvas id="predictionChart"></canvas>
+                </div>
+                <small class="text-muted d-block text-center mt-2">
+                    * Dotted line = predicted future trend
+                </small>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Product Breakdown -->
+        <div class="card shadow-sm border-0 mb-4">
+            <div class="card-header bg-white py-3">
+                <h6 class="fw-bold">
+                    <i class="fas fa-box me-2 text-secondary"></i>Product Performance
+                </h6>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive" style="max-height:300px;">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light sticky-top">
+                            <tr>
+                                <th>Product Name</th>
+                                <th class="text-center">Quantity</th>
+                                <th class="text-end">Total Sales</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for product in analysis.product_sales %}
+                            <tr>
+                                <td class="fw-bold">{{ product.name }}</td>
+                                <td class="text-center">
+                                    <span class="badge bg-secondary">{{ product.quantity }}</span>
+                                </td>
+                                <td class="text-end">₹{{ product.sales|floatformat:2 }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="3" class="text-center py-3">No product data found.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Raw Data -->
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-white py-3" data-bs-toggle="collapse" data-bs-target="#rawData"
+                style="cursor:pointer;">
+                <h6 class="fw-bold text-muted mb-0">
+                    <i class="fas fa-table me-2"></i>View Raw Data Source
+                </h6>
+            </div>
+            <div id="rawData" class="collapse">
+                <div class="card-body p-0">
+                    <div class="table-responsive" style="max-height:400px;">
+                        {{ analysis.html_table|safe }}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {% else %}
+
+        <!-- No file selected -->
+        <div class="card shadow-sm border-0 text-center py-5">
+            <div class="card-body">
+                <div class="mb-3 text-muted opacity-50">
+                    <i class="fas fa-file-excel fa-4x"></i>
+                </div>
+                <h3>Select a Data File</h3>
+                <p class="text-muted">
+                    Choose an Excel (.xlsx) or TSV file from the sidebar.
+                </p>
+            </div>
+        </div>
+
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{% if analysis and analysis.has_prediction %}
+<script>
+    const ctx = document.getElementById('predictionChart').getContext('2d');
+    new Chart(ctx, {
+        type: "line",
+        data: {
+            labels: JSON.parse('{{ analysis.chart_labels|safe }}'),
+            datasets: [
+                {
+                    label: "Actual Values",
+                    data: JSON.parse('{{ analysis.chart_actual|safe }}'),
+                    borderColor: "#0d6efd",
+                    backgroundColor: "rgba(13,110,253,0.1)",
+                    borderWidth: 2,
+                    tension: 0.1
+                },
+                {
+                    label: "Trend & Prediction",
+                    data: JSON.parse('{{ analysis.chart_trend|safe }}'),
+                    borderColor: "#198754",
+                    borderDash: [5, 5],
+                    borderWidth: 2,
+                    tension: 0.1
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false
+        }
+    });
+</script>
+{% endif %}
 {% endblock %}

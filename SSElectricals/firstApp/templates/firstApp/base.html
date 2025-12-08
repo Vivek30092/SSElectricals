@@ -440,6 +440,9 @@
                 body.classList.add('dark-mode');
                 icon.classList.remove('fa-moon');
                 icon.classList.add('fa-sun');
+            } else if (!savedTheme) {
+                // Explicitly set default to light if not set
+                localStorage.setItem('theme', 'light');
             }
 
             themeToggleBtn.addEventListener('click', function () {

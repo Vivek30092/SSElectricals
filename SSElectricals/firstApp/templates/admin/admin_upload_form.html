@@ -1,0 +1,26 @@
+{% extends 'admin/base_admin.html' %}
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0">{{ title|default:"Upload File" }}</h4>
+            </div>
+            <div class="card-body">
+                <p>Please upload a CSV or XLSX file.</p>
+                <form method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="file" class="form-label">Select File</label>
+                        <input type="file" name="file" id="file" class="form-control" required accept=".csv, .xlsx, .xls">
+                    </div>
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary">Upload & Process</button>
+                        <a href="javascript:history.back()" class="btn btn-secondary">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
