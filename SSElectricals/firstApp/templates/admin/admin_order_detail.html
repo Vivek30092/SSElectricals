@@ -1,0 +1,162 @@
+{% extends 'admin/base_admin.html' %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <a href="{% url 'admin_order_list' %}" class="btn btn-outline-secondary mb-3">
+            <i class="fas fa-arrow-left"></i> Back to Orders
+        </a>
+        <h2 class="d-inline-block ms-2">Order #{{ order.id }}</h2>
+        <span
+            class="badge fs-5 float-end bg-{% if order.status == 'Delivered' %}success{% elif order.status == 'Pending' %}warning{% elif order.status == 'Confirmed' %}info{% elif order.status == 'Out for Delivery' %}primary{% else %}danger{% endif %}">
+            {{ order.status }}
+        </span>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Order info -->
+    <div class="col-lg-8">
+        <div class="card mb-4">
+            <div class="card-header">
+                Order Items
+            </div>
+            <div class="card-body">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Product</th>
+                            <th>Quantity</th>
+                            <th class="text-end">Unit Price</th>
+                            <th class="text-end">Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in order.items.all %}
+                        <tr>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <img src="{{ item.product.image.url }}" class="img-thumbnail me-2"
+                                        style="width: 50px; height: 50px; object-fit: cover;">
+                                    <div>{{ item.product.name }}</div>
+                                </div>
+                            </td>
+                            <td>{{ item.quantity }}</td>
+                            <td class="text-end">₹{{ item.price }}</td>
+                            <td class="text-end">₹{{ item.total_price }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <td colspan="3" class="text-end fw-bold">Subtotal:</td>
+                            <td class="text-end">₹{{ order.total_price }}</td>
+                        </tr>
+                        <tr>
+                            <td colspan="3" class="text-end fw-bold">Delivery Charge:</td>
+                            <td class="text-end">₹{{ order.delivery_charge }}</td>
+                        </tr>
+                        <tr class="bg-light">
+                            <td colspan="3" class="text-end fw-bold fs-5">Final Total:</td>
+                            <td class="text-end fs-5 text-success">
+                                ₹{{ order.final_price|default:order.total_price|add:order.delivery_charge }}
+                            </td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+
+        <!-- Status Management -->
+        <div class="card">
+            <div class="card-header bg-warning text-dark">
+                Admin Actions
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="update_status" value="1">
+
+                    <div class="row g-3 align-items-end">
+                        <div class="col-md-4">
+                            <label class="form-label">Update Status</label>
+                            <select name="status" class="form-select" id="statusSelect" onchange="togglePriceFields()">
+                                {% for status, label in order.STATUS_CHOICES %}
+                                <option value="{{ status }}" {% if order.status==status %}selected{% endif %}>{{ label
+                                    }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <!-- Extra fields for confirmation -->
+                        <div class="col-md-3 price-field" style="display: none;">
+                            <label class="form-label">Final Price</label>
+                            <input type="number" step="0.01" name="final_price" class="form-control"
+                                value="{{ order.final_price|default:order.total_price }}">
+                        </div>
+                        <div class="col-md-3 price-field" style="display: none;">
+                            <label class="form-label">Delivery Charge</label>
+                            <input type="number" step="0.01" name="delivery_charge" class="form-control"
+                                value="{{ order.delivery_charge }}">
+                        </div>
+
+                        <div class="col-md-2">
+                            <button type="submit" class="btn btn-primary w-100">Update</button>
+                        </div>
+                    </div>
+                </form>
+
+                {% if order.delivery_otp %}
+                <div class="alert alert-info mt-3 mb-0">
+                    <strong>Delivery OTP:</strong> {{ order.delivery_otp }}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Sidebar Info -->
+    <div class="col-lg-4">
+        <div class="card mb-4">
+            <div class="card-header">
+                Customer Details
+            </div>
+            <div class="card-body">
+                <p><strong>Name:</strong> {{ order.user.first_name }} {{ order.user.last_name }}</p>
+                <p><strong>Phone:</strong> {{ order.user.phone_number }}</p>
+                <p><strong>Email:</strong> {{ order.user.email }}</p>
+                <hr>
+                <h6>Delivery Address</h6>
+                <p>{{ order.address }}</p>
+                {% if order.distance_km %}
+                <p class="mb-0"><strong>Distance:</strong> {{ order.distance_km }} KM</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="d-grid gap-2">
+            <a href="{% url 'order_receipt' order.id %}" target="_blank" class="btn btn-dark">
+                <i class="fas fa-print me-2"></i> Print Receipt
+            </a>
+            <a href="https://www.google.com/maps/dir/?api=1&destination={{ order.latitude }},{{ order.longitude }}"
+                target="_blank" class="btn btn-success">
+                <i class="fas fa-map-marker-alt me-2"></i> Track Location
+            </a>
+        </div>
+    </div>
+</div>
+
+<script>
+    function togglePriceFields() {
+        const status = document.getElementById('statusSelect').value;
+        const priceFields = document.querySelectorAll('.price-field');
+        if (status === 'Confirmed') {
+            priceFields.forEach(el => el.style.display = 'block');
+        } else {
+            priceFields.forEach(el => el.style.display = 'none');
+        }
+    }
+    // Run on load
+    togglePriceFields();
+</script>
+{% endblock %}

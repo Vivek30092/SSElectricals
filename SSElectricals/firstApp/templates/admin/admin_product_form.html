@@ -1,0 +1,95 @@
+{% extends 'admin/base_admin.html' %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0">{% if product %}Edit Product{% else %}Add New Product{% endif %}</h4>
+            </div>
+            <div class="card-body">
+                <form method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+
+                    <div class="mb-3">
+                        <label class="form-label">Product Name</label>
+                        <input type="text" name="name" class="form-control" value="{{ product.name|default:'' }}" required>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Category</label>
+                            <select name="category" class="form-select" required>
+                                <option value="">Select Category</option>
+                                {% for cat in categories %}
+                                    <option value="{{ cat.id }}" {% if product and product.category.id == cat.id %}selected{% endif %}>
+                                        {{ cat.name }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">Brand</label>
+                            <input type="text" name="brand" class="form-control" value="{{ product.brand|default:'' }}">
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Description</label>
+                        <textarea name="description" class="form-control" rows="4" required>{{ product.description|default:'' }}</textarea>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <label class="form-label">Price (₹)</label>
+                            <input type="number" step="0.01" name="price" class="form-control" value="{{ product.price|default:'' }}" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Discount Price (₹)</label>
+                            <input type="number" step="0.01" name="discount_price" class="form-control" value="{{ product.discount_price|default:'' }}">
+                            <div class="form-text">Leave blank if no discount</div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Stock Quantity</label>
+                            <input type="number" name="stock_quantity" class="form-control" value="{{ product.stock_quantity|default:0 }}" required>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Main Image</label>
+
+                        {% if product.image %}
+                        <div class="mb-2">
+                            <img src="{{ product.image.url }}" alt="Current Image" style="height: 100px;">
+                        </div>
+                        {% endif %}
+
+                        <input type="file" name="image" class="form-control" accept="image/*"
+                               {% if not product %}required{% endif %}>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label">Additional Images (Select Multiple)</label>
+                        <input type="file" name="more_images" class="form-control" accept="image/*" multiple>
+
+                        {% if product and product.images.exists %}
+                        <div class="d-flex mt-2 gap-2 overflow-auto">
+                            {% for img in product.images.all %}
+                            <img src="{{ img.image.url }}" style="height: 60px; border: 1px solid #ddd;">
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="d-flex justify-content-end gap-2">
+                        <a href="{% url 'admin_product_list' %}" class="btn btn-secondary">Cancel</a>
+                        <button type="submit" class="btn btn-primary">{% if product %}Update Product{% else %}Add Product{% endif %}</button>
+                    </div>
+
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

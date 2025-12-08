@@ -1,0 +1,79 @@
+{% extends 'admin/base_admin.html' %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Product Management</h2>
+    <a href="{% url 'admin_product_add' %}" class="btn btn-primary">
+        <i class="fas fa-plus"></i> Add New Product
+    </a>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-striped table-hover align-middle">
+                <thead>
+                    <tr>
+                        <th style="width: 80px;">Image</th>
+                        <th>Name</th>
+                        <th>Category</th>
+                        <th>Price</th>
+                        <th>Stock</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for product in products %}
+                    <tr>
+                        <td>
+                            {% if product.image %}
+                            <img src="{{ product.image.url }}" alt="{{ product.name }}" class="img-thumbnail"
+                                style="width: 50px; height: 50px; object-fit: cover;">
+                            {% else %}
+                            <span class="text-muted">No Img</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="fw-bold">{{ product.name }}</div>
+                            <small class="text-muted">{{ product.brand|default:"" }}</small>
+                        </td>
+                        <td>{{ product.category.name }}</td>
+                        <td>
+                            {% if product.discount_price %}
+                            <span class="text-decoration-line-through text-muted small">₹{{ product.price }}</span>
+                            <span class="text-success fw-bold">₹{{ product.discount_price }}</span>
+                            {% else %}
+                            ₹{{ product.price }}
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if product.stock_quantity > 10 %}
+                            <span class="badge bg-success">{{ product.stock_quantity }}</span>
+                            {% elif product.stock_quantity > 0 %}
+                            <span class="badge bg-warning text-dark">{{ product.stock_quantity }}</span>
+                            {% else %}
+                            <span class="badge bg-danger">Out of Stock</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a href="{% url 'admin_product_edit' product.pk %}"
+                                class="btn btn-sm btn-info text-white me-1">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            <a href="{% url 'admin_product_delete' product.pk %}" class="btn btn-sm btn-danger"
+                                onclick="return confirm('Are you sure you want to delete this product?');">
+                                <i class="fas fa-trash"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center py-4">No products found.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

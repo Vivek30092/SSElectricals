@@ -73,6 +73,17 @@ class Product(models.Model):
     def final_price(self):
         return self.discount_price if self.discount_price else self.price
 
+    @property
+    def average_rating(self):
+        reviews = self.reviews.all()
+        if reviews:
+            return sum([r.rating for r in reviews]) / len(reviews)
+        return 0
+
+    @property
+    def review_count(self):
+        return self.reviews.count()
+
 class ProductImage(models.Model):
     product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='images')
     image = models.ImageField(upload_to='product_gallery/')
@@ -143,6 +154,7 @@ class Order(models.Model):
     total_price = models.DecimalField(max_digits=10, decimal_places=2, help_text="Sum of product prices")
     delivery_charge = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     final_price = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True, help_text="Final price confirmed by admin")
+    cancellation_reason = models.TextField(blank=True, null=True)
     
     # Delivery Info
     distance_km = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
@@ -349,3 +361,87 @@ class Appointment(models.Model):
     @property
     def total_charge(self):
         return self.visiting_charge + self.extra_charge
+
+# 7. Product Review System
+class Review(models.Model):
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='reviews')
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    rating = models.IntegerField(choices=[(i, i) for i in range(1, 6)])
+    comment = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.user.username}'s review on {self.product.name}"
+
+# 8. Daily Sales Entry
+class DailySales(models.Model):
+    REMARK_CHOICES = [
+        ('NILL', 'NILL'),
+        ('Shop Closed', 'Shop Closed'),
+        ('Other', 'Other'),
+    ]
+
+    date = models.DateField()
+    day = models.CharField(max_length=20)
+    total_sales = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    online_received = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    cash_received = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    subtotal = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    remark = models.CharField(max_length=20, choices=REMARK_CHOICES, default='NILL')
+    other_remark = models.TextField(blank=True, null=True)
+    admin = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-date']
+
+    def save(self, *args, **kwargs):
+        if not self.subtotal:
+            self.subtotal = self.online_received + self.cash_received
+        if not self.day and self.date:
+            self.day = self.date.strftime('%A')
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"Sales for {self.date} ({self.day})"
+
+# 9. Daily Investment / Expenditure
+class DailyExpenditure(models.Model):
+    PAYMENT_METHOD_CHOICES = [
+        ('Online', 'Online'),
+        ('Cash', 'Cash'),
+    ]
+
+    date = models.DateField()
+    day = models.CharField(max_length=20)
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    payment_method = models.CharField(max_length=10, choices=PAYMENT_METHOD_CHOICES)
+    description = models.TextField()
+    admin = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-date']
+
+    def save(self, *args, **kwargs):
+        if not self.day and self.date:
+            self.day = self.date.strftime('%A')
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"Expense on {self.date}: ₹{self.amount}"
+
+# 10. Wishlist
+class Wishlist(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='wishlist')
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='wishlisted_by')
+    added_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('user', 'product') # Prevent duplicate products in wishlist for a user
+
+    def __str__(self):
+        return f"{self.user.username}'s wishlist: {self.product.name}"

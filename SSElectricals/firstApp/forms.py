@@ -1,6 +1,6 @@
 from django import forms
 from django.contrib.auth.forms import UserCreationForm
-from .models import CustomUser, Appointment
+from .models import CustomUser, Appointment, Product, Order, Review, DailySales, DailyExpenditure
 from .validators import validate_indian_phone, validate_strong_password, validate_upi_id, validate_address_format
 
 class CustomUserCreationForm(UserCreationForm):
@@ -302,3 +302,81 @@ class CancelAppointmentForm(forms.Form):
     ]
     reason = forms.ChoiceField(choices=REASON_CHOICES, widget=forms.Select(attrs={'class': 'form-select'}))
     other_reason = forms.CharField(required=False, widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Please specify if other...'}))
+
+class ProductForm(forms.ModelForm):
+    class Meta:
+        model = Product
+        fields = ['name', 'category', 'description', 'price', 'discount_price', 'stock_quantity', 'brand', 'image']
+        widgets = {
+            'name': forms.TextInput(attrs={'class': 'form-control'}),
+            'category': forms.Select(attrs={'class': 'form-select'}),
+            'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 4}),
+            'price': forms.NumberInput(attrs={'class': 'form-control'}),
+            'discount_price': forms.NumberInput(attrs={'class': 'form-control'}),
+            'stock_quantity': forms.NumberInput(attrs={'class': 'form-control'}),
+            'brand': forms.TextInput(attrs={'class': 'form-control'}),
+            'image': forms.FileInput(attrs={'class': 'form-control'}),
+        }
+class CancelOrderForm(forms.ModelForm):
+    reason_choices = [
+        ('Changed my mind', 'Changed my mind'),
+        ('Found a better price', 'Found a better price'),
+        ('Ordered by mistake', 'Ordered by mistake'),
+        ('Delivery time too long', 'Delivery time too long'),
+        ('Other', 'Other'),
+    ]
+    reason_select = forms.ChoiceField(choices=reason_choices, widget=forms.Select(attrs={'class': 'form-select', 'onchange': 'toggleOtherReason(this)'}), label="Reason for Cancellation")
+    other_reason = forms.CharField(required=False, widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Please specify details...', 'style': 'display:none;'}))
+
+    class Meta:
+        model = Order
+        fields = []
+
+    def clean(self):
+        cleaned_data = super().clean()
+        reason_select = cleaned_data.get('reason_select')
+        other_reason = cleaned_data.get('other_reason')
+
+        if reason_select == 'Other':
+            if not other_reason:
+                self.add_error('other_reason', 'Please specify the reason.')
+            else:
+                 cleaned_data['final_reason'] = other_reason
+        else:
+            cleaned_data['final_reason'] = reason_select
+        
+        return cleaned_data
+
+class ReviewForm(forms.ModelForm):
+    class Meta:
+        model = Review
+        fields = ['rating', 'comment']
+        widgets = {
+            'rating': forms.Select(attrs={'class': 'form-select'}),
+            'comment': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Write your review here...'}),
+        }
+
+class DailySalesForm(forms.ModelForm):
+    class Meta:
+        model = DailySales
+        fields = ['date', 'total_sales', 'online_received', 'cash_received', 'subtotal', 'remark', 'other_remark']
+        widgets = {
+            'date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'total_sales': forms.NumberInput(attrs={'class': 'form-control'}),
+            'online_received': forms.NumberInput(attrs={'class': 'form-control'}),
+            'cash_received': forms.NumberInput(attrs={'class': 'form-control'}),
+            'subtotal': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Leave empty to auto-calculate'}),
+            'remark': forms.Select(attrs={'class': 'form-select', 'onchange': 'if(this.value=="Other"){document.getElementById("id_other_remark").parentElement.style.display="block";}else{document.getElementById("id_other_remark").parentElement.style.display="none";}'}),
+            'other_remark': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+        }
+
+class DailyExpenditureForm(forms.ModelForm):
+    class Meta:
+        model = DailyExpenditure
+        fields = ['date', 'amount', 'payment_method', 'description']
+        widgets = {
+            'date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'amount': forms.NumberInput(attrs={'class': 'form-control'}),
+            'payment_method': forms.Select(attrs={'class': 'form-select'}),
+            'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+        }

@@ -305,10 +305,12 @@
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button"
                             data-bs-toggle="dropdown">
-                            {{ user.username }}
+                            {{ user.first_name|default:user.username }}
                         </a>
                         <ul class="dropdown-menu">
                             {% if user.is_staff %}
+                            <li><a class="dropdown-item" href="{% url 'admin_dashboard' %}"><strong><i
+                                            class="fas fa-tachometer-alt me-1"></i> Admin Dashboard</strong></a></li>
                             <li><a class="dropdown-item" href="{% url 'confirm_delivery_otp' %}">Confirm Delivery</a>
                             </li>
                             <li>
@@ -316,6 +318,7 @@
                             </li>
                             {% endif %}
                             <li><a class="dropdown-item" href="{% url 'profile' %}">Profile</a></li>
+                            <li><a class="dropdown-item" href="{% url 'wishlist_list' %}">Wishlist</a></li>
                             <li><a class="dropdown-item" href="{% url 'order_history' %}">Orders</a></li>
                             <li><a class="dropdown-item" href="{% url 'my_appointments' %}">My Appointments</a></li>
                             <li>

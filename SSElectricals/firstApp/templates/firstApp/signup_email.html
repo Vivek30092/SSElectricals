@@ -1,0 +1,97 @@
+{% extends 'firstApp/base.html' %}
+
+{% block title %}Sign Up - SS Electricals{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center my-5">
+    <div class="col-md-8 col-lg-6">
+        <div class="card shadow-lg border-0 rounded-lg">
+            <div class="card-header bg-warning text-dark text-center py-4">
+                <h3 class="mb-0 fw-bold"><i class="fas fa-user-plus me-2"></i>Create Account</h3>
+            </div>
+            <div class="card-body p-5">
+                {% if form.errors %}
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    <strong>Please correct the errors below:</strong>
+                    {{ form.non_field_errors }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+                {% endif %}
+
+                <form method="post">
+                    {% csrf_token %}
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Full Name</label>
+                        {{ form.full_name }}
+                        {% if form.full_name.errors %}
+                        <div class="text-danger small">{{ form.full_name.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold">Email Address</label>
+                            {{ form.email }}
+                            {% if form.email.errors %}
+                            <div class="text-danger small">{{ form.email.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold">Phone Number</label>
+                            {{ form.phone }}
+                            {% if form.phone.errors %}
+                            <div class="text-danger small">{{ form.phone.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Full Address</label>
+                        {{ form.address }}
+                        {% if form.address.errors %}
+                        <div class="text-danger small">{{ form.address.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Pincode</label>
+                        {{ form.pincode }}
+                        {% if form.pincode.errors %}
+                        <div class="text-danger small">{{ form.pincode.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold">Password</label>
+                            {{ form.password }}
+                            <div class="form-text small">Use 8+ chars with mix of letters & numbers.</div>
+                            {% if form.password.errors %}
+                            <div class="text-danger small">{{ form.password.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold">Confirm Password</label>
+                            {{ form.confirm_password }}
+                            {% if form.confirm_password.errors %}
+                            <div class="text-danger small">{{ form.confirm_password.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="d-grid gap-2 mt-4">
+                        <button class="btn btn-warning btn-lg fw-bold" type="submit">
+                            Send OTP & Verify <i class="fas fa-arrow-right ms-2"></i>
+                        </button>
+                    </div>
+                </form>
+            </div>
+            <div class="card-footer text-center py-3">
+                <div class="small">Already have an account? <a href="{% url 'email_login' %}"
+                        class="fw-bold text-decoration-none text-primary">Log In</a></div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,85 @@
+{% extends 'admin/base_admin.html' %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0">{{ title|default:"Add Daily Sales Entry" }}</h4>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Date</label>
+                            {{ form.date }}
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Total Sales (₹)</label>
+                        {{ form.total_sales }}
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Online Money Received (₹)</label>
+                            {{ form.online_received }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Cash Received (₹)</label>
+                            {{ form.cash_received }}
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Subtotal (₹)</label>
+                        {{ form.subtotal }}
+                        <div class="form-text">Leave blank to auto-calculate (Online + Cash)</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Remark</label>
+                        {{ form.remark }}
+                    </div>
+
+                    <div class="mb-3" style="display: none;">
+                        <label class="form-label">Other Remark</label>
+                        {{ form.other_remark }}
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary">Save Record</button>
+                        <a href="{% url 'admin_daily_sales' %}" class="btn btn-secondary">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Simple script to handle 'Other' remark visibility if inline JS in form widget isn't enough or for initial load
+    document.addEventListener('DOMContentLoaded', function () {
+        const remarkSelect = document.querySelector('select[name="remark"]');
+        const otherRemarkDiv = document.querySelector('textarea[name="other_remark"]').closest('div');
+
+        function toggleOther() {
+            if (remarkSelect.value === 'Other') {
+                otherRemarkDiv.style.display = 'block';
+            } else {
+                otherRemarkDiv.style.display = 'none';
+            }
+        }
+
+        // Initial check
+        // toggleOther(); -- Form widget onchange handles it, but maybe initial state needs checking?
+        // The widget onchange handles dynamic. If validation fails and reloads, we need to check.
+        if (remarkSelect.value === 'Other') {
+            otherRemarkDiv.style.display = 'block';
+        }
+    });
+</script>
+{% endblock %}

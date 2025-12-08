@@ -1,92 +1,229 @@
-{% extends 'firstApp/base.html' %}
+{% extends 'admin/base_admin.html' %}
 
 {% block content %}
-<div class="container-fluid my-4">
-    <div class="row">
-        <!-- Sidebar -->
-        <div class="col-md-2 d-none d-md-block bg-light sidebar">
-            <div class="position-sticky pt-3">
-                <ul class="nav flex-column">
-                    <li class="nav-item">
-                        <a class="nav-link active" href="{% url 'admin_dashboard' %}">
-                            <i class="fas fa-home"></i> Dashboard
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{% url 'admin_appointment_list' %}">
-                            <i class="fas fa-calendar-check"></i> Appointments
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="/admin/firstApp/product/">
-                            <i class="fas fa-box"></i> Products
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="/admin/firstApp/order/">
-                            <i class="fas fa-shopping-cart"></i> Orders
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{% url 'admin_activity_log' %}">
-                            <i class="fas fa-history"></i> Activity Log
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{% url 'admin_analytics' %}">
-                            <i class="fas fa-chart-line"></i> Analytics (.xlsx)
-                        </a>
-                    </li>
-                </ul>
+<div class="row mb-4">
+    <div class="col-12">
+        <h2 class="mb-4">Dashboard</h2>
+    </div>
+</div>
+
+<!-- KPI Cards -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-white bg-primary h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title mb-0">Total Revenue</h6>
+                        <h2 class="my-2">₹{{ total_revenue|stringformat:".2f" }}</h2>
+                    </div>
+                    <i class="fas fa-rupee-sign fa-2x opacity-50"></i>
+                </div>
             </div>
         </div>
-
-        <!-- Main Content -->
-        <div class="col-md-10 ms-sm-auto col-lg-10 px-md-4">
-            <div
-                class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-                <h1 class="h2">Dashboard</h1>
-                <div class="btn-toolbar mb-2 mb-md-0">
-                    <div class="btn-group me-2">
-                        <button type="button" class="btn btn-sm btn-outline-secondary">Share</button>
-                        <button type="button" class="btn btn-sm btn-outline-secondary">Export</button>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-success h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title mb-0">Total Orders</h6>
+                        <h2 class="my-2">{{ total_orders }}</h2>
                     </div>
+                    <i class="fas fa-shopping-bag fa-2x opacity-50"></i>
                 </div>
             </div>
-
-            <div class="row">
-                <div class="col-md-4 mb-4">
-                    <div class="card text-white bg-primary">
-                        <div class="card-body">
-                            <h5 class="card-title">Pending Orders</h5>
-                            <p class="card-text fs-2">...</p>
-                        </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-warning h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title mb-0">Pending Orders</h6>
+                        <h2 class="my-2">{{ pending_orders }}</h2>
                     </div>
-                </div>
-                <div class="col-md-4 mb-4">
-                    <div class="card text-white bg-success">
-                        <div class="card-body">
-                            <h5 class="card-title">Completed Orders</h5>
-                            <p class="card-text fs-2">...</p>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-4 mb-4">
-                    <div class="card text-white bg-warning text-dark">
-                        <div class="card-body">
-                            <h5 class="card-title">Service Requests</h5>
-                            <p class="card-text fs-2">...</p>
-                        </div>
-                    </div>
+                    <i class="fas fa-clock fa-2x opacity-50"></i>
                 </div>
             </div>
-
-            <h2>Recent Appointments</h2>
-            <div class="table-responsive">
-                <!-- Fetch recent appointments here -->
-                <p>Visit the <a href="{% url 'admin_appointment_list' %}">Appointments page</a> for details.</p>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-info h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title mb-0">New Appointments</h6>
+                        <h2 class="my-2">{{ pending_appointments }}</h2>
+                    </div>
+                    <i class="fas fa-calendar-alt fa-2x opacity-50"></i>
+                </div>
             </div>
         </div>
     </div>
 </div>
+
+<!-- Charts -->
+<div class="row mb-4">
+    <div class="col-lg-8">
+        <div class="card h-100">
+            <div class="card-header">
+                Daily Sales (Last 30 Days)
+            </div>
+            <div class="card-body" style="position: relative; height: 400px;">
+                <canvas id="salesChart"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card h-100">
+            <div class="card-header">
+                Order Status Distribution
+            </div>
+            <div class="card-body" style="position: relative; height: 400px;">
+                <canvas id="statusChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Tables -->
+<div class="row">
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span>Recent Orders</span>
+                <a href="{% url 'admin_order_list' %}" class="btn btn-sm btn-outline-primary">View All</a>
+            </div>
+            <div class="card-body p-0">
+                <table class="table table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>Order ID</th>
+                            <th>Customer</th>
+                            <th>Amount</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for order in recent_orders %}
+                        <tr>
+                            <td>#{{ order.id }}</td>
+                            <td>{{ order.user.username }}</td>
+                            <td>₹{{ order.total_price }}</td>
+                            <td>
+                                <span
+                                    class="badge bg-{% if order.status == 'Delivered' %}success{% elif order.status == 'Pending' %}warning{% elif order.status == 'Cancelled' %}danger{% else %}info{% endif %}">
+                                    {{ order.status }}
+                                </span>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="4" class="text-center py-3">No recent orders</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span>Recent Appointments</span>
+                <a href="{% url 'admin_appointment_list' %}" class="btn btn-sm btn-outline-primary">View All</a>
+            </div>
+            <div class="card-body p-0">
+                <table class="table table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>Service</th>
+                            <th>Customer</th>
+                            <th>Date</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for appt in recent_appointments %}
+                        <tr>
+                            <td>{{ appt.service_type }}</td>
+                            <td>{{ appt.customer_name }}</td>
+                            <td>{{ appt.date|date:"d M" }}</td>
+                            <td>
+                                <span
+                                    class="badge bg-{% if appt.status == 'Completed' %}success{% elif appt.status == 'Pending' %}warning{% else %}secondary{% endif %}">
+                                    {{ appt.status }}
+                                </span>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="4" class="text-center py-3">No recent appointments</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Sales Chart
+    const salesCtx = document.getElementById('salesChart').getContext('2d');
+    const salesChart = new Chart(salesCtx, {
+        type: 'line',
+        data: {
+            labels: JSON.parse('{{ dates_json|escapejs }}'),
+            datasets: [{
+                label: 'Sales (₹)',
+                data: JSON.parse('{{ sales_json|escapejs }}'),
+                borderColor: '#0d6efd',
+                backgroundColor: 'rgba(13, 110, 253, 0.1)',
+                fill: true,
+                tension: 0.1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+
+    // Status Chart
+    const statusCtx = document.getElementById('statusChart').getContext('2d');
+    const statusChart = new Chart(statusCtx, {
+        type: 'doughnut',
+        data: {
+            labels: JSON.parse('{{ status_labels_json|escapejs }}'),
+            datasets: [{
+                data: JSON.parse('{{ status_data_json|escapejs }}'),
+                backgroundColor: [
+                    '#ffc107', // Pending - Warning
+                    '#0dcaf0', // Confirmed - Info
+                    '#0d6efd', // Out for Delivery - Primary
+                    '#198754', // Delivered - Success
+                    '#dc3545'  // Cancelled - Danger
+                ]
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }
+    });
+</script>
 {% endblock %}

@@ -1,0 +1,44 @@
+{% extends 'firstApp/base.html' %}
+
+{% block title %}Verify Email - SS Electricals{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center my-5">
+    <div class="col-md-6 col-lg-5">
+        <div class="card shadow-lg border-0 rounded-lg">
+            <div class="card-header bg-success text-white text-center py-4">
+                <h3 class="mb-0"><i class="fas fa-shield-alt me-2"></i>Verify Email</h3>
+            </div>
+            <div class="card-body p-5 text-center">
+                <p class="lead mb-4">
+                    We've sent a 6-digit verification code to <br>
+                    <strong>{{ email }}</strong>
+                </p>
+
+                {% if form.errors %}
+                <div class="alert alert-danger alert-dismissible fade show text-start" role="alert">
+                    <strong>Error:</strong> Invalid OTP. Please try again.
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+                {% endif %}
+
+                <form method="post">
+                    {% csrf_token %}
+
+                    <div class="mb-4">
+                        {{ form.otp }}
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-success btn-lg fw-bold" type="submit">Verify & Create Account</button>
+                    </div>
+                </form>
+            </div>
+            <div class="card-footer text-center py-3">
+                <div class="small text-muted">Didn't receive code? <a href="{% url 'email_signup' %}"
+                        class="text-decoration-none">Resend</a> or Check Spam folder.</div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

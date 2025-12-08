@@ -17,10 +17,12 @@
                     <label class="form-label">Category</label>
                     <select name="category" class="form-select">
                         <option value="">All Categories</option>
+
                         {% for cat in categories %}
-                        <option value="{{ cat.id }}" {% if
-                            request.GET.category|stringformat:"s"==cat.id|stringformat:"s" %}selected{% endif %}>{{
-                            cat.name }}</option>
+                        <option value="{{ cat.id }}" {% if request.GET.category==cat.id|stringformat:"s" %} selected {%
+                            endif %}>
+                            {{ cat.name }}
+                        </option>
                         {% endfor %}
                     </select>
                 </div>
@@ -29,7 +31,8 @@
                     <label class="form-label">Sort By</label>
                     <select name="sort" class="form-select">
                         <option value="">Default</option>
-                        <option value="newest" {% if request.GET.sort=='newest' %}selected{% endif %}>Newest First
+                        <option value="newest" {% if request.GET.sort=="newest" %}selected{% endif %}>
+                            Newest First
                         </option>
                     </select>
                 </div>
@@ -42,6 +45,7 @@
     <div class="col-md-9">
         <h2 class="mb-4">Products</h2>
         <div class="row">
+
             {% for product in products %}
             <div class="col-md-4 mb-4">
                 <div class="card h-100">
@@ -52,10 +56,26 @@
                     {% endif %}
 
                     <div class="card-body">
+                        <small class="text-muted text-uppercase fw-bold" style="font-size: 0.75rem;">{{
+                            product.category.name }}</small>
                         <h5 class="card-title">{{ product.name }}</h5>
                         <p class="card-text text-truncate">{{ product.description }}</p>
 
-                        <p class="card-text"><small class="text-muted">Brand: {{ product.brand }}</small></p>
+                        <p class="card-text">
+                            <small class="text-muted">Brand: {{ product.brand }}</small>
+                            <a href="{% url 'add_to_wishlist' product.id %}" class="float-end text-danger"
+                                title="Add to Wishlist">
+                                <i class="far fa-heart fa-lg"></i>
+                            </a>
+                        </p>
+
+                        <!-- Rating Display -->
+                        <div class="mb-2">
+                            <span class="text-warning">
+                                <i class="fas fa-star"></i> {{ product.average_rating|floatformat:1 }}
+                            </span>
+                            <span class="text-muted small">({{ product.review_count }} reviews)</span>
+                        </div>
 
                         <div class="d-grid gap-2">
                             <a href="{% url 'contact' %}?subject=Enquiry for {{ product.name }}"
@@ -79,6 +99,7 @@
                 <p class="text-muted">No products found.</p>
             </div>
             {% endfor %}
+
         </div>
     </div>
 </div>

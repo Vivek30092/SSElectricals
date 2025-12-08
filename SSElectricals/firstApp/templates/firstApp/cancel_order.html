@@ -1,0 +1,60 @@
+{% extends 'firstApp/base.html' %}
+
+{% block content %}
+<div class="row justify-content-center my-5">
+    <div class="col-md-6">
+        <div class="card shadow">
+            <div class="card-header bg-danger text-white">
+                <h4 class="mb-0">Cancel Order #{{ order.id }}</h4>
+            </div>
+            <div class="card-body">
+                <p>Are you sure you want to cancel this order? This action cannot be undone.</p>
+
+                <div class="bg-light p-3 rounded mb-3">
+                    <strong>Items:</strong>
+                    <ul class="mb-0 ps-3">
+                        {% for item in order.items.all %}
+                        <li>{{ item.product.name }} (x{{ item.quantity }})</li>
+                        {% endfor %}
+                    </ul>
+                    <div class="mt-2"><strong>Total:</strong> ₹{{ order.total_price }}</div>
+                </div>
+
+                <form method="post">
+                    {% csrf_token %}
+
+                    <div class="mb-3">
+                        {{ form.reason_select.label_tag }}
+                        {{ form.reason_select }}
+                    </div>
+
+                    <div class="mb-3">
+                        {{ form.other_reason }}
+                        {% if form.other_reason.errors %}
+                        <div class="text-danger small">{{ form.other_reason.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="d-flex justify-content-between mt-4">
+                        <a href="{% url 'order_history' %}" class="btn btn-secondary">Go Back</a>
+                        <button type="submit" class="btn btn-danger">Confirm Cancellation</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function toggleOtherReason(select) {
+        var otherInput = document.getElementById('id_other_reason');
+        if (select.value === 'Other') {
+            otherInput.style.display = 'block';
+            otherInput.required = true;
+        } else {
+            otherInput.style.display = 'none';
+            otherInput.required = false;
+        }
+    }
+</script>
+{% endblock %}

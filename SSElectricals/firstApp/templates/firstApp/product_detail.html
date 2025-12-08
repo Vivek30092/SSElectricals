@@ -38,6 +38,12 @@
             <div class="card-body p-5">
                 <h5 class="card-title text-muted">{{ product.category.name }}</h5>
                 <h1 class="card-title mb-3">{{ product.name }}</h1>
+                <div class="mb-3">
+                    <span class="text-warning fs-5">
+                        <i class="fas fa-star"></i> {{ product.average_rating|floatformat:1 }}
+                    </span>
+                    <span class="text-muted ms-2">({{ product.review_count }} reviews)</span>
+                </div>
                 <p class="card-text">{{ product.description }}</p>
 
                 <div class="mb-4">
@@ -53,11 +59,23 @@
                 </p>
 
                 {% if product.stock_quantity > 0 %}
-                <a href="{% url 'add_to_cart' product.id %}" class="btn btn-primary btn-lg w-100 mb-2">
-                    <i class="fas fa-shopping-cart me-2"></i>Add to Cart
-                </a>
+                <div class="d-flex gap-2 mb-2">
+                    <a href="{% url 'add_to_cart' product.id %}" class="btn btn-primary btn-lg flex-grow-1">
+                        <i class="fas fa-shopping-cart me-2"></i>Add to Cart
+                    </a>
+                    <a href="{% url 'add_to_wishlist' product.id %}" class="btn btn-outline-danger btn-lg"
+                        title="Add to Wishlist">
+                        <i class="far fa-heart"></i>
+                    </a>
+                </div>
                 {% else %}
-                <button class="btn btn-secondary btn-lg w-100 mb-2" disabled>Out of Stock</button>
+                <div class="d-flex gap-2 mb-2">
+                    <button class="btn btn-secondary btn-lg flex-grow-1" disabled>Out of Stock</button>
+                    <a href="{% url 'add_to_wishlist' product.id %}" class="btn btn-outline-danger btn-lg"
+                        title="Add to Wishlist">
+                        <i class="far fa-heart"></i>
+                    </a>
+                </div>
                 {% endif %}
 
                 <div class="alert alert-light border mt-3">
@@ -81,6 +99,94 @@
                     <li>Category: {{ product.category.name }}</li>
                     <!-- Add more details if available -->
                 </ul>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h3 class="mb-4">Customer Reviews</h3>
+
+                {% if can_review %}
+                <div class="mb-5 p-4 bg-light rounded">
+                    <h5>Write a Review</h5>
+                    <form action="{% url 'add_review' product.id %}" method="post">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label class="form-label">Rating</label>
+                            <!-- Star Rating Input -->
+                            <div class="star-rating">
+                                <input type="radio" id="star5" name="rating" value="5" /><label for="star5"
+                                    title="5 stars"><i class="fas fa-star"></i></label>
+                                <input type="radio" id="star4" name="rating" value="4" /><label for="star4"
+                                    title="4 stars"><i class="fas fa-star"></i></label>
+                                <input type="radio" id="star3" name="rating" value="3" /><label for="star3"
+                                    title="3 stars"><i class="fas fa-star"></i></label>
+                                <input type="radio" id="star2" name="rating" value="2" /><label for="star2"
+                                    title="2 stars"><i class="fas fa-star"></i></label>
+                                <input type="radio" id="star1" name="rating" value="1" /><label for="star1"
+                                    title="1 star"><i class="fas fa-star"></i></label>
+                            </div>
+                            <!-- Hide default select if present or ensure functionality matches -->
+                            <style>
+                                .star-rating {
+                                    direction: rtl;
+                                    display: inline-flex;
+                                }
+
+                                .star-rating input {
+                                    display: none;
+                                }
+
+                                .star-rating label {
+                                    color: #ccc;
+                                    font-size: 2rem;
+                                    padding: 0 5px;
+                                    cursor: pointer;
+                                    transition: color 0.2s;
+                                }
+
+                                .star-rating input:checked~label,
+                                .star-rating label:hover,
+                                .star-rating label:hover~label {
+                                    color: #ffc107;
+                                }
+                            </style>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Review</label>
+                            {{ form.comment }}
+                        </div>
+                        <button type="submit" class="btn btn-primary">Submit Review</button>
+                    </form>
+                </div>
+                {% endif %}
+
+                {% if reviews %}
+                {% for review in reviews %}
+                <div class="border-bottom pb-3 mb-3">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <div>
+                            <strong>{% if review.user.first_name %}{{ review.user.first_name }} {{ review.user.last_name
+                                }}{% else %}{{ review.user.username }}{% endif %}</strong>
+                            <span class="text-muted small ms-2">{{ review.created_at|date:"M d, Y" }}</span>
+                        </div>
+                        <span class="text-warning">
+                            {% with ''|center:review.rating as range %}
+                            {% for _ in range %}★{% endfor %}
+                            {% endwith %}
+                            <!-- Simple star check, improve with loop if needed strictly -->
+                            ({{ review.rating }}/5)
+                        </span>
+                    </div>
+                    <p class="mb-0">{{ review.comment }}</p>
+                </div>
+                {% endfor %}
+                {% else %}
+                <p class="text-muted">No reviews yet. Be the first to review this product!</p>
+                {% endif %}
             </div>
         </div>
     </div>

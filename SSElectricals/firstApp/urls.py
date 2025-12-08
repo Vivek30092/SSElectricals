@@ -7,6 +7,10 @@ urlpatterns = [
     path('', views.home, name='home'),
     path('products/', views.product_list, name='product_list'),
     path('product/<int:pk>/', views.product_detail, name='product_detail'),
+    path('product/<int:pk>/add-review/', views.add_review, name='add_review'),
+    path('wishlist/', views.wishlist_list, name='wishlist_list'),
+    path('wishlist/add/<int:product_id>/', views.add_to_wishlist, name='add_to_wishlist'),
+    path('wishlist/remove/<int:product_id>/', views.remove_from_wishlist, name='remove_from_wishlist'),
     
 
     
@@ -37,15 +41,44 @@ urlpatterns = [
     
     path('checkout/', views.checkout, name='checkout'),
     path('orders/', views.order_history, name='order_history'),
+    path('orders/cancel/<int:order_id>/', views.cancel_order, name='cancel_order'),
     
     path('about/', views.about, name='about'),
     path('contact/', views.contact, name='contact'),
     
-    # Admin Dashboard URLs
-    path('admin/dashboard/', admin_views.admin_dashboard, name='admin_dashboard'),
-    path('admin/activity-log/', admin_views.admin_activity_log_view, name='admin_activity_log'),
-    path('admin/terminate-session/<int:session_id>/', admin_views.terminate_session, name='terminate_session'),
-    path('admin/analytics/', admin_views.admin_analytics, name='admin_analytics'),
+    # Admin Dashboard URLs (Renamed to shop-admin to avoid conflict)
+    path('shop-admin/dashboard/', admin_views.admin_dashboard, name='admin_dashboard'),
+    path('shop-admin/activity-log/', admin_views.admin_activity_log_view, name='admin_activity_log'),
+    path('shop-admin/terminate-session/<int:session_id>/', admin_views.terminate_session, name='terminate_session'),
+    path('shop-admin/analytics/', admin_views.admin_analytics, name='admin_analytics'),
+    
+    # Admin Product Management
+    path('shop-admin/products/', admin_views.admin_product_list, name='admin_product_list'),
+    path('shop-admin/products/add/', admin_views.admin_product_add, name='admin_product_add'),
+    path('shop-admin/products/edit/<int:pk>/', admin_views.admin_product_edit, name='admin_product_edit'),
+    path('shop-admin/products/delete/<int:pk>/', admin_views.admin_product_delete, name='admin_product_delete'),
+    
+    # Admin Order Management
+    path('shop-admin/orders/', admin_views.admin_order_list, name='admin_order_list'),
+    path('shop-admin/orders/<int:pk>/', admin_views.admin_order_detail, name='admin_order_detail'),
+
+    # Admin Reviews
+    path('shop-admin/reviews/', admin_views.admin_reviews_list, name='admin_reviews_list'),
+    path('shop-admin/reviews/delete/<int:review_id>/', admin_views.admin_delete_review, name='admin_delete_review'),
+
+    # Admin Daily Sales
+    path('shop-admin/sales/', admin_views.admin_daily_sales, name='admin_daily_sales'),
+    path('shop-admin/sales/add/', admin_views.admin_add_daily_sales, name='admin_add_daily_sales'),
+    path('shop-admin/sales/edit/<int:pk>/', admin_views.admin_edit_daily_sales, name='admin_edit_daily_sales'),
+    path('shop-admin/sales/delete/<int:pk>/', admin_views.admin_delete_daily_sales, name='admin_delete_daily_sales'),
+    path('shop-admin/sales/export/', admin_views.admin_export_sales, name='admin_export_sales'),
+
+    # Admin Daily Expenses
+    path('shop-admin/expenses/', admin_views.admin_daily_expenses, name='admin_daily_expenses'),
+    path('shop-admin/expenses/add/', admin_views.admin_add_daily_expense, name='admin_add_daily_expense'),
+    path('shop-admin/expenses/edit/<int:pk>/', admin_views.admin_edit_daily_expense, name='admin_edit_daily_expense'),
+    path('shop-admin/expenses/delete/<int:pk>/', admin_views.admin_delete_daily_expense, name='admin_delete_daily_expense'),
+    path('shop-admin/expenses/export/', admin_views.admin_export_expenses, name='admin_export_expenses'),
     
     # Appointment URLs
     path('book-appointment/', views.book_appointment, name='book_appointment'),
@@ -54,9 +87,9 @@ urlpatterns = [
     path('cancel-appointment/<int:pk>/', views.cancel_appointment, name='cancel_appointment'),
     
     # Admin Appointment URLs
-    path('admin/appointments/', admin_views.admin_appointment_list, name='admin_appointment_list'),
-    path('admin/appointments/update/<int:pk>/', admin_views.admin_appointment_update, name='admin_appointment_update'),
-    path('admin/appointments/delete/<int:pk>/', admin_views.admin_appointment_delete, name='admin_appointment_delete'),
+    path('shop-admin/appointments/', admin_views.admin_appointment_list, name='admin_appointment_list'),
+    path('shop-admin/appointments/update/<int:pk>/', admin_views.admin_appointment_update, name='admin_appointment_update'),
+    path('shop-admin/appointments/delete/<int:pk>/', admin_views.admin_appointment_delete, name='admin_appointment_delete'),
 
     path('confirm-delivery/', views.confirm_delivery_otp, name='confirm_delivery_otp'),
     path('order/receipt/<int:order_id>/', views.order_receipt, name='order_receipt'),

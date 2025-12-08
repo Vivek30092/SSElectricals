@@ -1,0 +1,61 @@
+{% extends 'admin/base_admin.html' %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Order Management</h2>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead>
+                    <tr>
+                        <th>Order ID</th>
+                        <th>Date</th>
+                        <th>Customer</th>
+                        <th>Items</th>
+                        <th>Total</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for order in orders %}
+                    <tr>
+                        <td><strong>#{{ order.id }}</strong></td>
+                        <td>
+                            {{ order.created_at|date:"d M Y" }}<br>
+                            <small class="text-muted">{{ order.created_at|time:"H:i A" }}</small>
+                        </td>
+                        <td>
+                            {{ order.user.username }}<br>
+                            <small class="text-muted">{{ order.user.phone_number }}</small>
+                        </td>
+                        <td>{{ order.items.count }} Items</td>
+                        <td>
+                            ₹{{ order.final_price|default:order.total_price }}
+                        </td>
+                        <td>
+                            <span
+                                class="badge bg-{% if order.status == 'Delivered' %}success{% elif order.status == 'Pending' %}warning{% elif order.status == 'Confirmed' %}info{% elif order.status == 'Out for Delivery' %}primary{% else %}danger{% endif %}">
+                                {{ order.status }}
+                            </span>
+                        </td>
+                        <td>
+                            <a href="{% url 'admin_order_detail' order.pk %}" class="btn btn-sm btn-primary">
+                                View Details
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="text-center py-4">No orders found.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,73 @@
+{% extends 'admin/base_admin.html' %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h2 class="mb-4">Service Appointments</h2>
+
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead class="bg-light">
+                            <tr>
+                                <th>Client Name</th>
+                                <th>Service</th>
+                                <th>Date & Time</th>
+                                <th>Location</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for appointment in appointments %}
+                            <tr>
+                                <td>
+                                    <div class="fw-bold">{{ appointment.customer_name }}</div>
+                                    <div class="text-muted small">{{ appointment.phone }}</div>
+                                </td>
+                                <td>{{ appointment.service_type }}</td>
+                                <td>
+                                    {{ appointment.date|date:"d M Y" }}<br>
+                                    <span class="text-muted small">{{ appointment.time|time:"H:i A" }}</span>
+                                </td>
+                                <td>
+                                    {{ appointment.area }}<br>
+                                    <small class="text-muted">{{ appointment.city }}</small>
+                                </td>
+                                <td>
+                                    {% if appointment.status == 'Pending' %}
+                                    <span class="badge bg-warning text-dark">Pending</span>
+                                    {% elif appointment.status == 'Approved' %}
+                                    <span class="badge bg-info text-dark">Approved</span>
+                                    {% elif appointment.status == 'Completed' %}
+                                    <span class="badge bg-success">Completed</span>
+                                    {% else %}
+                                    <span class="badge bg-danger">Cancelled</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <a href="{% url 'admin_appointment_update' appointment.pk %}"
+                                        class="btn btn-sm btn-primary">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    <a href="{% url 'admin_appointment_delete' appointment.pk %}"
+                                        class="btn btn-sm btn-danger"
+                                        onclick="return confirm('Delete this appointment?');">
+                                        <i class="fas fa-trash"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="6" class="text-center py-4 text-muted">No appointments found.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

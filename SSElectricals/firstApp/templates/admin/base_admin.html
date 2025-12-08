@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}SSElectricals Admin{% endblock %}</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f6f9;
+        }
+
+        .sidebar {
+            height: 100vh;
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 100;
+            width: 250px;
+            background-color: #343a40;
+            color: #fff;
+            padding-top: 20px;
+            /* overflow-y: auto; */
+        }
+
+        .main-content {
+            margin-left: 250px;
+            padding: 20px;
+        }
+
+        .sidebar a {
+            padding: 15px 20px;
+            text-decoration: none;
+            font-size: 1.1rem;
+            color: #ccc;
+            display: block;
+            transition: 0.3s;
+        }
+
+        .sidebar a:hover,
+        .sidebar a.active {
+            color: #fff;
+            background-color: #495057;
+            border-left: 4px solid #ffc107;
+        }
+
+        .sidebar .brand {
+            font-size: 1.5rem;
+            text-align: center;
+            margin-bottom: 30px;
+            font-weight: bold;
+            color: #ffc107;
+        }
+
+        .card {
+            border: none;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+
+        .card-header {
+            background-color: #fff;
+            border-bottom: 1px solid #eee;
+            font-weight: bold;
+        }
+
+        /* Responsive Sidebar */
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 100%;
+                height: auto;
+                position: relative;
+            }
+
+            .main-content {
+                margin-left: 0;
+            }
+        }
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+
+<body>
+
+    <div class="sidebar">
+        <div class="brand">
+            <i class="fas fa-bolt"></i> Admin Panel
+        </div>
+        <a href="{% url 'admin_dashboard' %}"
+            class="{% if request.resolver_match.url_name == 'admin_dashboard' %}active{% endif %}">
+            <i class="fas fa-tachometer-alt me-2"></i> Dashboard
+        </a>
+        <a href="{% url 'admin_product_list' %}"
+            class="{% if 'product' in request.resolver_match.url_name %}active{% endif %}">
+            <i class="fas fa-box me-2"></i> Products
+        </a>
+        <a href="{% url 'admin_order_list' %}"
+            class="{% if 'order' in request.resolver_match.url_name %}active{% endif %}">
+            <i class="fas fa-shopping-cart me-2"></i> Orders
+        </a>
+        <a href="{% url 'admin_appointment_list' %}"
+            class="{% if 'appointment' in request.resolver_match.url_name %}active{% endif %}">
+            <i class="fas fa-calendar-check me-2"></i> Appointments
+        </a>
+        <a href="{% url 'admin_analytics' %}"
+            class="{% if 'analytics' in request.resolver_match.url_name %}active{% endif %}">
+            <i class="fas fa-chart-line me-2"></i> Analytics
+        </a>
+        <a href="{% url 'admin_daily_sales' %}"
+            class="{% if 'sales' in request.resolver_match.url_name %}active{% endif %}">
+            <i class="fas fa-rupee-sign me-2"></i> Daily Sales
+        </a>
+        <a href="{% url 'admin_daily_expenses' %}"
+            class="{% if 'expenses' in request.resolver_match.url_name %}active{% endif %}">
+            <i class="fas fa-money-bill-wave me-2"></i> Expenses
+        </a>
+        <a href="{% url 'admin_reviews_list' %}"
+            class="{% if 'review' in request.resolver_match.url_name %}active{% endif %}">
+            <i class="fas fa-star me-2"></i> Reviews
+        </a>
+        <a href="{% url 'admin_activity_log' %}"
+            class="{% if 'log' in request.resolver_match.url_name %}active{% endif %}">
+            <i class="fas fa-history me-2"></i> Logs
+        </a>
+        <hr style="border-color: #555;">
+        <a href="{% url 'home' %}">
+            <i class="fas fa-globe me-2"></i> View Site
+        </a>
+        <form action="{% url 'logout' %}" method="post" class="d-inline">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-link text-decoration-none p-0 text-start w-100"
+                style="color: #ccc; padding: 15px 20px !important;">
+                <i class="fas fa-sign-out-alt me-2"></i> Logout
+            </button>
+        </form>
+    </div>
+
+    <div class="main-content">
+        <!-- Top Navbar (Optional, for now just content) -->
+        <div class="container-fluid">
+            {% if messages %}
+            {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+            {% endfor %}
+            {% endif %}
+
+            {% block content %}{% endblock %}
+        </div>
+    </div>
+
+    <!-- Bootstrap Bundle with Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Common Admin Scripts
+    </script>
+    {% block extra_js %}{% endblock %}
+</body>
+
+</html>

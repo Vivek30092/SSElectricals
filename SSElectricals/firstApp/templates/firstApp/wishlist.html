@@ -1,0 +1,52 @@
+{% extends 'firstApp/base.html' %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h2 class="mb-4">My Wishlist</h2>
+
+        {% if wishlist_items %}
+        <div class="row">
+            {% for item in wishlist_items %}
+            <div class="col-md-3 mb-4">
+                <div class="card h-100 shadow-sm">
+                    {% if item.product.image %}
+                    <img src="{{ item.product.image.url }}" class="card-img-top" alt="{{ item.product.name }}"
+                        style="height: 200px; object-fit: cover;">
+                    {% endif %}
+                    <div class="card-body">
+                        <h5 class="card-title text-truncate">{{ item.product.name }}</h5>
+                        <p class="card-text text-muted mb-1">{{ item.product.category.name }}</p>
+
+                        <!-- Rating Display -->
+                        <div class="mb-2">
+                            <span class="text-warning small">
+                                <i class="fas fa-star"></i> {{ item.product.average_rating|floatformat:1 }}
+                            </span>
+                            <span class="text-muted small">({{ item.product.review_count }})</span>
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            <a href="{% url 'product_detail' item.product.id %}" class="btn btn-primary btn-sm">View
+                                Product</a>
+                            <a href="{% url 'remove_from_wishlist' item.product.id %}"
+                                class="btn btn-outline-danger btn-sm">
+                                <i class="fas fa-trash"></i> Remove
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="alert alert-info py-5 text-center">
+            <i class="far fa-heart fa-3x mb-3"></i>
+            <h4>Your wishlist is empty</h4>
+            <p>Save items you love here for later.</p>
+            <a href="{% url 'product_list' %}" class="btn btn-primary mt-3">Browse Products</a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

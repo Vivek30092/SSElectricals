@@ -1,0 +1,116 @@
+{% extends 'admin/base_admin.html' %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Daily Sales Records</h2>
+    <div>
+        <a href="{% url 'admin_export_sales' %}" class="btn btn-success me-2"><i class="fas fa-file-csv"></i> Export
+            CSV</a>
+        <a href="{% url 'admin_add_daily_sales' %}" class="btn btn-primary"><i class="fas fa-plus"></i> Add Sales
+            Entry</a>
+    </div>
+</div>
+
+<!-- Filter Form -->
+<form method="get" class="mb-4 bg-light p-3 rounded">
+    <div class="row g-3 align-items-end">
+        <div class="col-md-4">
+            <label class="form-label">Date</label>
+            <input type="date" name="date" class="form-control" value="{{ request.GET.date }}">
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">Month</label>
+            <input type="month" name="month" class="form-control" value="{{ request.GET.month }}">
+        </div>
+        <div class="col-md-4">
+            <button type="submit" class="btn btn-primary">Filter</button>
+            <a href="{% url 'admin_daily_sales' %}" class="btn btn-secondary">Clear</a>
+        </div>
+    </div>
+</form>
+
+<div class="card shadow">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover table-bordered">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Date</th>
+                        <th>Day</th>
+                        <th>Total Sales</th>
+                        <th>Online Received</th>
+                        <th>Cash Received</th>
+                        <th>Subtotal</th>
+                        <th>Remark</th>
+                        <th>Admin</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for sale in sales_records %}
+                    <tr>
+                        <td>{{ sale.date }}</td>
+                        <td>{{ sale.day }}</td>
+                        <td>₹{{ sale.total_sales }}</td>
+                        <td>₹{{ sale.online_received }}</td>
+                        <td>₹{{ sale.cash_received }}</td>
+                        <td><strong>₹{{ sale.subtotal }}</strong></td>
+                        <td>
+                            {{ sale.remark }}
+                            {% if sale.remark == 'Other' and sale.other_remark %}
+                            <br><small class="text-muted">{{ sale.other_remark }}</small>
+                            {% endif %}
+                        </td>
+                        <td>{{ sale.admin.username }}</td>
+                        <td>
+                            <a href="{% url 'admin_edit_daily_sales' sale.id %}" class="btn btn-sm btn-primary"><i
+                                    class="fas fa-edit"></i></a>
+                            <a href="{% url 'admin_delete_daily_sales' sale.id %}" class="btn btn-sm btn-danger"
+                                onclick="return confirm('Delete this record?')"><i class="fas fa-trash"></i></a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="text-center">No sales records found.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        {% if sales_records.has_other_pages %}
+        <nav aria-label="Page navigation" class="mt-4">
+            <ul class="pagination justify-content-center">
+                {% if sales_records.has_previous %}
+                <li class="page-item">
+                    <a class="page-link"
+                        href="?page={{ sales_records.previous_page_number }}&date={{ request.GET.date }}&month={{ request.GET.month }}">Previous</a>
+                </li>
+                {% else %}
+                <li class="page-item disabled"><span class="page-link">Previous</span></li>
+                {% endif %}
+
+                {% for i in sales_records.paginator.page_range %}
+                {% if sales_records.number == i %}
+                <li class="page-item active"><span class="page-link">{{ i }}</span></li>
+                {% else %}
+                <li class="page-item"><a class="page-link"
+                        href="?page={{ i }}&date={{ request.GET.date }}&month={{ request.GET.month }}">{{ i }}</a></li>
+                {% endif %}
+                {% endfor %}
+
+                {% if sales_records.has_next %}
+                <li class="page-item">
+                    <a class="page-link"
+                        href="?page={{ sales_records.next_page_number }}&date={{ request.GET.date }}&month={{ request.GET.month }}">Next</a>
+                </li>
+                {% else %}
+                <li class="page-item disabled"><span class="page-link">Next</span></li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

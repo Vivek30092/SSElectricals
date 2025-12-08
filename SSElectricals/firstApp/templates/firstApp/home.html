@@ -173,11 +173,14 @@
                         </div>
                     </div>
                     <div class="card-body text-center">
-                        <small class="text-muted text-uppercase fw-bold" style="font-size: 0.75rem;">{{
-                            product.category.name }}</small>
-                        <h5 class="card-title fw-bold text-truncate mt-1"><a
-                                href="{% url 'product_detail' product.pk %}" class="text-dark text-decoration-none">{{
-                                product.name }}</a></h5>
+                        <small class="text-muted text-uppercase fw-bold" style="font-size: 0.75rem;">
+                            {{ product.category.name }}
+                        </small>
+                        <h5 class="card-title fw-bold text-truncate mt-1">
+                            <a href="{% url 'product_detail' product.pk %}" class="text-dark text-decoration-none">
+                                {{ product.name }}
+                            </a>
+                        </h5>
                         <div class="mb-2">
                             <!-- Price Removed -->
                         </div>
