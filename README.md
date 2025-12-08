@@ -1,15 +1,15 @@
 # ⚡ SSElectricals - Premium E-Commerce Solution
 
-> **A Next-Generation Django E-Commerce Platform for Electrical Products**  
+> **A Next-Generation Django E-Commerce Platform for Electrical Products & Services**  
 > *Built for performance, scalability, and a seamless user experience.*
 
 ---
 
 ## 📖 Overview
 
-**SSElectricals** is a robust, full-featured e-commerce application designed specifically for electrical shops. It bridges the gap between traditional retail and modern digital commerce, offering a sophisticated platform for managing products, orders, and customer interactions.
+**SSElectricals** is a robust, full-featured e-commerce application designed specifically for electrical shops. It bridges the gap between traditional retail and modern digital commerce, offering a sophisticated platform for buying products, booking services, and managing comprehensive business operations.
 
-Built with **Django 5.x**, this project leverages advanced web technologies to deliver a responsive, secure, and dynamic shopping experience. From real-time stock management to an intuitive admin dashboard, every feature is crafted with precision.
+Built with **Django 5.x**, this project leverages advanced web technologies to deliver a responsive, secure, and dynamic shopping experience. From real-time stock management to daily accounting and service bookings, every feature is crafted with precision.
 
 ---
 
@@ -17,21 +17,35 @@ Built with **Django 5.x**, this project leverages advanced web technologies to d
 
 ### 🛍️ Advanced Shopping Experience
 - **Dynamic Cart System**: AJAX-powered cart operations for a smooth, reload-free experience.
+- **Product Reviews & Ratings**: 5-star rating system with user reviews to build trust.
+- **Wishlist**: Save favorite products for later purchase with a single click.
 - **Live Search**: Instant product suggestions with keyboard navigation support.
 - **Responsive Design**: Mobile-first architecture ensuring perfect rendering on all devices.
-- **Smart Filters**: Easy product discovery through categorized browsing.
+- **Smart Filters**: Easy product discovery through categorized browsing and sorting.
 
-### 🛡️ Robust Security & Validation
-- **Secure Authentication**: Phone number-based login with strong password enforcement.
-- **Smart Validations**: Real-time frontend and backend validation for forms, UPI IDs, and stock limits.
-- **Session Management**: Advanced admin session tracking with auto-logout and activity monitoring.
-- **Data Integrity**: Comprehensive protection against SQL injection and XSS attacks.
+### 🔧 Services & Appointments
+- **Service Booking**: Book professional services like House Wiring, Appliance Repair, etc.
+- **Appointment Management**: Track appointment status, extra charges, and history.
+- **Technician Allocation**: Admin can manage and update service requests.
+
+### 🛡️ Robust Security & Authentication
+- **Secure Authentication**: OTP-based Email Login and Signup for enhanced security.
+- **Profile Management**: Secure profile updates and password changes via OTP verification.
+- **Delivery Verification**: OTP-based delivery confirmation to ensure secure order handovers.
+- **Smart Validations**: Real-time frontend and backend validation for forms and data integrity.
 
 ### 👨‍💼 Powerful Admin Dashboard
-- **Real-Time Analytics**: Visual sales charts (Chart.js) and key performance metrics.
-- **Activity Logging**: Detailed logs of all admin actions for accountability and auditing.
-- **Session Control**: Monitor and terminate active admin sessions remotely.
+- **Dashboard Overview**: Real-time charts (Chart.js) for sales, orders, and user growth.
+- **Daily Sales Tracker**: Record daily offline/online sales with auto-calculated subtotals and CSV export.
+- **Expense Manager**: Track daily shop expenditures and export data for accounting.
+- **Review Management**: Moderate user reviews to maintain platform quality.
+- **Order Management**: Update order statuses, confirm deliveries, and manage cancellations.
 - **Inventory Management**: Streamlined tools for adding, updating, and tracking products.
+
+### 🎨 User Experience (UX)
+- **Dark Mode**: specialized dark theme for comfortable night-time browsing.
+- **Marquee Tech Stack**: Visual showcase of technologies used.
+- **Interactive UI**: Hover effects, smooth transitions, and animated alerts.
 
 ---
 
@@ -39,7 +53,7 @@ Built with **Django 5.x**, this project leverages advanced web technologies to d
 
 | Category | Technologies |
 |----------|--------------|
-| **Backend** | Python, Django 5.x |
+| **Backend** | Python 3.13, Django 5.2.x |
 | **Frontend** | HTML5, CSS3, JavaScript (ES6+), Bootstrap 5 |
 | **Database** | SQLite (Dev) / PostgreSQL (Prod) |
 | **Visualization** | Chart.js 4.0 |
@@ -52,7 +66,7 @@ Built with **Django 5.x**, this project leverages advanced web technologies to d
 Follow these steps to get the project running on your local machine.
 
 ### Prerequisites
-- Python 3.8 or higher
+- Python 3.10 or higher
 - pip (Python package manager)
 
 ### Step-by-Step Guide
@@ -108,8 +122,9 @@ VISIT: `http://127.0.0.1:8000/`
 ```plaintext
 SSElectricals/
 ├── firstApp/                 # Core Application Logic
-│   ├── models.py             # Database Models
-│   ├── views.py              # Business Logic & Views
+│   ├── models.py             # Database Models (Products, Orders, Reviews, Sales, Expenses)
+│   ├── views.py              # User Views (Shopping, Auth, Services)
+│   ├── admin_views.py        # Admin Dashboard Views
 │   ├── urls.py               # App Routing
 │   └── templates/            # HTML Templates
 ├── static/                   # Static Assets (CSS, JS, Images)
@@ -120,18 +135,22 @@ SSElectricals/
 
 ---
 
-## 📱 API Endpoints
+## 📱 API Endpoints & Routes
 
-The platform exposes several internal APIs for dynamic interactions:
+The platform exposes several routes for dynamic interactions:
 
-- **Cart Operations**:
-    - `POST /api/cart/add/` - Add item to cart
-    - `POST /api/cart/update/` - Update item quantity
-- **Search**:
-    - `GET /api/search/?q=<query>` - Live product search
+- **Shopping**:
+    - `/products/` - Product Listing
+    - `/wishlist/` - User Wishlist
+    - `/cart/` - Shopping Cart
+- **User Actions**:
+    - `/product/<id>/add-review/` - Submit Review
+    - `/book-appointment/` - Service Booking
 - **Admin**:
-    - `/admin/dashboard/` - Analytics Dashboard
-    - `/admin/activity-log/` - Security Logs
+    - `/shop-admin/dashboard/` - Main Dashboard
+    - `/shop-admin/sales/` - Daily Sales Entry
+    - `/shop-admin/expenses/` - Daily Expenditure Entry
+    - `/shop-admin/reviews/` - Review Moderation
 
 ---
 
