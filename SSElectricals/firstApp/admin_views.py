@@ -169,12 +169,25 @@ def admin_appointment_update(request, pk):
     appointment = get_object_or_404(Appointment, pk=pk)
     if request.method == 'POST':
         status = request.POST.get('status')
+        visiting_charge = request.POST.get('visiting_charge')
+        extra_charge = request.POST.get('extra_charge')
+
         if status:
             appointment.status = status
-            appointment.save()
-            messages.success(request, "Appointment updated successfully.")
-            return redirect('admin_appointment_list')
-    return render(request, 'admin/appointment_update.html', {'appointment': appointment})
+        
+        if visiting_charge:
+            appointment.visiting_charge = visiting_charge
+            
+        if extra_charge:
+            appointment.extra_charge = extra_charge
+            
+        appointment.save()
+        messages.success(request, "Appointment updated successfully.")
+        return redirect('admin_appointment_list')
+    return render(request, 'admin/appointment_update.html', {
+        'appointment': appointment,
+        'status_choices': Appointment.STATUS_CHOICES
+    })
 
 @staff_member_required
 def admin_appointment_delete(request, pk):

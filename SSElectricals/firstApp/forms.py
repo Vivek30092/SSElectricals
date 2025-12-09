@@ -1,7 +1,7 @@
 from django import forms
 from django.contrib.auth.forms import UserCreationForm
 from .models import CustomUser, Appointment, Product, Order, Review, DailySales, DailyExpenditure
-from .validators import validate_indian_phone, validate_strong_password, validate_upi_id, validate_address_format
+from .validators import validate_indian_phone, validate_strong_password, validate_upi_id, validate_address_format, validate_pincode
 
 class CustomUserCreationForm(UserCreationForm):
     password1 = forms.CharField(
@@ -83,17 +83,30 @@ class CustomUserUpdateForm(forms.ModelForm):
         }
 
 class CheckoutForm(forms.Form):
-    address = forms.CharField(
-        widget=forms.Textarea(attrs={
-            'rows': 4,
-            'class': 'form-control',
-            'placeholder': 'Enter your complete delivery address',
-            'id': 'checkout-address'
-        }),
-        validators=[validate_address_format],
-        help_text='Please provide your complete delivery address with pincode'
+    house_number = forms.CharField(
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'House Number'}),
+        label='House Number'
     )
-    
+    address_line1 = forms.CharField(
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Address Line 1 (Area/Colony)'}),
+        label='Address Line 1'
+    )
+    address_line2 = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Address Line 2 (Optional)'}),
+        label='Address Line 2'
+    )
+    pincode = forms.CharField(
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Pincode'}),
+        validators=[validate_pincode], # Updated validator
+        label='Pincode'
+    )
+    city = forms.CharField(
+        initial='Indore',
+        widget=forms.TextInput(attrs={'class': 'form-control', 'readonly': 'readonly', 'value': 'Indore'}),
+        required=False
+    )
+
     payment_method = forms.ChoiceField(
         choices=[
             ('COD', 'Cash on Delivery (COD) Only'),

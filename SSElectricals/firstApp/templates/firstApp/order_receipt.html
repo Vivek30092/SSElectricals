@@ -11,9 +11,9 @@
                     <div class="row mb-5">
                         <div class="col-6">
                             <h2 class="text-warning fw-bold">Shiv Shakti Electrical</h2>
-                            <p class="mb-1">123, Example Address, Indore (M.P.)</p>
-                            <p class="mb-1">Phone: +91-9876543210</p>
-                            <p class="mb-0">GSTIN: 23ABCDE1234F1Z5</p>
+                            <p class="mb-1">B-115, Abhinandan Nagar, Indore </p>
+                            <p class="mb-1">Phone: +91-9993149226</p>
+                            <p class="mb-0">GSTIN: </p>
                         </div>
                         <div class="col-6 text-end">
                             <h3 class="mb-3">ORDER RECEIPT</h3>
@@ -27,8 +27,7 @@
                     <div class="row mb-4">
                         <div class="col-12">
                             <h5 class="border-bottom pb-2">Customer Details</h5>
-                            <p class="mb-1"><strong>Name:</strong> {{ order.user.first_name }} {{ order.user.last_name
-                                }}</p>
+                            <p class="mb-1"><strong>Name:</strong> {{ order.user.first_name }} {{ order.user.last_name}}</p>
                             <p class="mb-1"><strong>Phone:</strong> {{ order.user.phone_number }}</p>
                             <p class="mb-0"><strong>Address:</strong> {{ order.address }}</p>
                         </div>
@@ -66,8 +65,13 @@
                                 </tr>
                                 <tr class="bg-light fs-5">
                                     <td colspan="3" class="text-end">Grand Total:</td>
-                                    <td class="text-end text-success">₹{{
-                                        order.final_price|default:order.total_price|add:order.delivery_charge }}</td>
+                                    <td class="text-end text-success">
+                                        ₹{% if order.final_price %}
+                                        {{ order.final_price }}
+                                        {% else %}
+                                        {{ order.total_price|add:order.delivery_charge }}
+                                        {% endif %}
+                                    </td>
                                 </tr>
                             </tfoot>
                         </table>

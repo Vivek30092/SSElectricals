@@ -158,11 +158,17 @@ def calculate_distance_and_price(user_address):
 
     # Fallback: Geopy (Nominatim)
     try:
-        geolocator = Nominatim(user_agent="sselectricals_app")
+        geolocator = Nominatim(user_agent="sselectricals_app_v2")
         # Try to clean address or append city context if missing
         search_address = user_address
+        
+        # Helper to ensure city context
         if "indore" not in search_address.lower():
             search_address += ", Indore, Madhya Pradesh, India"
+        else:
+            # Even if indore is present, ensure state/country for better matching
+            if "madhya pradesh" not in search_address.lower():
+                search_address += ", Madhya Pradesh, India"
             
         location = geolocator.geocode(search_address)
         
@@ -191,3 +197,35 @@ def _calculate_price(distance_km):
 
 
 
+
+def save_csv_entry(filename, data, fieldnames):
+    """
+    Appends a dictionary row to a CSV file in /media/data/.
+    Creates the file and directory if they don't exist.
+    """
+    import csv
+    import os
+    from django.conf import settings
+    
+    try:
+        data_dir = os.path.join(settings.MEDIA_ROOT, 'data')
+        if not os.path.exists(data_dir):
+            os.makedirs(data_dir)
+            
+        file_path = os.path.join(data_dir, filename)
+        file_exists = os.path.exists(file_path)
+        
+        with open(file_path, mode='a', newline='', encoding='utf-8') as f:
+            writer = csv.DictWriter(f, fieldnames=fieldnames)
+            
+            if not file_exists:
+                writer.writeheader()
+            
+            # Ensure only relevant fields are written
+            row = {field: data.get(field, '') for field in fieldnames}
+            writer.writerow(row)
+            
+        return True, "Entry saved successfully."
+    except Exception as e:
+        print(f"Error saving to CSV: {e}")
+        return False, str(e)

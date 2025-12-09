@@ -82,8 +82,11 @@
                             <label class="form-label">Update Status</label>
                             <select name="status" class="form-select" id="statusSelect" onchange="togglePriceFields()">
                                 {% for status, label in order.STATUS_CHOICES %}
-                                <option value="{{ status }}" {% if order.status==status %}selected{% endif %}>{{ label
-                                    }}</option>
+                                <option value="{{ status }}" {% if order.status == status %}
+                                selected
+                                {% endif %}>
+                                {{ label }}
+                                </option>
                                 {% endfor %}
                             </select>
                         </div>

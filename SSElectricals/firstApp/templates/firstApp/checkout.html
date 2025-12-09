@@ -11,10 +11,50 @@
             <div class="card-body">
                 <form method="post">
                     {% csrf_token %}
-                    <div class="mb-3">
-                        <label class="form-label">Shipping Address</label>
-                        {{ form.address }}
-                        <div class="form-text">Please ensure your address is accurate for delivery logic.</div>
+                    <div class="row g-3">
+                        {% if form.non_field_errors %}
+                        <div class="col-12">
+                            <div class="alert alert-danger">
+                                {{ form.non_field_errors }}
+                            </div>
+                        </div>
+                        {% endif %}
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">House Number <span class="text-danger">*</span></label>
+                            {{ form.house_number }}
+                            {% if form.house_number.errors %}
+                            <div class="text-danger small">{{ form.house_number.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Pincode <span class="text-danger">*</span></label>
+                            {{ form.pincode }}
+                            {% if form.pincode.errors %}
+                            <div class="text-danger small">{{ form.pincode.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-12 mb-3">
+                            <label class="form-label">Address Line 1 (Area/Colony) <span
+                                    class="text-danger">*</span></label>
+                            {{ form.address_line1 }}
+                            {% if form.address_line1.errors %}
+                            <div class="text-danger small">{{ form.address_line1.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-12 mb-3">
+                            <label class="form-label">Address Line 2 (Optional)</label>
+                            {{ form.address_line2 }}
+                            {% if form.address_line2.errors %}
+                            <div class="text-danger small">{{ form.address_line2.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-12 mb-3">
+                            <label class="form-label">City</label>
+                            {{ form.city }}
+                            {% if form.city.errors %}
+                            <div class="text-danger small">{{ form.city.errors.0 }}</div>
+                            {% endif %}
+                        </div>
                     </div>
 
                     <div class="mb-3">

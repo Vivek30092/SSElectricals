@@ -50,17 +50,24 @@
                 <div
                     class="list-group-item d-flex justify-content-between align-items-center {% if file == current_file %}bg-light{% endif %}">
                     <a href="?file={{ file }}" class="text-decoration-none text-dark d-block text-truncate"
-                        style="max-width: 80%;">
+                        style="max-width: 60%;">
                         {% if file == current_file %}<strong>{{ file }}</strong>{% else %}{{ file }}{% endif %}
                     </a>
-                    <form action="{% url 'admin_delete_analytics_file' %}" method="POST" class="d-inline"
-                        onsubmit="return confirm('Are you sure you want to delete {{ file }}?');">
-                        {% csrf_token %}
-                        <input type="hidden" name="filename" value="{{ file }}">
-                        <button type="submit" class="btn btn-sm btn-outline-danger border-0 p-1" title="Delete File">
-                            <i class="fas fa-trash-alt"></i>
-                        </button>
-                    </form>
+                    <div>
+                        <a href="{{ MEDIA_URL }}data/{{ file }}" download
+                            class="btn btn-sm btn-outline-primary border-0 p-1 me-1" title="Download File">
+                            <i class="fas fa-download"></i>
+                        </a>
+                        <form action="{% url 'admin_delete_analytics_file' %}" method="POST" class="d-inline"
+                            onsubmit="return confirm('Are you sure you want to delete {{ file }}?');">
+                            {% csrf_token %}
+                            <input type="hidden" name="filename" value="{{ file }}">
+                            <button type="submit" class="btn btn-sm btn-outline-danger border-0 p-1"
+                                title="Delete File">
+                                <i class="fas fa-trash-alt"></i>
+                            </button>
+                        </form>
+                    </div>
                 </div>
                 {% endfor %}
                 {% else %}

@@ -290,40 +290,8 @@
                                 return; // Stop processing
                             }
 
-                            // Auto-fill fields ONLY if not locked
-                            var pincodeInput = document.getElementById('id_pincode');
-                            if (pincodeInput && !pincodeInput.hasAttribute('readonly')) {
-                                if (addr.postcode) {
-                                    pincodeInput.value = addr.postcode;
-                                    pincodeInput.setAttribute('readonly', true);
-                                }
-
-                                // Construct Address Line 1
-                                var line1 = [];
-                                if (addr.road) line1.push(addr.road);
-                                if (addr.suburb) line1.push(addr.suburb);
-                                if (addr.neighbourhood) line1.push(addr.neighbourhood);
-                                var line1Field = document.getElementById('id_address_line1');
-                                if (line1Field) {
-                                    line1Field.value = line1.join(', ');
-                                    line1Field.setAttribute('readonly', true);
-                                }
-
-                                // Construct Address Line 2 / Landmark
-                                var line2 = [];
-                                if (addr.city_district) line2.push(addr.city_district);
-                                if (addr.state_district) line2.push(addr.state_district);
-                                var line2Field = document.getElementById('id_address_line2');
-                                if (line2Field) line2Field.value = line2.join(', ');
-
-                                // Landmark
-                                if (addr.amenity || addr.shop || addr.building) {
-                                    var landmarkField = document.getElementById('id_landmark');
-                                    if (landmarkField) landmarkField.value = addr.amenity || addr.shop || addr.building;
-                                }
-                            } else {
-                                console.log("Address fields are locked. Skipping auto-fill.");
-                            }
+                            // Auto-fill logic REMOVED as per user request.
+                            // Location is used ONLY for distance/charge calculation.
                         }
                     })
                     .catch(error => {

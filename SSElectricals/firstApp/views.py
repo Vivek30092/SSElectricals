@@ -31,7 +31,17 @@ def checkout(request):
     if request.method == 'POST':
         form = CheckoutForm(request.POST)
         if form.is_valid():
-            address = form.cleaned_data['address']
+            # Construct address from parts
+            house_number = form.cleaned_data['house_number']
+            address_line1 = form.cleaned_data['address_line1']
+            address_line2 = form.cleaned_data.get('address_line2', '')
+            pincode = form.cleaned_data['pincode']
+            city = 'Indore' # Fixed
+            
+            # Full address for usage
+            full_address = f"{house_number}, {address_line1}, {address_line2}, {city}, {pincode}"
+            search_address = f"{house_number} {address_line1} {city} {pincode}" # Simplified for search
+
             payment_method = 'COD' # Fixed as per requirement
             
             # Check stock availability
@@ -41,16 +51,35 @@ def checkout(request):
                     return redirect('view_cart')
             
             # Calculate Delivery Charge
-            dist_km, delivery_charge, error_msg = calculate_distance_and_price(address)
+            dist_km, delivery_charge, error_msg = calculate_distance_and_price(search_address)
             
             if error_msg:
-                messages.error(request, f"Delivery Error: {error_msg}")
-                return render(request, 'firstApp/checkout.html', {
-                    'form': form, 
-                    'cart': cart, 
-                    'delivery_charge': 0, 
-                    'total_amount': cart.total_price
-                })
+                # If geocoding fails, fallback/retry logic
+                if "could not be located" in error_msg:
+                     # Try more generic search
+                     search_address_v2 = f"{address_line1}, {city}, {pincode}"
+                     dist_km, delivery_charge, error_msg_v2 = calculate_distance_and_price(search_address_v2)
+                     if error_msg_v2:
+                          # If both fail, allow order but mark as manual verification needed
+                          print(f"Checkout Location Failed: {full_address}")
+                          dist_km = 0
+                          delivery_charge = 0
+                          full_address += " [Location Verification Needed]"
+                          error_msg = None # Clear error to proceed
+                     else:
+                        error_msg = None # Recovered
+            
+            # If error was something else entirely (unlikely if 'could not be located' check passed), still proceed? 
+            # If we cleared error_msg above, we are good.
+            # If error_msg was NOT 'could not be located' (e.g. API quota), we might still want to proceed to not lose sale.
+            if error_msg:
+                 # Catch-all for other errors: Log and proceed
+                 print(f"Checkout Geocode Error: {error_msg}")
+                 dist_km = 0
+                 delivery_charge = 0
+                 full_address += f" [System Error: {error_msg}]"
+                 error_msg = None
+
             
             # Convert float to Decimal for math operations
             delivery_charge = Decimal(str(delivery_charge))
@@ -59,7 +88,7 @@ def checkout(request):
             # Create Order
             order = Order.objects.create(
                 user=request.user,
-                address=address,
+                address=full_address,
                 total_price=cart.total_price, # Base product price
                 delivery_charge=delivery_charge,
                 distance_km=dist_km,
@@ -83,24 +112,31 @@ def checkout(request):
             # Clear Cart
             cart.items.all().delete()
             
-            messages.success(request, f"Order placed successfully! Delivery distance: {dist_km} KM. Admin will contact you for final confirmation.")
+            dist_msg = f"{dist_km} KM" if dist_km > 0 else "Pending Verification"
+            messages.success(request, f"Order placed successfully! Delivery distance: {dist_msg}. Admin will contact you for final confirmation.")
             return redirect('order_history')
+        else:
+            print(f"Checkout Form Errors: {form.errors}")
+            messages.error(request, "Please correct the errors in the form.")
     else:
         # Pre-fill address from user profile
-        initial_data = {}
-        if request.user.house_number:
-             full_address = f"{request.user.house_number}, {request.user.address_line1}, {request.user.city} - {request.user.pincode}"
-             initial_data['address'] = full_address
-        else:
-             initial_data['address'] = request.user.address
+        initial_data = {
+            'house_number': request.user.house_number,
+            'address_line1': request.user.address_line1,
+            'pincode': request.user.pincode,
+            'city': 'Indore'
+        }
+        # Fallback if fields are empty but old single address field has data
+        if not initial_data['address_line1'] and request.user.address:
+             initial_data['address_line1'] = ' '.join(request.user.address.splitlines())[:100] # Safe slice
 
-        form = CheckoutForm(initial=initial_data)
+        form = CheckoutForm(initial=initial_data) # Re-init form only if GET
         
     return render(request, 'firstApp/checkout.html', {
         'form': form, 
         'cart': cart, 
         'delivery_charge': "Calculated at checkout", 
-        'total_amount': "Calculated at checkout"
+        'total_amount': cart.total_price
     })
 
 @login_required
@@ -386,42 +422,49 @@ def book_appointment(request):
                     appointment.email = request.user.email
             
             # --- 3KM Radius Check ---
-            # Construct address for distance check
-            full_address = f"{appointment.house_number}, {appointment.address_line1}, {appointment.city}"
-            distance_km, _, error_msg = calculate_distance_and_price(full_address)
+            # --- 3KM Radius Check ---
+            # Construct address for distance check using all fields for better accuracy
+            full_address_search = f"{appointment.house_number} {appointment.address_line1} {appointment.city} {appointment.pincode}"
+            distance_km, _, error_msg = calculate_distance_and_price(full_address_search)
             
+            # Fallback if first attempt fails
+            if error_msg and "could not be located" in error_msg:
+                 full_address_search_v2 = f"{appointment.address_line1}, {appointment.city}, {appointment.pincode}"
+                 distance_km, _, error_msg = calculate_distance_and_price(full_address_search_v2)
+
+            if error_msg and "could not be located" in error_msg:
+                 # If still fails, we ALLOW it but distance is unknown (0).
+                 # Admin will verify manually.
+                 print(f"Appointment Address Location Failed: {full_address_search}")
+                 distance_km = 0
+                 # We don't block anymore. We just proceed.
+                 # But we might want to warn the admin in the email later.
+                 pass
+
             if distance_km > 3:
                 # Check for exception areas
                 allowed_areas = ['Vijay Nagar', 'Sukhliya', 'Abhinandan Nagar']
-                # area is a Choice field, so we check if the selected area is in allowed list
-                # Note: 'Other' will fall through to rejection unless we want to allow it?
-                # Requirement: "If outside: Let user choose from dropdown... Dropdown: Vijay, Sukhliya, Abhi, Other"
-                # If "Other Region" is selected, we probably process it but maybe warn?
-                # "If calculation fails: Your request could not be processed..."
                 
                 if appointment.area in allowed_areas:
-                    # Allow service for these specific areas
+                    # Allow service for these specific areas regardless of distance
                     pass
-                elif appointment.area == 'Other':
-                    # Maybe allow 'Other' too since it's in the dropdown requirements?
-                    # But usually 'Other' implies > 3km might be too far.
-                    # Let's BLOCK 'Other' if it's > 3km, unless user explicitly demands otherwise.
-                    # User requirement: "If outside... dropdown: ... Other Region ... On success page..."
-                    # This implies valid selection leads to success. So "Other Region" might be allowed too?
-                    # Let's allow it but warn or charge extra? 
-                    # For safety, I will Block 'Other' if > 3km to avoid huge distances, unless specified.
-                    # Actually, let's allow the named ones.
-                    messages.error(request, f"Service available only within 3 KM. Your distance: {distance_km} KM. We only serve Vijay Nagar, Sukhliya, Abhinandan Nagar outside this range.")
-                    return redirect('book_appointment')
+                elif distance_km == 0:
+                     # Distance could not be calculated.
+                     # Trust the Area field?
+                     if appointment.area in allowed_areas:
+                          pass
+                     else:
+                          # If area is 'Other' and distance unknown, we can allow it but maybe warn?
+                          # Let's allow it as "Pending Verification"
+                          pass
                 else:
-                     messages.error(request, f"Service available only within 3 KM. Your distance: {distance_km} KM.")
+                     # Strict 3KM limit for others
+                     messages.error(request, f"Service available only within 3 KM. Your calculated distance: {distance_km} KM. Please select a valid service area.")
                      return redirect('book_appointment')
-                
-            if error_msg and "could not be located" in error_msg:
-                 # Be lenient if address not found but allow area selection?
-                 # Requirement: "If calculation fails: Your request could not be processed"
-                 messages.error(request, "Your request could not be processed. We will contact you soon.")
-                 return redirect('book_appointment')
+
+            # Append location warning if applicable
+            if distance_km == 0 and error_msg and "could not be located" in error_msg:
+                 appointment.problem_description += " [System Note: Address location failed on map. Verify distance manually.]"
 
             try:
                 appointment.save()
@@ -493,18 +536,21 @@ Shiv Shakti Electrical
                 form.fields['email'].widget.attrs['readonly'] = True
                 form.fields['email'].help_text = "Email is verified and cannot be changed."
             if request.user.pincode:
-                form.fields['pincode'].widget.attrs['readonly'] = True
-                form.fields['pincode'].help_text = "Pincode from your profile."
+                # Optional: keep pincode readonly if strict policy, otherwise remove.
+                # User asked for address line 1 to work correct (editable).
+                # Removing strict readonly to allow user edits on booking page if they are at a different location.
+                pass
             if request.user.address_line1 or request.user.address:
-                form.fields['address_line1'].widget.attrs['readonly'] = True
-                form.fields['address_line1'].help_text = "Address from your profile."
+                # Allow editing
+                form.fields['address_line1'].widget.attrs.pop('readonly', None)
             if request.user.house_number:
-                form.fields['house_number'].widget.attrs['readonly'] = True
+                # Allow editing
+                form.fields['house_number'].widget.attrs.pop('readonly', None)
             if request.user.city:
-                 # City is already readonly and set to Indore in form __init__, but we can ensure it matches
                  pass 
             if request.user.landmark:
-                form.fields['landmark'].widget.attrs['readonly'] = True
+                 # Allow editing
+                 form.fields['landmark'].widget.attrs.pop('readonly', None)
     
     return render(request, 'firstApp/book_appointment.html', {'form': form})
 

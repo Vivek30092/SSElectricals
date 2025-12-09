@@ -4,6 +4,7 @@ from django.contrib.auth.signals import user_logged_in, user_logged_out
 from django.db.models.signals import post_save, post_delete, pre_save
 from django.dispatch import receiver
 from .models import CustomUser, Category, Product, ProductImage, Cart, CartItem, Order, OrderItem, AdminSession, AdminActivityLog, Appointment, DailySales, DailyExpenditure, PurchaseEntry
+from .utils import save_csv_entry
 
 class CustomUserAdmin(UserAdmin):
     fieldsets = UserAdmin.fieldsets + (
@@ -82,9 +83,29 @@ class AppointmentAdmin(admin.ModelAdmin):
     search_fields = ('customer_name', 'phone', 'email')
     readonly_fields = ('created_at',)
 
+class DailySalesAdmin(admin.ModelAdmin):
+    list_display = ('date', 'day', 'total_sales', 'remark', 'admin')
+    list_filter = ('date', 'remark')
+    search_fields = ('remark',)
+    
+    def save_model(self, request, obj, form, change):
+        if not obj.admin:
+            obj.admin = request.user
+        super().save_model(request, obj, form, change)
+
+class DailyExpenditureAdmin(admin.ModelAdmin):
+    list_display = ('date', 'amount', 'payment_method', 'description', 'admin')
+    list_filter = ('date', 'payment_method')
+    search_fields = ('description',)
+
+    def save_model(self, request, obj, form, change):
+        if not obj.admin:
+            obj.admin = request.user
+        super().save_model(request, obj, form, change)
+
 admin.site.register(Appointment, AppointmentAdmin)
-admin.site.register(DailySales)
-admin.site.register(DailyExpenditure)
+admin.site.register(DailySales, DailySalesAdmin)
+admin.site.register(DailyExpenditure, DailyExpenditureAdmin)
 admin.site.register(PurchaseEntry)
 
 
@@ -265,3 +286,35 @@ def log_order_save(sender, instance, created, **kwargs):
             description=description,
             ip_address=getattr(instance, '_ip_address', '0.0.0.0')
         )
+
+
+# Unified CSV Storage Signals
+@receiver(post_save, sender=DailySales)
+def log_daily_sales_csv(sender, instance, created, **kwargs):
+    if created:
+        data = {
+            'Date': str(instance.date),
+            'Day': instance.day or '',
+            'Daily sales amount': str(instance.total_sales),
+            'Total online money received': str(instance.online_received),
+            'Total cash received': str(instance.cash_received),
+            'Subtotal': str(instance.subtotal),
+            'Remark': instance.remark,
+            'Admin ID': instance.admin.username if instance.admin else 'Unknown'
+        }
+        headers = ['Date', 'Day', 'Daily sales amount', 'Total online money received', 'Total cash received', 'Subtotal', 'Remark', 'Admin ID']
+        save_csv_entry('daily_sales.csv', data, headers)
+
+@receiver(post_save, sender=DailyExpenditure)
+def log_expenses_csv(sender, instance, created, **kwargs):
+    if created:
+        data = {
+            'Date': str(instance.date),
+            'Amount': str(instance.amount),
+            'Payment method': instance.payment_method,
+            'Added by': instance.admin.username if instance.admin else 'Unknown',
+            'Description': instance.description
+        }
+        headers = ['Date', 'Amount', 'Payment method', 'Added by', 'Description']
+        save_csv_entry('expenses.csv', data, headers)
+

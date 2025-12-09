@@ -50,5 +50,12 @@ def validate_address_format(value):
     Basic validation for address format.
     Ensures the address is not just whitespace and has a minimum length.
     """
-    if not value or len(value.strip()) < 10:
-        raise ValidationError(_('Address must be at least 10 characters long and provide sufficient detail.'))
+    if not value or len(value.strip()) < 3:
+        raise ValidationError(_('Address details must be at least 3 characters long.'))
+
+def validate_pincode(value):
+    """
+    Validates that the pincode is exactly 6 digits.
+    """
+    if not value.isdigit() or len(value) != 6:
+        raise ValidationError(_('Pincode must be exactly 6 digits.'))
