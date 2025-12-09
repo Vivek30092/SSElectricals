@@ -171,6 +171,8 @@ def admin_appointment_update(request, pk):
         status = request.POST.get('status')
         visiting_charge = request.POST.get('visiting_charge')
         extra_charge = request.POST.get('extra_charge')
+        
+        old_status = appointment.status
 
         if status:
             appointment.status = status
@@ -182,6 +184,56 @@ def admin_appointment_update(request, pk):
             appointment.extra_charge = extra_charge
             
         appointment.save()
+        
+        # Send Email Notification if status changed
+        if old_status != appointment.status and appointment.email:
+            try:
+                subject = f"Appointment Update: {appointment.service_type} - {appointment.status}"
+                
+                # Interactive HTML Email
+                html_message = f"""
+                <!DOCTYPE html>
+                <html>
+                <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+                    <div style="max-width: 600px; margin: 0 auto; border: 1px solid #ddd; border-radius: 8px; overflow: hidden;">
+                        <div style="background-color: #0d6efd; color: white; padding: 20px; text-align: center;">
+                            <h2 style="margin: 0;">Shiv Shakti Electrical</h2>
+                            <p style="margin: 5px 0 0;">Service Update</p>
+                        </div>
+                        <div style="padding: 20px;">
+                            <p>Dear {appointment.customer_name},</p>
+                            <p>The status of your appointment for <strong>{appointment.service_type}</strong> has been updated.</p>
+                            
+                            <div style="background-color: #f8f9fa; padding: 15px; border-left: 4px solid #0d6efd; margin: 20px 0;">
+                                <p style="margin: 0;"><strong>New Status:</strong> <span style="color: #0d6efd; font-size: 18px; font-weight: bold;">{appointment.status}</span></p>
+                                <p style="margin: 10px 0 0;"><strong>Date:</strong> {appointment.date} at {appointment.time}</p>
+                                <p style="margin: 5px 0 0;"><strong>Total Charge:</strong> ₹{appointment.total_charge}</p>
+                            </div>
+                            
+                            <p>If you have any questions, please contact us.</p>
+                            <div style="text-align: center; margin-top: 30px;">
+                                <a href="http://127.0.0.1:8000/contact/" style="background-color: #0d6efd; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold;">Contact Support</a>
+                            </div>
+                        </div>
+                        <div style="background-color: #eee; padding: 15px; text-align: center; font-size: 12px; color: #777;">
+                            &copy; {timezone.now().year} Shiv Shakti Electrical. All rights reserved.
+                        </div>
+                    </div>
+                </body>
+                </html>
+                """
+                
+                send_mail(
+                    subject=subject,
+                    message=strip_tags(html_message), # Fallback text
+                    from_email=settings.DEFAULT_FROM_EMAIL,
+                    recipient_list=[appointment.email],
+                    html_message=html_message,
+                    fail_silently=True
+                )
+            except Exception as e:
+                print(f"Error sending appointment email: {e}")
+
         messages.success(request, "Appointment updated successfully.")
         return redirect('admin_appointment_list')
     return render(request, 'admin/appointment_update.html', {
@@ -483,6 +535,10 @@ def admin_order_detail(request, pk):
         # Update Status
         if 'update_status' in request.POST:
             new_status = request.POST.get('status')
+            
+            # Capture old status to detect change
+            old_status = order.status
+            
             order.status = new_status
             
             # If confirmed, maybe generate OTP? Or admin manually does it.
@@ -503,21 +559,75 @@ def admin_order_detail(request, pk):
                 # In real app, send SMS here
                 messages.info(request, f"Delivery OTP generated: {otp}")
             
-            # If Delivered, send Review Request Email
-            if new_status == 'Delivered' and order.status != 'Delivered':
+            # Send status update email for ALL status changes (including Confirmed, Out for Delivery, etc)
+            if new_status != old_status:
                 try:
-                    review_url = request.build_absolute_uri('/') + 'orders/' # Or product specific links
-                    # We can link to order history where they can click products
+                    subject = f"Order Update: Order #{order.id} is {new_status}"
+                    review_link_block = ""
+                    otp_block = ""
+                    
+                    if new_status == 'Delivered':
+                        review_url = request.build_absolute_uri('/') + 'orders/'
+                        review_link_block = f"""
+                        <div style="text-align: center; margin-top: 20px;">
+                            <a href="{review_url}" style="background-color: #198754; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold;">Review Products</a>
+                        </div>
+                        """
+                    
+                    if new_status == 'Out for Delivery' and order.delivery_otp:
+                        otp_block = f"""
+                        <div style="margin-top: 15px; padding-top: 15px; border-top: 1px dashed #856404;">
+                            <p style="margin: 0; color: #d9534f; font-weight: bold;">SECRET DELIVERY CODE</p>
+                            <p style="margin: 5px 0 0; font-size: 24px; font-weight: bold; letter-spacing: 5px;">{order.delivery_otp}</p>
+                            <p style="margin: 5px 0 0; font-size: 13px;">Please share this OTP with our delivery agent to receive your package.</p>
+                        </div>
+                        """
+                    
+                    # Interactive HTML Email
+                    html_message = f"""
+                    <!DOCTYPE html>
+                    <html>
+                    <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+                        <div style="max-width: 600px; margin: 0 auto; border: 1px solid #ddd; border-radius: 8px; overflow: hidden;">
+                            <div style="background-color: #ffc107; color: black; padding: 20px; text-align: center;">
+                                <h2 style="margin: 0;">Shiv Shakti Electrical</h2>
+                                <p style="margin: 5px 0 0;">Order Status Update</p>
+                            </div>
+                            <div style="padding: 20px;">
+                                <p>Hi {order.user.first_name},</p>
+                                <p>Your Order <strong>#{order.id}</strong> has been updated.</p>
+                                
+                                <div style="background-color: #fff3cd; padding: 15px; border-left: 4px solid #ffc107; margin: 20px 0;">
+                                    <p style="margin: 0;"><strong>New Status:</strong> <span style="color: #856404; font-size: 18px; font-weight: bold;">{new_status}</span></p>
+                                    <p style="margin: 10px 0 0;"><strong>Total Amount:</strong> ₹{order.total_price + order.delivery_charge}</p>
+                                    {otp_block}
+                                </div>
+                                
+                                {review_link_block}
+                                
+                                <p style="margin-top: 20px;">Track your order or view details in your account.</p>
+                                <div style="text-align: center; margin-top: 30px;">
+                                    <a href="http://127.0.0.1:8000/orders/" style="background-color: #333; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px;">View Order</a>
+                                </div>
+                            </div>
+                            <div style="background-color: #eee; padding: 15px; text-align: center; font-size: 12px; color: #777;">
+                                &copy; {timezone.now().year} Shiv Shakti Electrical. All rights reserved.
+                            </div>
+                        </div>
+                    </body>
+                    </html>
+                    """
                     
                     send_mail(
-                        subject=f"Delivered: Order #{order.id} - Please Review Your Products",
-                        message=f"Hi {order.user.first_name},\n\nYour order #{order.id} has been delivered successfully. We hope you like your products!\n\nPlease take a moment to review them to help others.\n\nVisit your order history to leave a review: {review_url}\n\nThank you,\nShiv Shakti Electrical",
+                        subject=subject,
+                        message=strip_tags(html_message),
                         from_email=settings.DEFAULT_FROM_EMAIL,
                         recipient_list=[order.user.email],
+                        html_message=html_message,
                         fail_silently=True
                     )
                 except Exception as e:
-                    print("Email Error:", e)
+                    print(f"Error sending order email: {e}")
 
             order.save()
             messages.success(request, f"Order status updated to {new_status}")
@@ -553,7 +663,7 @@ def admin_delete_review(request, review_id):
 
 @staff_member_required
 def admin_daily_sales(request):
-    sales_list = DailySales.objects.all().order_by('-date')
+    sales_list = DailySales.objects.all().order_by('date')
     
     # Filters
     month = request.GET.get('month') # standard format YYYY-MM
@@ -652,7 +762,7 @@ def admin_export_sales(request):
 
 @staff_member_required
 def admin_daily_expenses(request):
-    expenses_list = DailyExpenditure.objects.all().order_by('-date')
+    expenses_list = DailyExpenditure.objects.all().order_by('date', 'created_at')
     
     # Filters
     month = request.GET.get('month')

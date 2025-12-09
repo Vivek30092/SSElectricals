@@ -82,10 +82,8 @@
                             <label class="form-label">Update Status</label>
                             <select name="status" class="form-select" id="statusSelect" onchange="togglePriceFields()">
                                 {% for status, label in order.STATUS_CHOICES %}
-                                <option value="{{ status }}" {% if order.status == status %}
-                                selected
-                                {% endif %}>
-                                {{ label }}
+                                <option value="{{ status }}" {% if order.status == status %} selected {% endif %}>
+                                    {{ label }}
                                 </option>
                                 {% endfor %}
                             </select>
@@ -95,7 +93,7 @@
                         <div class="col-md-3 price-field" style="display: none;">
                             <label class="form-label">Final Price</label>
                             <input type="number" step="0.01" name="final_price" class="form-control"
-                                value="{{ order.final_price|default:order.total_price }}">
+                                value="{% if order.final_price %}{{ order.final_price }}{% else %}{{ order.total_price|add:order.delivery_charge }}{% endif %}">
                         </div>
                         <div class="col-md-3 price-field" style="display: none;">
                             <label class="form-label">Delivery Charge</label>
@@ -141,9 +139,17 @@
             <a href="{% url 'order_receipt' order.id %}" target="_blank" class="btn btn-dark">
                 <i class="fas fa-print me-2"></i> Print Receipt
             </a>
+            {% if order.latitude and order.longitude %}
             <a href="https://www.google.com/maps/dir/?api=1&destination={{ order.latitude }},{{ order.longitude }}"
                 target="_blank" class="btn btn-success">
                 <i class="fas fa-map-marker-alt me-2"></i> Track Location
+            </a>
+            {% else %}
+            <a href="https://www.google.com/maps/dir/?api=1&destination={{ order.address|urlencode }}" target="_blank"
+                class="btn btn-success">
+                <i class="fas fa-map-marker-alt me-2"></i> Track Location (Address)
+            </a>
+            {% endif %}
             </a>
         </div>
     </div>

@@ -114,13 +114,13 @@ from django.conf import settings
 import requests
 
 # Approximate location for Shiv Shakti Electrical, Indore
-SHOP_LAT = 22.7533
-SHOP_LNG = 75.8937
+SHOP_LAT = 22.760000894618454
+SHOP_LNG = 75.8652550423512
 
 def calculate_distance_and_price(user_address):
     """
     Calculate distance using Google Maps API, falling back to Geopy (OpenStreetMap) if necessary.
-    Returns: (distance_km, price, error_message)
+    Returns: (distance_km, price, error_message, latitude, longitude)
     """
     api_key = getattr(settings, 'GOOGLE_PLACES_API_KEY', None)
     
@@ -129,6 +129,9 @@ def calculate_distance_and_price(user_address):
         try:
             origin = f"{SHOP_LAT},{SHOP_LNG}"
             destination = user_address
+            # Note: Distance Matrix doesn't return destination coords. 
+            # If strictly needed, we'd need Geocoding API here. 
+            # For now returning None, None for coords if strictly using Distance Matrix.
             url = f"https://maps.googleapis.com/maps/api/distancematrix/json?origins={origin}&destinations={destination}&key={api_key}"
             
             response = requests.get(url)
@@ -140,18 +143,16 @@ def calculate_distance_and_price(user_address):
                     if element['status'] == 'OK':
                         distance_value = element['distance']['value']
                         distance_km = distance_value / 1000.0
-                        return _calculate_price(distance_km)
+                        return _calculate_price(distance_km) # Returns (dist, price, err, None, None) by default logic below? No, need to update _calculate_price
                     else:
-                        # Fallback to Geopy below if Google fails to locate
                         pass
                 else:
-                    # Fallback to Geopy
                     pass
             elif data['status'] == 'REQUEST_DENIED':
                 print("Google Maps API Request Denied. Falling back to Geopy.")
                 # Fallback to Geopy
             else:
-                 return 0, 0, f"Distance API Error: {data['status']}"
+                 return 0, 0, f"Distance API Error: {data['status']}", None, None
         except Exception as e:
             print(f"Google Maps API Error: {e}")
             # Fallback to Geopy
@@ -176,14 +177,14 @@ def calculate_distance_and_price(user_address):
             user_coords = (location.latitude, location.longitude)
             shop_coords = (SHOP_LAT, SHOP_LNG)
             distance_km = geodesic(shop_coords, user_coords).km
-            return _calculate_price(distance_km)
+            return _calculate_price(distance_km, location.latitude, location.longitude)
         else:
-            return 0, 0, "Address could not be located. Please make sure to include a valid area/landmark in Indore."
+            return 0, 0, "Address could not be located on map. Please ensure valid area/landmark.", None, None
             
     except Exception as e:
-        return 0, 0, f"Error calculating distance: {str(e)}"
+        return 0, 0, f"Error calculating distance: {str(e)}", None, None
 
-def _calculate_price(distance_km):
+def _calculate_price(distance_km, lat=None, lng=None):
     distance_km = round(distance_km, 2)
     price = 0
     if distance_km <= 3:
@@ -191,9 +192,9 @@ def _calculate_price(distance_km):
     elif distance_km <= 7:
         price = 70
     else:
-        return distance_km, 0, f"Delivery available only within 7 KM. Your distance: {distance_km} KM."
+        return distance_km, 0, f"Delivery available only within 7 KM. Your distance: {distance_km} KM.", lat, lng
     
-    return distance_km, price, None
+    return distance_km, price, None, lat, lng
 
 
 

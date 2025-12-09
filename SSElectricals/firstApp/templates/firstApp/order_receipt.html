@@ -2,122 +2,249 @@
 {% load static %}
 
 {% block content %}
-<div class="container my-5">
-    <div class="row justify-content-center">
-        <div class="col-lg-8">
-            <div class="card shadow" id="receipt-card">
-                <div class="card-body p-5">
-                    <!-- Header -->
-                    <div class="row mb-5">
-                        <div class="col-6">
-                            <h2 class="text-warning fw-bold">Shiv Shakti Electrical</h2>
-                            <p class="mb-1">B-115, Abhinandan Nagar, Indore </p>
-                            <p class="mb-1">Phone: +91-9993149226</p>
-                            <p class="mb-0">GSTIN: </p>
-                        </div>
-                        <div class="col-6 text-end">
-                            <h3 class="mb-3">ORDER RECEIPT</h3>
-                            <p class="mb-1"><strong>Order ID:</strong> #{{ order.id }}</p>
-                            <p class="mb-1"><strong>Date:</strong> {{ order.created_at|date:"d M Y" }}</p>
-                            <p class="mb-0"><strong>Time:</strong> {{ order.created_at|time:"H:i A" }}</p>
-                        </div>
-                    </div>
+<div class="container my-5 d-flex justify-content-center">
+    <!-- A4 Paper Wrapper for Screen -->
+    <div class="receipt-sheet shadow-lg" id="printable-area">
+        <!-- Holographic Watermark -->
+        <div class="watermark">
+            <img src="{{ MEDIA_URL }}profile_pics/business_logo.png" alt="Watermark" class="watermark-img">
+        </div>
 
-                    <!-- Customer Info -->
-                    <div class="row mb-4">
-                        <div class="col-12">
-                            <h5 class="border-bottom pb-2">Customer Details</h5>
-                            <p class="mb-1"><strong>Name:</strong> {{ order.user.first_name }} {{ order.user.last_name}}</p>
-                            <p class="mb-1"><strong>Phone:</strong> {{ order.user.phone_number }}</p>
-                            <p class="mb-0"><strong>Address:</strong> {{ order.address }}</p>
-                        </div>
+        <!-- Border Container -->
+        <div class="receipt-border">
+            <!-- Header -->
+            <div class="row mb-4">
+                <div class="col-7">
+                    <h2 class="text-uppercase fw-bold text-primary mb-2" style="letter-spacing: 1px;">Shiv Shakti
+                        Electrical</h2>
+                    <div class="text-muted">
+                        <p class="mb-1">B-115, Abhinandan Nagar, Indore (M.P.)</p>
+                        <p class="mb-1">Phone: +91-9993149226</p>
+                        <p class="mb-0">GSTIN: </p>
                     </div>
-
-                    <!-- Order Items -->
-                    <div class="table-responsive mb-4">
-                        <table class="table table-bordered">
-                            <thead class="bg-light">
-                                <tr>
-                                    <th>Product</th>
-                                    <th class="text-center">Quantity</th>
-                                    <th class="text-end">Price</th>
-                                    <th class="text-end">Total</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for item in order.items.all %}
-                                <tr>
-                                    <td>{{ item.product.name }}</td>
-                                    <td class="text-center">{{ item.quantity }}</td>
-                                    <td class="text-end">₹{{ item.price }}</td>
-                                    <td class="text-end">₹{{ item.total_price }}</td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                            <tfoot class="fw-bold">
-                                <tr>
-                                    <td colspan="3" class="text-end">Subtotal:</td>
-                                    <td class="text-end">₹{{ order.total_price }}</td>
-                                </tr>
-                                <tr>
-                                    <td colspan="3" class="text-end">Delivery Charge ({{ order.distance_km }} KM):</td>
-                                    <td class="text-end">₹{{ order.delivery_charge }}</td>
-                                </tr>
-                                <tr class="bg-light fs-5">
-                                    <td colspan="3" class="text-end">Grand Total:</td>
-                                    <td class="text-end text-success">
-                                        ₹{% if order.final_price %}
-                                        {{ order.final_price }}
-                                        {% else %}
-                                        {{ order.total_price|add:order.delivery_charge }}
-                                        {% endif %}
-                                    </td>
-                                </tr>
-                            </tfoot>
-                        </table>
-                    </div>
-
-                    <!-- Footer -->
-                    <div class="row mt-5">
-                        <div class="col-8">
-                            <p class="text-muted small">
-                                * This is a computer generated receipt.<br>
-                                * Goods once sold will not be taken back.<br>
-                                * Subject to Indore Jurisdiction.
-                            </p>
-                        </div>
-                        <div class="col-4 text-center">
-                            <div class="border-bottom mb-2" style="height: 50px;"></div>
-                            <p class="fw-bold">Authorized Signature</p>
-                        </div>
-                    </div>
+                </div>
+                <div class="col-5 text-end">
+                    <h4 class="mb-3 fw-bold text-dark">INVOICE</h4>
+                    <ul class="list-unstyled">
+                        <li class="mb-1"><span class="fw-bold me-2">Invoice #:</span> #{{ order.id }}</li>
+                        <li class="mb-1"><span class="fw-bold me-2">Date:</span> {{ order.created_at|date:"d M Y" }}
+                        </li>
+                        <li class="mb-0"><span class="fw-bold me-2">Time:</span> {{ order.created_at|time:"H:i A" }}
+                        </li>
+                    </ul>
                 </div>
             </div>
 
-            <!-- Action Buttons -->
-            <div class="text-center mt-4 mb-5 no-print">
-                <button onclick="window.print()" class="btn btn-primary btn-lg me-2">
-                    <i class="fas fa-print me-2"></i> Print Receipt
-                </button>
-                <a href="{% url 'order_history' %}" class="btn btn-outline-secondary btn-lg">Back to Orders</a>
+            <hr class="my-4 border-2 border-primary opacity-75">
+
+            <!-- Bill To -->
+            <div class="row mb-5">
+                <div class="col-12">
+                    <h6 class="text-uppercase text-secondary fw-bold mb-3 small">Bill To:</h6>
+                    <h5 class="fw-bold mb-1">{{ order.user.first_name }} {{ order.user.last_name }}</h5>
+                    <p class="mb-1">{{ order.user.phone_number }}</p>
+                    <p class="mb-0" style="max-width: 60%;">{{ order.address }}</p>
+                </div>
+            </div>
+
+            <!-- Items Table -->
+            <div class="table-responsive mb-4">
+                <table class="table table-striped table-bordered align-middle text-center">
+                    <thead class="bg-primary text-white">
+                        <tr>
+                            <th scope="col" style="width: 40%;" class="text-start">Item Description</th>
+                            <th scope="col" style="width: 10%;">Qty</th>
+                            <th scope="col" style="width: 15%;">MRP</th>
+                            <th scope="col" style="width: 10%;">Disc.%</th>
+                            <th scope="col" style="width: 10%;">Rate</th>
+                            <th scope="col" style="width: 15%;">Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in order_items %}
+                        <tr>
+                            <td class="text-start">
+                                <span class="fw-bold">{{ item.product.name }}</span>
+                                <br>
+                                <small class="text-muted">{{ item.product.brand|default:"" }}</small>
+                            </td>
+                            <td>{{ item.quantity }}</td>
+                            <td class="text-muted text-decoration-line-through">₹{{ item.calculated_mrp }}</td>
+                            <td class="text-danger small">{{ item.calculated_discount_pct }}%</td>
+                            <td class="fw-bold">₹{{ item.price }}</td>
+                            <td class="text-end fw-bold">₹{{ item.total_price }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Totals -->
+            <div class="row justify-content-end mb-5">
+                <div class="col-6">
+                    <table class="table table-sm table-borderless">
+                        <tr>
+                            <td class="text-end text-muted">Subtotal:</td>
+                            <td class="text-end fw-bold">₹{{ order.total_price }}</td>
+                        </tr>
+                        <tr>
+                            <td class="text-end text-muted">Delivery ({{ order.distance_km }} KM):</td>
+                            <td class="text-end fw-bold">₹{{ order.delivery_charge }}</td>
+                        </tr>
+                        <tr class="border-top border-secondary mt-2">
+                            <td class="text-end fs-5 fw-bold text-dark pt-3">Grand Total:</td>
+                            <td class="text-end fs-4 fw-bold text-primary pt-3">
+                                ₹{{ grand_total }}
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Footer / Terms -->
+            <div class="mt-auto">
+                <div class="row">
+                    <div class="col-12">
+                        <div class="p-3 bg-light rounded border">
+                            <h6 class="fw-bold small mb-2">Terms & Conditions:</h6>
+                            <ul class="mb-0 small text-muted ps-3">
+                                <li>Goods once sold will not be taken back.</li>
+                                <li>Subject to Indore Jurisdiction.</li>
+                                <li>This is a computer-generated receipt.</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                <div class="row mt-5">
+                    <div class="col-12 text-end">
+                        <div class="d-inline-block text-center">
+                            <div class="border-bottom border-dark mb-2" style="width: 200px;"></div>
+                            <span class="fw-bold small">Authorized Signature</span>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 </div>
 
+<!-- Print/Back Buttons (Hidden on Print) -->
+<div class="text-center mb-5 no-print">
+    <button onclick="window.print()" class="btn btn-primary btn-lg shadow-sm me-3">
+        <i class="fas fa-print me-2"></i> Print Detail
+    </button>
+    <a href="{% url 'order_history' %}" class="btn btn-outline-secondary btn-lg shadow-sm">
+        <i class="fas fa-arrow-left me-2"></i> Back to Orders
+    </a>
+</div>
+
 <style>
+    /* Screen Styles simulating A4 */
+    .receipt-sheet {
+        width: 210mm;
+        min-height: 297mm;
+        padding: 0.5in;
+        /* Adjusted padding as requested */
+        background: white;
+        position: relative;
+    }
+
+    .watermark {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        opacity: 0.1;
+        /* High transparency */
+        pointer-events: none;
+        z-index: 0;
+        width: 40%;
+        /* Reduced size from 60% */
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .watermark-img {
+        width: 100%;
+        height: auto;
+        filter: grayscale(100%);
+        border-radius: 50%;
+        /* Circular shape */
+        /* Optional: makes it look more like a background print */
+    }
+
+    .receipt-border {
+        position: relative;
+        /* Ensure content is above watermark */
+        z-index: 1;
+        height: 100%;
+        border: 2px solid #333;
+        /* The requested border */
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+    }
+
+    /* Print Styles */
     @media print {
-        .no-print {
-            display: none !important;
+        @page {
+            size: A4;
+            margin: 0;
+            /* We handle margins in the body/sheet to keep the border visible */
         }
 
         body {
             background-color: white !important;
+            margin: 0;
+            padding: 0;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
         }
 
-        .card {
+        /* Hide everything else */
+        body>*:not(.container) {
+            display: none;
+        }
+
+        /* Reset bootstrap attributes that might interfere */
+        .container,
+        .row,
+        .col-lg-8 {
+            width: 100% !important;
+            max-width: none !important;
+            margin: 0 !important;
+            padding: 0 !important;
+        }
+
+        .receipt-sheet {
+            width: 100%;
+            height: auto;
+            min-height: 100vh;
+            margin: 0 !important;
+            padding: 0.5in;
+            /* Slightly less on print to fit printer margins safely, or keep 1in if printer supports full bleed */
             box-shadow: none !important;
-            border: none !important;
+            border: none;
+        }
+
+        /* Ensure the border prints */
+        .receipt-border {
+            border: 2px solid black !important;
+        }
+
+        .no-print {
+            display: none !important;
+        }
+
+        /* Force background colors */
+        .bg-primary {
+            background-color: #0d6efd !important;
+            color: white !important;
+        }
+
+        .bg-light {
+            background-color: #f8f9fa !important;
         }
     }
 </style>

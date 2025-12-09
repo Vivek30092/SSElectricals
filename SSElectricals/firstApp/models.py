@@ -167,6 +167,16 @@ class Order(models.Model):
     payment_method = models.CharField(max_length=20, choices=PAYMENT_CHOICES, default='COD')
     created_at = models.DateTimeField(auto_now_add=True)
 
+    @property
+    def grand_total(self):
+        # Heuristic: If final_price was saved as just total_price (omitting delivery),
+        # but there is a delivery charge, return the sum instead.
+        if self.final_price:
+            if self.final_price == self.total_price and self.delivery_charge > 0:
+                 return self.total_price + self.delivery_charge
+            return self.final_price
+        return self.total_price + self.delivery_charge
+
     def __str__(self):
         return f"Order #{self.id} by {self.user.username}"
 

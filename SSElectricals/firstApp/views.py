@@ -51,19 +51,20 @@ def checkout(request):
                     return redirect('view_cart')
             
             # Calculate Delivery Charge
-            dist_km, delivery_charge, error_msg = calculate_distance_and_price(search_address)
+            dist_km, delivery_charge, error_msg, lat, lng = calculate_distance_and_price(search_address)
             
             if error_msg:
                 # If geocoding fails, fallback/retry logic
                 if "could not be located" in error_msg:
                      # Try more generic search
                      search_address_v2 = f"{address_line1}, {city}, {pincode}"
-                     dist_km, delivery_charge, error_msg_v2 = calculate_distance_and_price(search_address_v2)
+                     dist_km, delivery_charge, error_msg_v2, lat, lng = calculate_distance_and_price(search_address_v2)
                      if error_msg_v2:
                           # If both fail, allow order but mark as manual verification needed
                           print(f"Checkout Location Failed: {full_address}")
                           dist_km = 0
                           delivery_charge = 0
+                          # Lat/Lng will likely be None from utility if failed
                           full_address += " [Location Verification Needed]"
                           error_msg = None # Clear error to proceed
                      else:
@@ -83,12 +84,23 @@ def checkout(request):
             
             # Convert float to Decimal for math operations
             delivery_charge = Decimal(str(delivery_charge))
+
+            # PROMOTION: Free delivery for first 2 orders within 3KM
+            is_free_delivery = False
+            if dist_km <= 3.0:
+                 previous_orders_count = Order.objects.filter(user=request.user).count()
+                 if previous_orders_count < 2:
+                     delivery_charge = Decimal('0.00')
+                     is_free_delivery = True
+            
             total_amount = cart.total_price + delivery_charge
 
             # Create Order
             order = Order.objects.create(
                 user=request.user,
                 address=full_address,
+                latitude=lat,
+                longitude=lng,
                 total_price=cart.total_price, # Base product price
                 delivery_charge=delivery_charge,
                 distance_km=dist_km,
@@ -112,7 +124,11 @@ def checkout(request):
             # Clear Cart
             cart.items.all().delete()
             
-            dist_msg = f"{dist_km} KM" if dist_km > 0 else "Pending Verification"
+            if is_free_delivery:
+                 dist_msg = f"{dist_km} KM (Free Delivery Applied)"
+            else:
+                 dist_msg = f"{dist_km} KM" if dist_km > 0 else "Pending Verification"
+                 
             messages.success(request, f"Order placed successfully! Delivery distance: {dist_msg}. Admin will contact you for final confirmation.")
             return redirect('order_history')
         else:
@@ -425,12 +441,12 @@ def book_appointment(request):
             # --- 3KM Radius Check ---
             # Construct address for distance check using all fields for better accuracy
             full_address_search = f"{appointment.house_number} {appointment.address_line1} {appointment.city} {appointment.pincode}"
-            distance_km, _, error_msg = calculate_distance_and_price(full_address_search)
+            distance_km, _, error_msg, _, _ = calculate_distance_and_price(full_address_search)
             
             # Fallback if first attempt fails
             if error_msg and "could not be located" in error_msg:
                  full_address_search_v2 = f"{appointment.address_line1}, {appointment.city}, {appointment.pincode}"
-                 distance_km, _, error_msg = calculate_distance_and_price(full_address_search_v2)
+                 distance_km, _, error_msg, _, _ = calculate_distance_and_price(full_address_search_v2)
 
             if error_msg and "could not be located" in error_msg:
                  # If still fails, we ALLOW it but distance is unknown (0).
@@ -986,8 +1002,41 @@ def order_receipt(request, order_id):
     # Ideally should only be viewing confirmed or later orders
     if order.status == 'Pending':
         messages.warning(request, "Receipt is available only after order confirmation.")
+
+    # Calculate discount info for template
+    order_items = []
+    for item in order.items.all():
+        mrp = item.product.price
+        selling_price = item.price
+        # Ensure we don't divide by zero and handle cases where product price might be inconsistent
+        # Assuming product.price is the MRP. 
+        if mrp > selling_price:
+            discount_amt = mrp - selling_price
+            discount_pct = (discount_amt / mrp) * 100
+        else:
+            mrp = selling_price # If selling price is higher, assume that's the current value or no discount
+            discount_pct = 0
+            
+        item.calculated_mrp = mrp
+        item.calculated_discount_pct = round(discount_pct, 1)
+        item.total_price = item.price * item.quantity 
+        order_items.append(item)
+    
+    # Calculate Grand Total safely
+    calculated_total = order.total_price + order.delivery_charge
+    
+    if order.final_price:
+        # Heuristic: If final_price equals subtotal (total_price) but delivery_charge is > 0,
+        # it likely means the admin accidentally saved the default value (subtotal) without adding delivery.
+        # In this case, we prefer the calculated total.
+        if order.final_price == order.total_price and order.delivery_charge > 0:
+             grand_total = calculated_total
+        else:
+             grand_total = order.final_price
+    else:
+        grand_total = calculated_total
         
-    return render(request, 'firstApp/order_receipt.html', {'order': order})
+    return render(request, 'firstApp/order_receipt.html', {'order': order, 'order_items': order_items, 'grand_total': grand_total})
 
 def google_reviews(request):
     reviews = fetch_google_reviews()
