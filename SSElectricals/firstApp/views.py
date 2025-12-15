@@ -35,63 +35,65 @@ def checkout(request):
             house_number = form.cleaned_data['house_number']
             address_line1 = form.cleaned_data['address_line1']
             address_line2 = form.cleaned_data.get('address_line2', '')
+            area = form.cleaned_data.get('area', '')
+            landmark = form.cleaned_data.get('landmark', '')
             pincode = form.cleaned_data['pincode']
-            city = 'Indore' # Fixed
+            city = 'Indore'
             
             # Full address for usage
-            full_address = f"{house_number}, {address_line1}, {address_line2}, {city}, {pincode}"
-            search_address = f"{house_number} {address_line1} {city} {pincode}" # Simplified for search
+            full_address = f"{house_number}, {address_line1}, {address_line2}, {area}, Near {landmark}, {city}, {pincode}"
+            search_address = f"{house_number} {address_line1} {area} {city} {pincode}" 
 
-            payment_method = 'COD' # Fixed as per requirement
+            payment_method = 'COD' 
             
             # Check stock availability
             for item in cart.items.all():
                 if item.product.stock_quantity < item.quantity:
-                    messages.error(request, f"{item.product.name} is out of stock or insufficient quantity available.")
+                    messages.error(request, f"{item.product.name} is out of stock.")
                     return redirect('view_cart')
             
             # Calculate Delivery Charge
-            dist_km, delivery_charge, error_msg, lat, lng = calculate_distance_and_price(search_address)
-            
-            if error_msg:
-                # If geocoding fails, fallback/retry logic
-                if "could not be located" in error_msg:
-                     # Try more generic search
-                     search_address_v2 = f"{address_line1}, {city}, {pincode}"
-                     dist_km, delivery_charge, error_msg_v2, lat, lng = calculate_distance_and_price(search_address_v2)
-                     if error_msg_v2:
-                          # If both fail, allow order but mark as manual verification needed
-                          print(f"Checkout Location Failed: {full_address}")
-                          dist_km = 0
-                          delivery_charge = 0
-                          # Lat/Lng will likely be None from utility if failed
-                          full_address += " [Location Verification Needed]"
-                          error_msg = None # Clear error to proceed
-                     else:
-                        error_msg = None # Recovered
-            
-            # If error was something else entirely (unlikely if 'could not be located' check passed), still proceed? 
-            # If we cleared error_msg above, we are good.
-            # If error_msg was NOT 'could not be located' (e.g. API quota), we might still want to proceed to not lose sale.
-            if error_msg:
-                 # Catch-all for other errors: Log and proceed
-                 print(f"Checkout Geocode Error: {error_msg}")
-                 dist_km = 0
-                 delivery_charge = 0
-                 full_address += f" [System Error: {error_msg}]"
-                 error_msg = None
+            lat_post = request.POST.get('latitude')
+            lng_post = request.POST.get('longitude')
+            dist_post = request.POST.get('distance_km')
 
+            dist_km = 0
+            delivery_charge = 0
+            error_msg = None
+            lat = None
+            lng = None
+
+            if lat_post and lng_post and dist_post:
+                # Use GPS data from client
+                try:
+                    lat = float(lat_post)
+                    lng = float(lng_post)
+                    dist_km = float(dist_post)
+                    print(f"Using Client GPS Data: {dist_km} KM")
+                except ValueError:
+                    dist_km, _, error_msg, lat, lng = calculate_distance_and_price(search_address)
+            else:
+                dist_km, _, error_msg, lat, lng = calculate_distance_and_price(search_address)
+
+            # Apply New Delivery Charge Rules
+            # 0-3 KM: 50, 3-5 KM: 70, 5-7 KM: 80, >7 or Fail: 0 (Pending)
+            if dist_km > 0:
+                if dist_km <= 3.0:
+                    delivery_charge = 50
+                elif dist_km <= 5.0:
+                    delivery_charge = 70
+                elif dist_km <= 7.0:
+                    delivery_charge = 80
+                else:
+                    delivery_charge = 0 # Out of range, admin to confirm
             
-            # Convert float to Decimal for math operations
             delivery_charge = Decimal(str(delivery_charge))
 
-            # PROMOTION: Free delivery for first 2 orders within 3KM
+            # Free Delivery Logic: If user hasn't used free delivery yet AND within 3 KM
             is_free_delivery = False
-            if dist_km <= 3.0:
-                 previous_orders_count = Order.objects.filter(user=request.user).count()
-                 if previous_orders_count < 2:
-                     delivery_charge = Decimal('0.00')
-                     is_free_delivery = True
+            if request.user.free_delivery_used_count == 0 and dist_km <= 3.0:
+                delivery_charge = Decimal('0.00')
+                is_free_delivery = True
             
             total_amount = cart.total_price + delivery_charge
 
@@ -101,12 +103,14 @@ def checkout(request):
                 address=full_address,
                 latitude=lat,
                 longitude=lng,
-                total_price=cart.total_price, # Base product price
+                total_price=cart.total_price, 
                 delivery_charge=delivery_charge,
                 distance_km=dist_km,
                 final_price=None, # To be confirmed by Admin
                 status='Pending',
-                payment_method=payment_method
+                payment_method=payment_method,
+                free_delivery_applied=is_free_delivery,
+                delivery_charge_status='ESTIMATED'
             )
             
             # Create Order Items
@@ -121,6 +125,12 @@ def checkout(request):
                 item.product.stock_quantity -= item.quantity
                 item.product.save()
             
+            # Update User Order Count
+            request.user.total_orders_count += 1
+            if is_free_delivery:
+                request.user.free_delivery_used_count += 1
+            request.user.save()
+
             # Clear Cart
             cart.items.all().delete()
             
@@ -148,11 +158,16 @@ def checkout(request):
 
         form = CheckoutForm(initial=initial_data) # Re-init form only if GET
         
+    # Determine if eligible for Free Delivery (hasn't used it yet)
+    is_free_delivery_eligible = request.user.free_delivery_used_count == 0
+
     return render(request, 'firstApp/checkout.html', {
         'form': form, 
         'cart': cart, 
         'delivery_charge': "Calculated at checkout", 
-        'total_amount': cart.total_price
+        'total_amount': cart.total_price,
+        'is_first_order': is_free_delivery_eligible,  # Using same variable name for template compatibility
+        'GOOGLE_PLACES_API_KEY': settings.GOOGLE_PLACES_API_KEY
     })
 
 @login_required
@@ -181,8 +196,8 @@ def confirm_delivery_otp(request):
 
 def home(request):
     categories = Category.objects.all()
-    # Trending products could be random or latest
-    trending_products = Product.objects.all().order_by('-created_at')[:8]
+    # Filter Trending Products
+    trending_products = Product.objects.filter(is_trending=True).order_by('-created_at')[:8]
     return render(request, 'firstApp/home.html', {'categories': categories, 'trending_products': trending_products})
 
 def product_list(request):
@@ -209,10 +224,17 @@ def product_list(request):
 
 def product_detail(request, pk):
     product = get_object_or_404(Product, pk=pk)
-    # Check if user can review (Any logged in user can review)
-    can_review = request.user.is_authenticated
+    
+    # Show all reviews (since we auto-approve all reviews now)
+    reviews = product.reviews.all().order_by('-created_at')
+
+    # Any authenticated user can review (simplified logic)
+    can_review = False
+    if request.user.is_authenticated:
+        # Check if not already reviewed
+        already_reviewed = Review.objects.filter(user=request.user, product=product).exists()
+        can_review = not already_reviewed
             
-    reviews = product.reviews.all()
     form = ReviewForm()
     
     return render(request, 'firstApp/product_detail.html', {
@@ -227,9 +249,9 @@ def add_review(request, pk):
     product = get_object_or_404(Product, pk=pk)
     
     if request.method == 'POST':
-        form = ReviewForm(request.POST)
+        form = ReviewForm(request.POST, request.FILES)  # Added request.FILES for image upload
         if form.is_valid():
-            # Check if already reviewed
+            # Check for duplicate review
             existing_review = Review.objects.filter(user=request.user, product=product).exists()
             if existing_review:
                 messages.warning(request, "You have already reviewed this product.")
@@ -237,6 +259,21 @@ def add_review(request, pk):
                 review = form.save(commit=False)
                 review.product = product
                 review.user = request.user
+                
+                # Check if user has a delivered order with this product
+                orders_with_product = Order.objects.filter(
+                    user=request.user, 
+                    status='Delivered', 
+                    items__product=product
+                )
+                
+                # Link to order if exists (for audit trail)
+                if orders_with_product.exists():
+                    review.order = orders_with_product.latest('created_at')
+                
+                # Auto-approve all reviews (admin can delete if inappropriate)
+                review.is_approved = True
+                
                 review.save()
                 messages.success(request, "Review added successfully!")
     
@@ -359,8 +396,15 @@ def remove_from_cart(request, item_id):
 
 @login_required
 def order_history(request):
-    orders = Order.objects.filter(user=request.user).order_by('-created_at')
-    return render(request, 'firstApp/orders.html', {'orders': orders})
+    orders = Order.objects.filter(user=request.user).order_by('-created_at').prefetch_related('items__product')
+    
+    # Get IDs of products reviewed by user
+    reviewed_product_ids = Review.objects.filter(user=request.user).values_list('product_id', flat=True)
+    
+    return render(request, 'firstApp/orders.html', {
+        'orders': orders, 
+        'reviewed_product_ids': set(reviewed_product_ids)
+    })
 
 @login_required
 def cancel_order(request, order_id):
@@ -780,72 +824,77 @@ def email_signup_verify(request):
                 messages.error(request, "Invalid OTP request.")
     else:
         form = OTPVerificationForm()
+    
     return render(request, 'firstApp/signup_otp_verify.html', {'form': form, 'email': email})
 
 def email_login(request):
     if request.method == 'POST':
-        login_type = request.POST.get('login_type')
+        login_type = request.POST.get('login_type', 'password')
+        form = EmailLoginForm(request.POST) # Note: EmailLoginForm doesn't strictly have login_type field usually, but we are handling manually.
         
         if login_type == 'password':
             identifier = request.POST.get('identifier')
             password = request.POST.get('password')
+            user = authenticate(request, username=identifier, password=password)
             
-            if not identifier or not password:
-                messages.error(request, "Please enter both identifier and password.")
-            else:
-                try:
-                    # Determine if identifier is email or phone
-                    if '@' in identifier:
-                        user_obj = CustomUser.objects.get(email=identifier)
-                    else:
-                        user_obj = CustomUser.objects.get(phone_number=identifier)
-                        
-                    user = authenticate(request, username=user_obj.phone_number, password=password)
-                    if user:
-                        login(request, user)
-                        messages.success(request, "Login successful!")
-                        return redirect('home')
-                    else:
-                        messages.error(request, "Invalid credentials.")
-                except CustomUser.DoesNotExist:
-                    messages.error(request, "No account found.")
-            form = EmailLoginForm(initial={'identifier': identifier}) 
-            
-        elif login_type == 'otp':
-            # OTP login currently only supports email as per previous implementation, 
-            # but we can extend it if needed. For now, let's keep it email-based or update form.
-            # The user request specifically mentioned "Enable login using either email or phone number".
-            # Assuming this applies to password login primarily. 
-            # If OTP login is also needed for phone, we'd need SMS integration.
-            # Let's stick to email for OTP for now as per existing code, or update if requested.
-            # Actually, let's update the form usage here too.
-            form = EmailLoginForm(request.POST)
-            if form.is_valid():
-                identifier = form.cleaned_data['identifier']
+            if not user:
+                 # Try finding user by email if username/phone failed (Django default backend uses username field which we mapped to phone)
+                 try:
+                     user_obj = CustomUser.objects.get(email=identifier)
+                     user = authenticate(request, username=user_obj.phone_number, password=password)
+                 except CustomUser.DoesNotExist:
+                     pass
+
+            if user:
+                login(request, user)
+                messages.success(request, f"Welcome, {user.get_full_name()}!")
                 
+                # Redirection Logic
+                if user.role == 'ADMIN' or user.is_superuser:
+                    return redirect('admin_dashboard')
+                elif user.role == 'STAFF' or user.is_staff:
+                    return redirect('admin_dashboard') # Assuming staff shares dashboard
+                else:
+                    return redirect('home')
+            else:
+                messages.error(request, "Invalid credentials.")
+        
+        elif login_type == 'otp':
+            identifier = request.POST.get('identifier')
+            # form validation for identifier could be here
+            
+            if identifier:
                 if '@' in identifier:
                      email = identifier
+                     user = CustomUser.objects.filter(email=email).first()
                 else:
-                     # If phone, we need to find the email associated to send OTP (since we only have email OTP)
-                     try:
-                         user = CustomUser.objects.get(phone_number=identifier)
-                         email = user.email
-                     except CustomUser.DoesNotExist:
-                         messages.error(request, "User not found.")
-                         return render(request, 'firstApp/login_email.html', {'form': form})
+                     user = CustomUser.objects.filter(phone_number=identifier).first()
+                     email = user.email if user else None
+
+                if not user:
+                    messages.error(request, "User not found.")
+                    return render(request, 'firstApp/login_email.html', {'form': form})
+                
+                # RESTRICTION: Block OTP for Admin/Staff
+                if user.role in ['ADMIN', 'STAFF'] or user.is_staff or user.is_superuser:
+                    messages.error(request, "OTP Login is disabled for Admin and Staff accounts. Please use Password Login.")
+                    return render(request, 'firstApp/login_email.html', {'form': form})
 
                 otp = EmailOTP.generate_otp()
                 EmailOTP.objects.create(email=email, otp=otp)
                 if send_otp_email(email, otp):
                     request.session['otp_email'] = email
                     request.session['otp_purpose'] = 'login'
-                    messages.success(request, f"OTP sent to {email}")
+                    # Use masking for the message
+                    from .utils import mask_email
+                    masked = mask_email(email)
+                    messages.success(request, f"OTP sent to {masked}")
                     return redirect('email_login_verify')
                 else:
                     messages.error(request, "Failed to send OTP.")
-        else:
-             messages.error(request, "Invalid login method.")
-             form = EmailLoginForm()
+            else:
+                messages.error(request, "Please enter email or phone number.")
+
     else:
         form = EmailLoginForm()
     return render(request, 'firstApp/login_email.html', {'form': form})
@@ -866,15 +915,26 @@ def email_login_verify(request):
                 if success:
                     try:
                         user = CustomUser.objects.get(email=email)
+                        
+                        # Double check restriction just in case
+                        if user.role in ['ADMIN', 'STAFF'] or user.is_staff or user.is_superuser:
+                            messages.error(request, "OTP Login not permitted for this account.")
+                            return redirect('email_login')
+
                         login(request, user, backend='django.contrib.auth.backends.ModelBackend')
                         del request.session['otp_email']
                         del request.session['otp_purpose']
                         messages.success(request, "Login successful!")
-                        return redirect('home')
+                        
+                        # Redirect based on role
+                        if user.role == 'USER':
+                            return redirect('home')
+                        else:
+                            # Should not happen given restriction, but safe fallback
+                            return redirect('admin_dashboard')
+
                     except CustomUser.DoesNotExist:
                         messages.error(request, "User account not found.")
-                    except CustomUser.MultipleObjectsReturned:
-                        messages.error(request, "Multiple accounts found with this email. Please contact support.")
                     except Exception as e:
                         messages.error(request, f"Login failed: {str(e)}")
                 else:
@@ -883,7 +943,28 @@ def email_login_verify(request):
                 messages.error(request, "Invalid OTP request.")
     else:
         form = OTPVerificationForm()
-    return render(request, 'firstApp/login_email_otp_verify.html', {'form': form, 'email': email})
+    
+    # Mask email for display in template
+    from .utils import mask_email
+    masked_email = mask_email(email)
+
+    # Get OTP expiry for timer
+    otp_remaining = 0
+    try:
+        otp_obj = EmailOTP.objects.filter(email=email).latest('created_at')
+        now = timezone.now()
+        age = (now - otp_obj.created_at).total_seconds()
+        remaining = 300 - age # 5 minutes = 300 seconds
+        if remaining > 0:
+            otp_remaining = int(remaining * 1000) # Convert to ms for JS
+    except (EmailOTP.DoesNotExist, Exception):
+        pass
+    
+    return render(request, 'firstApp/login_email_otp_verify.html', {
+        'form': form, 
+        'email': masked_email,
+        'otp_remaining': otp_remaining
+    })
 
 
 def forgot_password(request):

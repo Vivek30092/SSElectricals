@@ -2,17 +2,44 @@ from django.core.mail import EmailMultiAlternatives
 from django.conf import settings
 from django.utils.html import strip_tags
 
+def mask_email(email):
+    """
+    Masks the email address for security.
+    Example: johndoe@gmail.com -> j*****e@gmail.com
+    Rules: Show only 1st char and last char before @.
+    """
+    if not email or '@' not in email:
+        return email
+        
+    try:
+        local_part, domain = email.split('@')
+        if len(local_part) <= 2:
+            masked_local = local_part # Too short to mask
+        else:
+            masked_local = local_part[0] + '*' * 5 + local_part[-1]
+            
+        return f"{masked_local}@{domain}"
+    except:
+        return email
+
 def send_otp_email(email, otp):
     """Send OTP to the user's email with HTML and plain text alternatives."""
     subject = 'Shiv Shakti Electrical – Your OTP Verification Code'
     email_from = settings.DEFAULT_FROM_EMAIL
     recipient_list = [email]
+    
+    masked_email = mask_email(email)
 
     # Plain text content
     text_content = f"""
 Hello,
 
 Your OTP for verification is: {otp}
+
+This OTP was requested for: {masked_email}
+
+This OTP is valid for 5 minutes.
+If you did not request this code, please ignore this email. Do not share this code with anyone.
 
 This OTP is valid for 5 minutes.
 If you did not request this code, please ignore this email. Do not share this code with anyone.
@@ -108,14 +135,103 @@ Shiv Shakti Electrical, Indore (M.P.)
         print(f"Error sending email: {e}")
         return False
 
+def send_order_status_email(order):
+    """
+    Send email notification to user when order status changes.
+    """
+    subject = f'Order Notification - {order.status} (Order #{order.id})'
+    email_from = settings.DEFAULT_FROM_EMAIL
+    recipient_list = [order.user.email]
+    
+    # Determine Status Color
+    status_color = "#17a2b8" # Info
+    if order.status == 'Confirmed':
+        status_color = "#28a745"
+    elif order.status == 'Out for Delivery':
+        status_color = "#ffc107"
+    elif order.status == 'Delivered':
+        status_color = "#007bff"
+    elif order.status == 'Cancelled':
+        status_color = "#dc3545"
+
+    html_content = f"""
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #444; }}
+        .container {{ max-width: 600px; margin: 0 auto; border: 1px solid #eee; border-radius: 8px; overflow: hidden; }}
+        .header {{ background-color: #343a40; color: #fff; padding: 20px; text-align: center; }}
+        .content {{ padding: 20px; background-color: #f9f9f9; }}
+        .status-badge {{ background-color: {status_color}; color: white; padding: 5px 10px; border-radius: 4px; display: inline-block; font-weight: bold; }}
+        .details {{ margin-top: 20px; border-top: 1px solid #ddd; padding-top: 20px; }}
+        .footer {{ background-color: #eee; padding: 15px; text-align: center; font-size: 12px; color: #777; }}
+        ul {{ list-style: none; padding: 0; }}
+        li {{ border-bottom: 1px solid #eee; padding: 5px 0; }}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h2>Shiv Shakti Electrical</h2>
+        </div>
+        <div class="content">
+            <h3>Hello {order.user.username},</h3>
+            <p>Your order <strong>#{order.id}</strong> status has been updated.</p>
+            
+            <p>Current Status: <span class="status-badge">{order.status}</span></p>
+            
+            <div class="details">
+                <h4>Order Details:</h4>
+                <p><strong>Total Amount:</strong> ₹{order.grand_total}</p>
+                <p><strong>Delivery Charge:</strong> ₹{order.delivery_charge} 
+                   <small>({'Confirmed' if order.final_price else 'Estimated'})</small>
+                </p>
+                
+                <h4>Items:</h4>
+                <ul>
+    """
+    
+    for item in order.items.all():
+        html_content += f"<li>{item.quantity} x {item.product.name} - ₹{item.price}</li>"
+        
+    html_content += f"""
+                </ul>
+            </div>
+            
+            <p><strong>Delivery Address:</strong><br>{order.address}</p>
+            
+            <br>
+            <p>If you have any questions, please contact us at:</p>
+            <p>📞 +91 9977228020<br>✉️ shivshaktielectrical1430@gmail.com</p>
+        </div>
+        <div class="footer">
+            &copy; 2025 Shiv Shakti Electrical. All rights reserved.
+        </div>
+    </div>
+</body>
+</html>
+    """
+    
+    text_content = strip_tags(html_content)
+    
+    try:
+        msg = EmailMultiAlternatives(subject, text_content, email_from, recipient_list)
+        msg.attach_alternative(html_content, "text/html")
+        msg.send()
+        return True
+    except Exception as e:
+        print(f"Error sending order status email: {e}")
+        return False
+
 from geopy.geocoders import Nominatim
 from geopy.distance import geodesic
 from django.conf import settings
 import requests
 
 # Approximate location for Shiv Shakti Electrical, Indore
-SHOP_LAT = 22.760000894618454
-SHOP_LNG = 75.8652550423512
+SHOP_LAT = 22.7624113
+SHOP_LNG = 75.8692938
 
 def calculate_distance_and_price(user_address):
     """
@@ -159,29 +275,56 @@ def calculate_distance_and_price(user_address):
 
     # Fallback: Geopy (Nominatim)
     try:
-        geolocator = Nominatim(user_agent="sselectricals_app_v2")
-        # Try to clean address or append city context if missing
-        search_address = user_address
+        from geopy.geocoders import Nominatim
         
-        # Helper to ensure city context
-        if "indore" not in search_address.lower():
-            search_address += ", Indore, Madhya Pradesh, India"
-        else:
-            # Even if indore is present, ensure state/country for better matching
-            if "madhya pradesh" not in search_address.lower():
-                search_address += ", Madhya Pradesh, India"
-            
-        location = geolocator.geocode(search_address)
+        # Initialize with user agent
+        geolocator = Nominatim(user_agent="sselectricals_app_v2", timeout=10)
         
+        # 1. Structured Query (More reliable)
+        # We try to extract components if the input string is structured specifically, 
+        # but since 'user_address' is often a single string, we might just append 'Indore'
+        
+        search_query = user_address
+        if "indore" not in search_query.lower():
+            search_query += ", Indore"
+        if "madhya pradesh" not in search_query.lower():
+            search_query += ", Madhya Pradesh"
+        if "india" not in search_query.lower():
+            search_query += ", India"
+
+        # 2. Viewbox Restriction (Box around Indore)
+        # Approximate box: Top-Left (23.0, 75.5), Bottom-Right (22.5, 76.2)
+        # This helps ignore results from other states/countries
+        viewbox = [
+            (23.0, 75.5), # North-West
+            (22.5, 76.2)  # South-East
+        ]
+        
+        location = geolocator.geocode(search_query, viewbox=viewbox, bounded=True)
+        
+        # 3. Validation
         if location:
+            # Check if really in Indore (redundant if bounded=True works, but good safety)
+            # Or just check distance bounds immediately
+            pass
+            
             user_coords = (location.latitude, location.longitude)
             shop_coords = (SHOP_LAT, SHOP_LNG)
             distance_km = geodesic(shop_coords, user_coords).km
+            
+            # Sanity Check: If distance > 100km, something is wrong with geocoding result
+            if distance_km > 50:
+                 print(f"Geocoding Warning: Found location too far ({distance_km}km). Query: {search_query}, Result: {location.address}")
+                 return 0, 0, f"We could not locate this address precisely in Indore. (Distance calculated: {distance_km:.2f} KM). Please provide a landmark or use the map pin.", None, None
+
             return _calculate_price(distance_km, location.latitude, location.longitude)
         else:
-            return 0, 0, "Address could not be located on map. Please ensure valid area/landmark.", None, None
+            print(f"Geocoding Failed: No location found for {search_query}")
+            # Try a broader search without bounds just in case, but usually dangerous
+            return 0, 0, "Address could not be located on map. Please ensure valid area/landmark inside Indore.", None, None
             
     except Exception as e:
+        print(f"Geocoding Error: {e}")
         return 0, 0, f"Error calculating distance: {str(e)}", None, None
 
 def _calculate_price(distance_km, lat=None, lng=None):

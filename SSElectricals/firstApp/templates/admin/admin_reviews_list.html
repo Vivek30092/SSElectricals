@@ -13,9 +13,12 @@
                     <tr>
                         <th>Date</th>
                         <th>Product</th>
+                        <th>Order</th>
                         <th>User</th>
                         <th>Rating</th>
                         <th>Comment</th>
+                        <th>Image</th>
+                        <th>Verified</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
@@ -24,11 +27,30 @@
                     <tr>
                         <td>{{ review.created_at|date:"Y-m-d H:i" }}</td>
                         <td>{{ review.product.name }}</td>
+                        <td>{% if review.order %}<a href="{% url 'admin_order_detail' review.order.id %}">
+                                #{{review.order.id }}</a>{% else %}-{% endif %}</td>
                         <td>{{ review.user.username }}</td>
                         <td>
                             <span class="text-warning fw-bold">{{ review.rating }} ★</span>
                         </td>
                         <td>{{ review.comment|truncatechars:50 }}</td>
+                        <td>
+                            {% if review.image %}
+                            <a href="{{ review.image.url }}" target="_blank">
+                                <img src="{{ review.image.url }}" alt="Review"
+                                    style="width: 60px; height: 60px; object-fit: cover;" class="rounded">
+                            </a>
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if review.order %}
+                            <span class="badge bg-success" title="Review from verified purchase">✓ Verified</span>
+                            {% else %}
+                            <span class="badge bg-secondary">General Review</span>
+                            {% endif %}
+                        </td>
                         <td>
                             <a href="{% url 'admin_delete_review' review.id %}" class="btn btn-sm btn-danger"
                                 onclick="return confirm('Delete this review?')">Delete</a>
@@ -36,7 +58,7 @@
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="6" class="text-center">No reviews found.</td>
+                        <td colspan="9" class="text-center">No reviews found.</td>
                     </tr>
                     {% endfor %}
                 </tbody>

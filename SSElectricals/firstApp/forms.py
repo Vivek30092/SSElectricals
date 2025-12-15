@@ -84,27 +84,41 @@ class CustomUserUpdateForm(forms.ModelForm):
 
 class CheckoutForm(forms.Form):
     house_number = forms.CharField(
-        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'House Number'}),
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'House Number', 'id': 'id_house_number'}),
         label='House Number'
     )
     address_line1 = forms.CharField(
-        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Address Line 1 (Area/Colony)'}),
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Address Line 1 (Street/Road)', 'id': 'id_address_line1'}),
         label='Address Line 1'
     )
     address_line2 = forms.CharField(
         required=False,
-        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Address Line 2 (Optional)'}),
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Address Line 2 (Optional)', 'id': 'id_address_line2'}),
         label='Address Line 2'
     )
     pincode = forms.CharField(
-        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Pincode'}),
-        validators=[validate_pincode], # Updated validator
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Pincode', 'id': 'id_pincode'}),
+        validators=[validate_pincode],
         label='Pincode'
     )
     city = forms.CharField(
         initial='Indore',
-        widget=forms.TextInput(attrs={'class': 'form-control', 'readonly': 'readonly', 'value': 'Indore'}),
+        widget=forms.TextInput(attrs={'class': 'form-control', 'readonly': 'readonly', 'value': 'Indore', 'id': 'id_city'}),
         required=False
+    )
+    area = forms.ChoiceField(
+        choices=Appointment.AREA_CHOICES,
+        widget=forms.Select(attrs={'class': 'form-select', 'id': 'id_area', 'onchange': 'toggleOtherArea(this)'}),
+        label='Area'
+    )
+    other_area = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Enter your area name', 'id': 'id_other_area', 'style': 'display:none;'})
+    )
+    landmark = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Near Landmark', 'id': 'id_landmark'}),
+        label='Nearby Landmark'
     )
 
     payment_method = forms.ChoiceField(
@@ -132,6 +146,15 @@ class CheckoutForm(forms.Form):
         payment_method = cleaned_data.get('payment_method')
         upi_id = cleaned_data.get('upi_id')
         
+        area = cleaned_data.get('area')
+        other_area = cleaned_data.get('other_area')
+
+        if area == 'Other':
+            if not other_area:
+                self.add_error('other_area', 'Please specify your area.')
+            else:
+                cleaned_data['area'] = other_area
+
         # Validate UPI ID if UPI payment is selected
         if payment_method == 'UPI':
             if not upi_id:
@@ -185,8 +208,9 @@ class AppointmentForm(forms.ModelForm):
 
     def clean_pincode(self):
         pincode = self.cleaned_data.get('pincode')
-        if pincode and not str(pincode).startswith('452'):
-            raise forms.ValidationError("Service is available only in Indore (Pincode starting with 452).")
+        pincode_str = str(pincode) if pincode else ''
+        if pincode and not (pincode_str.startswith('452') or pincode_str.startswith('453')):
+            raise forms.ValidationError("Service is available only in Indore (Pincode starting with 452 or 453).")
         return pincode
 
     def clean(self):
@@ -363,10 +387,17 @@ class CancelOrderForm(forms.ModelForm):
 class ReviewForm(forms.ModelForm):
     class Meta:
         model = Review
-        fields = ['rating', 'comment']
+        fields = ['rating', 'comment', 'image']
         widgets = {
             'rating': forms.Select(attrs={'class': 'form-select'}),
             'comment': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Write your review here...'}),
+            'image': forms.FileInput(attrs={'class': 'form-control', 'accept': 'image/*'}),
+        }
+        labels = {
+            'image': 'Upload Photo (Optional)'
+        }
+        help_texts = {
+            'image': 'Share a photo of the product (Max 5MB, JPG/PNG)'
         }
 
 class DailySalesForm(forms.ModelForm):

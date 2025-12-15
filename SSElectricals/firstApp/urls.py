@@ -27,8 +27,9 @@ urlpatterns = [
     
     # Password Authentication (For admins)
     path('signup/', views.signup, name='signup'),
-    path('login/', auth_views.LoginView.as_view(template_name='firstApp/login.html'), name='login'),
-    path('logout/', auth_views.LogoutView.as_view(next_page='login'), name='logout'),
+    path('signup/', views.signup, name='signup'),
+    # path('login/', auth_views.LoginView.as_view(template_name='firstApp/login.html'), name='login'), # Removed as per request
+    path('logout/', auth_views.LogoutView.as_view(next_page='email_login'), name='logout'),
     path('profile/', views.profile, name='profile'),
     path('profile/change-password/', views.initiate_profile_password_change, name='initiate_profile_password_change'),
     path('profile/change-password/verify/', views.verify_profile_password_change_otp, name='verify_profile_password_change_otp'),
@@ -72,6 +73,7 @@ urlpatterns = [
     # Admin Reviews
     path('shop-admin/reviews/', admin_views.admin_reviews_list, name='admin_reviews_list'),
     path('shop-admin/reviews/delete/<int:review_id>/', admin_views.admin_delete_review, name='admin_delete_review'),
+    path('shop-admin/reviews/approve/<int:review_id>/', admin_views.admin_approve_review, name='admin_approve_review'),
 
     # Admin Daily Sales
     path('shop-admin/sales/', admin_views.admin_daily_sales, name='admin_daily_sales'),

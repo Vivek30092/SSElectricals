@@ -13,7 +13,19 @@ class CustomUser(AbstractUser):
     landmark = models.CharField(max_length=255, blank=True, null=True)
     pincode = models.CharField(max_length=6, blank=True, null=True)
     profile_picture = models.ImageField(upload_to='profile_pics/', blank=True, null=True)
+    display_name = models.CharField(max_length=150, blank=True, null=True, help_text="Publicly displayed name")
+    
+    class Role(models.TextChoices):
+        ADMIN = "ADMIN", "Admin"
+        STAFF = "STAFF", "Staff"
+        USER = "USER", "User"
+
+    role = models.CharField(max_length=50, choices=Role.choices, default=Role.USER)
     is_email_verified = models.BooleanField(default=False)
+    
+    # Order Tracking
+    total_orders_count = models.PositiveIntegerField(default=0)
+    free_delivery_used_count = models.PositiveIntegerField(default=0)
 
     USERNAME_FIELD = 'phone_number'
     REQUIRED_FIELDS = ['username', 'email']
@@ -53,6 +65,7 @@ class Product(models.Model):
     image = models.ImageField(upload_to='product_images/')
     vendor = models.CharField(max_length=100, blank=True, null=True)
     purchase_price = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    is_trending = models.BooleanField(default=False, help_text="Mark this product as trending")
     created_at = models.DateTimeField(auto_now_add=True)
 
     def save(self, *args, **kwargs):
@@ -162,6 +175,8 @@ class Order(models.Model):
     # Delivery Info
     distance_km = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     delivery_otp = models.CharField(max_length=6, blank=True, null=True)
+    free_delivery_applied = models.BooleanField(default=False, help_text="Whether free delivery was applied to this order")
+    delivery_charge_status = models.CharField(max_length=20, default='ESTIMATED', choices=[('ESTIMATED', 'Estimated'), ('CONFIRMED', 'Confirmed')])
     
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Pending')
     payment_method = models.CharField(max_length=20, choices=PAYMENT_CHOICES, default='COD')
@@ -314,29 +329,55 @@ class Appointment(models.Model):
     ]
 
     AREA_CHOICES = [
-        ('Abhinandan Nagar', 'Abhinandan Nagar'),
-        ('Bapat Square', 'Bapat Square'),
-        ('Bhawarkua', 'Bhawarkua'),
-        ('Gauri Nagar', 'Gauri Nagar'),
-        ('Khajrana', 'Khajrana'),
-        ('LIG Colony', 'LIG Colony'),
-        ('Luv Kush', 'Luv Kush'),
-        ('MR10', 'MR10'),
-        ('Malwa Mill', 'Malwa Mill'),
-        ('Nehru Nagar', 'Nehru Nagar'),
-        ('Nipania', 'Nipania'),
-        ('Palasia', 'Palasia'),
-        ('Pardesipura', 'Pardesipura'),
-        ('Prime City', 'Prime City'),
-        ('Rajendra Nagar', 'Rajendra Nagar'),
-        ('Rajwada', 'Rajwada'),
-        ('Royal Bungalow City', 'Royal Bungalow City'),
-        ('Scheme No. 74', 'Scheme No. 74'),
-        ('Sukhliya', 'Sukhliya'),
-        ('Sundar Nagar', 'Sundar Nagar'),
-        ('Veena Nagar', 'Veena Nagar'),
-        ('Vijay Nagar', 'Vijay Nagar'),
-        ('Other', 'Other region'),
+         # Central Indore
+    ('Rajwada', 'Rajwada'),
+    ('Yashwant Ganj', 'Yashwant Ganj'),
+    ('Juni Indore', 'Juni Indore'),
+    ('Chhatribagh', 'Chhatribagh'),
+    ('Malwa Mill', 'Malwa Mill'),
+    ('Kesar Bagh', 'Kesar Bagh'),
+
+    # East Indore
+    ('Pardesipura', 'Pardesipura'),
+    ('Gumasta Nagar', 'Gumasta Nagar'),
+    ('Veena Nagar', 'Veena Nagar'),
+    ('Usha Nagar', 'Usha Nagar'),
+    ('Snehlataganj', 'Snehlataganj'),
+
+    # West / Northwest Indore
+    ('Palasia', 'Palasia'),
+    ('Zanjeerwala Square', 'Zanjeerwala Square'),
+    ('Scheme No. 74', 'Scheme No. 74'),
+    ('Mahalaxmi Nagar', 'Mahalaxmi Nagar'),
+    ('Vijay Nagar', 'Vijay Nagar'),
+    ('Nipania', 'Nipania'),
+    ('Bapat Square', 'Bapat Square'),
+    ('MR10', 'MR10'),
+    ('Silicon City', 'Silicon City'),
+
+    # North Indore
+    ('Patnipura', 'Patnipura'),
+    ('Hawa Bangla', 'Hawa Bangla'),
+    ('Tilak Nagar', 'Tilak Nagar'),
+
+    # South Indore
+    ('Rajendra Nagar', 'Rajendra Nagar'),
+    ('Annapurna Nagar', 'Annapurna Nagar'),
+    ('Manik Bagh', 'Manik Bagh'),
+    ('Kanadia Road', 'Kanadia Road'),
+
+    # Residential Colonies
+    ('Sukhliya', 'Sukhliya'),
+    ('Abhinandan Nagar', 'Abhinandan Nagar'),
+    ('LIG Colony', 'LIG Colony'),
+    ('Prime City', 'Prime City'),
+    ('Royal Bungalow City', 'Royal Bungalow City'),
+    ('Sundar Nagar', 'Sundar Nagar'),
+    ('Gauri Nagar', 'Gauri Nagar'),
+    ('Luv Kush', 'Luv Kush'),
+
+    # Fallback
+    ('Other', 'Other region'),
     ]
 
     # Link to user if logged in (optional but good for history)
@@ -379,8 +420,11 @@ class Appointment(models.Model):
 class Review(models.Model):
     product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='reviews')
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    order = models.ForeignKey('Order', on_delete=models.SET_NULL, null=True, blank=True, related_name='reviews')
     rating = models.IntegerField(choices=[(i, i) for i in range(1, 6)])
-    comment = models.TextField()
+    comment = models.TextField(null=True, blank=True)
+    image = models.ImageField(upload_to='review_images/', null=True, blank=True, help_text="Optional: Upload a photo of the product")
+    is_approved = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -477,3 +521,50 @@ class PurchaseEntry(models.Model):
 
     def __str__(self):
         return f"Purchase: {self.product.name} ({self.quantity} qty)"
+
+# 12. Email Logging System
+class EmailLog(models.Model):
+    """Track all email communications for audit and retry purposes"""
+    EMAIL_TYPE_CHOICES = [
+        ('ORDER_STATUS', 'Order Status Update'),
+        ('ORDER_RECEIPT', 'Order Receipt'),
+        ('DELIVERY_OTP', 'Delivery OTP'),
+        ('ORDER_DELIVERED', 'Order Delivered'),
+        ('APPOINTMENT_STATUS', 'Appointment Status Update'),
+        ('APPOINTMENT_COMPLETE', 'Appointment Complete'),
+        ('OTP_VERIFICATION', 'OTP Verification'),
+    ]
+    
+    STATUS_CHOICES = [
+        ('PENDING', 'Pending'),
+        ('SENT', 'Sent'),
+        ('FAILED', 'Failed'),
+        ('RETRY', 'Retry'),
+    ]
+    
+    email_type = models.CharField(max_length=30, choices=EMAIL_TYPE_CHOICES)
+    recipient = models.EmailField()
+    subject = models.CharField(max_length=255)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING')
+    
+    # Reference fields
+    order = models.ForeignKey(Order, on_delete=models.SET_NULL, null=True, blank=True, related_name='email_logs')
+    appointment = models.ForeignKey(Appointment, on_delete=models.SET_NULL, null=True, blank=True, related_name='email_logs')
+    
+    # Tracking
+    sent_at = models.DateTimeField(null=True, blank=True)
+    error_message = models.TextField(blank=True, null=True)
+    retry_count = models.IntegerField(default=0)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['status', 'created_at']),
+            models.Index(fields=['email_type', 'recipient']),
+        ]
+    
+    def __str__(self):
+        return f"{self.email_type} to {self.recipient} - {self.status}"

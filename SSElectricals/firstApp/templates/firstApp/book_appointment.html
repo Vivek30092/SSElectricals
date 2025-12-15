@@ -282,9 +282,9 @@
                         if (data && data.address) {
                             var addr = data.address;
 
-                            // Validate Pincode for Indore (Starts with 452)
-                            if (addr.postcode && !addr.postcode.startsWith('452')) {
-                                alert("Service is available only in Indore (Pincode starting with 452). Detected: " + addr.postcode);
+                            // Validate Pincode for Indore (Starts with 452 or 453)
+                            if (addr.postcode && !(addr.postcode.startsWith('452') || addr.postcode.startsWith('453'))) {
+                                alert("Service is available only in Indore (Pincode starting with 452 or 453). Detected: " + addr.postcode);
                                 msgDiv.innerHTML = '<i class="fas fa-times-circle"></i> Location outside Indore service area.';
                                 msgDiv.className = 'form-text text-danger fw-bold';
                                 return; // Stop processing

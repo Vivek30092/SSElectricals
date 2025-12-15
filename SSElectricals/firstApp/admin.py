@@ -9,19 +9,22 @@ from .utils import save_csv_entry
 class CustomUserAdmin(UserAdmin):
     fieldsets = UserAdmin.fieldsets + (
         (None, {'fields': ('phone_number', 'address', 'profile_picture')}),
+        ('Order Statistics', {'fields': ('total_orders_count', 'free_delivery_used_count')}),
     )
     add_fieldsets = UserAdmin.add_fieldsets + (
         (None, {'fields': ('phone_number', 'address', 'profile_picture')}),
     )
+    readonly_fields = ('total_orders_count', 'free_delivery_used_count')
 
 class ProductImageInline(admin.TabularInline):
     model = ProductImage
     extra = 1
 
 class ProductAdmin(admin.ModelAdmin):
-    list_display = ('name', 'category', 'price', 'stock_quantity')
+    list_display = ('name', 'category', 'price', 'stock_quantity', 'is_trending')
     search_fields = ('name', 'category__name')
-    list_filter = ('category',)
+    list_filter = ('category', 'is_trending')
+    list_editable = ('is_trending',)
     inlines = [ProductImageInline]
 
 class OrderItemInline(admin.TabularInline):
@@ -29,10 +32,24 @@ class OrderItemInline(admin.TabularInline):
     extra = 0
 
 class OrderAdmin(admin.ModelAdmin):
-    list_display = ('id', 'user', 'total_price', 'status', 'final_price', 'delivery_otp', 'created_at')
+    list_display = ('id', 'user', 'total_price', 'delivery_charge', 'status', 'final_price', 'delivery_otp', 'created_at')
     list_filter = ('status', 'created_at')
+    search_fields = ('user__phone_number', 'user__email', 'id')
+    readonly_fields = ('created_at',)
     inlines = [OrderItemInline]
-    actions = ['generate_delivery_otp']
+    actions = ['generate_delivery_otp', 'approve_free_delivery']
+    
+    fieldsets = (
+        ('Order Information', {
+            'fields': ('user', 'status', 'created_at')
+        }),
+        ('Pricing', {
+            'fields': ('total_price', 'delivery_charge', 'final_price')
+        }),
+        ('Delivery Details', {
+            'fields': ('address', 'distance_km', 'delivery_otp', 'latitude', 'longitude')
+        }),
+    )
 
     @admin.action(description='Generate Delivery OTP')
     def generate_delivery_otp(self, request, queryset):
@@ -46,6 +63,19 @@ class OrderAdmin(admin.ModelAdmin):
                 count += 1
         
         self.message_user(request, f"Generated OTP for {count} orders.")
+
+    @admin.action(description='Approve Free Delivery (Set Delivery Charge to 0)')
+    def approve_free_delivery(self, request, queryset):
+        for order in queryset:
+            order.delivery_charge = 0
+            order.final_price = order.total_price  # Updates final price to match total only
+            order.save()
+            # Also increment user's free delivery usage if not already counted? 
+            # Logic for that is better handled in save() or signal, but doing it simplistically here:
+            user = order.user
+            user.free_delivery_used_count += 1
+            user.save()
+        self.message_user(request, f"Free delivery approved for {queryset.count()} orders.")
 
 class AdminSessionAdmin(admin.ModelAdmin):
     list_display = ('user', 'ip_address', 'login_time', 'is_active', 'last_activity')
@@ -258,9 +288,10 @@ def track_order_status(sender, instance, **kwargs):
 
 @receiver(post_save, sender=Order)
 def log_order_save(sender, instance, created, **kwargs):
-    """Log order status changes."""
+    """Log order status changes and SEND EMAIL."""
     user = getattr(instance, '_current_user', None)
     
+    # Activity Log
     if user and user.is_staff:
         if created:
             description = f'Created order #{instance.id} for user {instance.user.username}'
@@ -286,6 +317,18 @@ def log_order_save(sender, instance, created, **kwargs):
             description=description,
             ip_address=getattr(instance, '_ip_address', '0.0.0.0')
         )
+
+    # --- EMAIL NOTIFICATION LOGIC ---
+    if not created:
+         old_status = _order_original_status.get(instance.pk)
+         # Send email if status changed OR if delivery charge/final price was updated effectively confirming it
+         # But mostly status changes trigger useful emails.
+         
+         # Note: _order_original_status is cleaned up above potentially, but we already grabbed old_status
+         
+         if old_status and old_status != instance.status:
+             from .utils import send_order_status_email
+             send_order_status_email(instance)
 
 
 # Unified CSV Storage Signals

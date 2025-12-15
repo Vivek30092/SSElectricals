@@ -37,9 +37,11 @@
                                         style="width: 100px;">
                                         {% csrf_token %}
                                         <input type="number" name="quantity" value="{{ item.quantity }}" min="1"
-                                            class="form-control form-control-sm me-2">
-                                        <button type="submit" class="btn btn-sm btn-outline-secondary"><i
-                                                class="fas fa-sync"></i></button>
+                                            class="form-control form-control-sm me-2" onchange="this.form.submit()">
+                                        <noscript>
+                                            <button type="submit" class="btn btn-sm btn-outline-secondary"><i
+                                                    class="fas fa-sync"></i></button>
+                                        </noscript>
                                     </form>
                                 </td>
                                 <td>

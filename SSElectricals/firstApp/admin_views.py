@@ -1,6 +1,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.core.files.storage import FileSystemStorage
-from django.contrib.admin.views.decorators import staff_member_required
+from django.contrib.admin.views.decorators import staff_member_required # Keep for reference or fallback
+from .decorators import admin_required, staff_required
 from django.contrib import messages
 from .models import Appointment, AdminActivityLog, AdminSession, Order, Product, Category, ProductImage, OrderItem, Review, DailySales, DailyExpenditure, PurchaseEntry, CustomUser
 import os
@@ -19,7 +20,7 @@ import json
 import numpy as np
 
 
-@staff_member_required
+@staff_required # Updated to custom decorator
 def admin_dashboard(request):
     # 1. KPI Cards
     # Updated Dashboard Logic
@@ -428,6 +429,8 @@ def admin_product_add(request):
         discount_price = request.POST.get('discount_price') or None
         stock_quantity = request.POST.get('stock_quantity')
         brand = request.POST.get('brand')
+        is_trending = request.POST.get('is_trending') == 'on'
+        
         main_image = request.FILES.get('image')
 
         try:
@@ -440,6 +443,7 @@ def admin_product_add(request):
                 discount_price=discount_price,
                 stock_quantity=stock_quantity,
                 brand=brand,
+                is_trending=is_trending,
                 image=main_image
             )
             
@@ -477,6 +481,7 @@ def admin_product_edit(request, pk):
         product.discount_price = dp if dp else None
         product.stock_quantity = request.POST.get('stock_quantity')
         product.brand = request.POST.get('brand')
+        product.is_trending = request.POST.get('is_trending') == 'on'
         
         if request.FILES.get('image'):
             product.image = request.FILES.get('image')
@@ -556,78 +561,24 @@ def admin_order_detail(request, pk):
                 import random
                 otp = str(random.randint(100000, 999999))
                 order.delivery_otp = otp
-                # In real app, send SMS here
-                messages.info(request, f"Delivery OTP generated: {otp}")
+                # We save later, but for email logging relying on ID it's fine as Order exists.
+                
+                from .email_utils import send_delivery_otp_email
+                send_delivery_otp_email(order, otp)
+                
+                messages.info(request, f"Delivery OTP generated and sent: {otp}")
             
             # Send status update email for ALL status changes (including Confirmed, Out for Delivery, etc)
             if new_status != old_status:
-                try:
-                    subject = f"Order Update: Order #{order.id} is {new_status}"
-                    review_link_block = ""
-                    otp_block = ""
-                    
-                    if new_status == 'Delivered':
-                        review_url = request.build_absolute_uri('/') + 'orders/'
-                        review_link_block = f"""
-                        <div style="text-align: center; margin-top: 20px;">
-                            <a href="{review_url}" style="background-color: #198754; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold;">Review Products</a>
-                        </div>
-                        """
-                    
-                    if new_status == 'Out for Delivery' and order.delivery_otp:
-                        otp_block = f"""
-                        <div style="margin-top: 15px; padding-top: 15px; border-top: 1px dashed #856404;">
-                            <p style="margin: 0; color: #d9534f; font-weight: bold;">SECRET DELIVERY CODE</p>
-                            <p style="margin: 5px 0 0; font-size: 24px; font-weight: bold; letter-spacing: 5px;">{order.delivery_otp}</p>
-                            <p style="margin: 5px 0 0; font-size: 13px;">Please share this OTP with our delivery agent to receive your package.</p>
-                        </div>
-                        """
-                    
-                    # Interactive HTML Email
-                    html_message = f"""
-                    <!DOCTYPE html>
-                    <html>
-                    <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-                        <div style="max-width: 600px; margin: 0 auto; border: 1px solid #ddd; border-radius: 8px; overflow: hidden;">
-                            <div style="background-color: #ffc107; color: black; padding: 20px; text-align: center;">
-                                <h2 style="margin: 0;">Shiv Shakti Electrical</h2>
-                                <p style="margin: 5px 0 0;">Order Status Update</p>
-                            </div>
-                            <div style="padding: 20px;">
-                                <p>Hi {order.user.first_name},</p>
-                                <p>Your Order <strong>#{order.id}</strong> has been updated.</p>
-                                
-                                <div style="background-color: #fff3cd; padding: 15px; border-left: 4px solid #ffc107; margin: 20px 0;">
-                                    <p style="margin: 0;"><strong>New Status:</strong> <span style="color: #856404; font-size: 18px; font-weight: bold;">{new_status}</span></p>
-                                    <p style="margin: 10px 0 0;"><strong>Total Amount:</strong> ₹{order.total_price + order.delivery_charge}</p>
-                                    {otp_block}
-                                </div>
-                                
-                                {review_link_block}
-                                
-                                <p style="margin-top: 20px;">Track your order or view details in your account.</p>
-                                <div style="text-align: center; margin-top: 30px;">
-                                    <a href="http://127.0.0.1:8000/orders/" style="background-color: #333; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px;">View Order</a>
-                                </div>
-                            </div>
-                            <div style="background-color: #eee; padding: 15px; text-align: center; font-size: 12px; color: #777;">
-                                &copy; {timezone.now().year} Shiv Shakti Electrical. All rights reserved.
-                            </div>
-                        </div>
-                    </body>
-                    </html>
-                    """
-                    
-                    send_mail(
-                        subject=subject,
-                        message=strip_tags(html_message),
-                        from_email=settings.DEFAULT_FROM_EMAIL,
-                        recipient_list=[order.user.email],
-                        html_message=html_message,
-                        fail_silently=True
-                    )
-                except Exception as e:
-                    print(f"Error sending order email: {e}")
+                from .email_utils import send_order_status_email, send_order_delivered_email
+                
+                if new_status == 'Delivered':
+                    send_order_delivered_email(order)
+                elif new_status == 'Out for Delivery':
+                    # Already sent OTP email above
+                    pass
+                else:
+                    send_order_status_email(order)
 
             order.save()
             messages.success(request, f"Order status updated to {new_status}")
@@ -655,6 +606,15 @@ def admin_delete_review(request, review_id):
     review = get_object_or_404(Review, id=review_id)
     review.delete()
     messages.success(request, "Review deleted successfully.")
+    return redirect('admin_reviews_list')
+
+@staff_member_required
+def admin_approve_review(request, review_id):
+    review = get_object_or_404(Review, id=review_id)
+    review.is_approved = not review.is_approved
+    review.save()
+    status = "visible" if review.is_approved else "hidden"
+    messages.success(request, f"Review is now {status}.")
     return redirect('admin_reviews_list')
 
 # ------------------------------------------------------------------

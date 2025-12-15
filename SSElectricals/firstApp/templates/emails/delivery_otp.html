@@ -1,0 +1,78 @@
+{% extends 'emails/base.html' %}
+
+{% block title %}Delivery OTP - {{ business.name }}{% endblock %}
+
+{% block content %}
+<div class="greeting">
+    Hello {{ user.first_name|default:user.username }},
+</div>
+
+<div class="content-block">
+    <p>Your order is out for delivery and will reach you shortly!</p>
+    <p>For your security, we've generated a One-Time Password (OTP) for this delivery.</p>
+</div>
+
+<div class="highlight-box">
+    <div class="small-text">Your Delivery OTP</div>
+    <div class="big-text">{{ otp }}</div>
+    <div class="small-text">Valid for this delivery only</div>
+</div>
+
+<div class="alert-box">
+    <strong>⚠️ Important Security Instructions:</strong><br><br>
+    • Share this OTP <strong>ONLY</strong> with our delivery person at the time of delivery<br>
+    • Do not share this OTP over phone, email, or any messaging platform<br>
+    • Verify the order details before sharing the OTP
+</div>
+
+<div class="info-box">
+    <h3>Order Details</h3>
+    <div class="info-row">
+        <span class="info-label">Order ID:</span>
+        <span class="info-value">#{{ order.id }}</span>
+    </div>
+    <div class="info-row">
+        <span class="info-label">Total Items:</span>
+        <span class="info-value">{{ items|length }}</span>
+    </div>
+    <div class="info-row">
+        <span class="info-label">Amount to Pay:</span>
+        <span class="info-value">₹{{ order.grand_total }}</span>
+    </div>
+    <div class="info-row">
+        <span class="info-label">Payment Method:</span>
+        <span class="info-value">{{ order.get_payment_method_display }}</span>
+    </div>
+</div>
+
+<div class="content-block">
+    <h3>Products in this Order:</h3>
+    <table class="item-table">
+        <thead>
+            <tr>
+                <th>Product</th>
+                <th>Quantity</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in items %}
+            <tr>
+                <td>{{ item.product.name }}</td>
+                <td>{{ item.quantity }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<div class="content-block">
+    <p><strong>Delivery Address:</strong><br>
+        {{ order.address }}</p>
+</div>
+
+<div class="content-block">
+    <p>Once you've received your order and shared the OTP with our delivery person, your order will be marked as
+        delivered.</p>
+    <p>We hope you enjoy your purchase!</p>
+</div>
+{% endblock %}

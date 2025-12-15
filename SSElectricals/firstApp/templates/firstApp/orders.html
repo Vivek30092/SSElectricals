@@ -34,13 +34,14 @@
                     <tr>
                         <th>Product</th>
                         <th>Quantity</th>
-                        <!-- Price Column hidden if pending? Or show estimated? 
-                             Let's show estimated/product price, but total as TBD if pending. -->
                         {% if order.final_price %}
-                        <th>Price</th>
+                        <th>Unit Price</th>
+                        <th>Subtotal</th>
                         {% else %}
                         <th>Est. Price</th>
+                        <th>Subtotal</th>
                         {% endif %}
+                        <th>Action</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -49,12 +50,23 @@
                         <td>{{ item.product.name }}</td>
                         <td>{{ item.quantity }}</td>
                         <td>₹{{ item.price }}</td>
+                        <td><strong>₹{% widthratio item.price 1 item.quantity %}</strong></td>
+                        <td>
+                            {% if order.status == 'Delivered' %}
+                            {% if item.product.id in reviewed_product_ids %}
+                            <span class="badge bg-success">Reviewed</span>
+                            {% else %}
+                            <a href="{% url 'product_detail' item.product.id %}"
+                                class="btn btn-sm btn-outline-primary">Rate & Review</a>
+                            {% endif %}
+                            {% endif %}
+                        </td>
                     </tr>
                     {% endfor %}
                 </tbody>
                 <tfoot>
                     <tr class="border-top">
-                        <td colspan="2" class="text-end fw-bold">Delivery Charge:</td>
+                        <td colspan="3" class="text-end fw-bold">Delivery Charge:</td>
                         <td class="fw-bold">
                             {% if order.delivery_charge %}
                             ₹{{ order.delivery_charge }}

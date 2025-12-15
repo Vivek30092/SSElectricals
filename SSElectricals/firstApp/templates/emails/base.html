@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>{% block title %}{{ business.name }}{% endblock %}</title>
+    <style>
+        /* Reset and Base Styles */
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f4f4;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* Email Container */
+        .email-wrapper {
+            width: 100%;
+            background-color: #f4f4f4;
+            padding: 20px 0;
+        }
+
+        .email-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #ffffff;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Header */
+        .email-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #ffffff;
+            padding: 30px 20px;
+            text-align: center;
+        }
+
+        .logo {
+            font-size: 28px;
+            font-weight: bold;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .tagline {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        /* Content Area */
+        .email-body {
+            padding: 40px 30px;
+            color: #333333;
+            line-height: 1.6;
+        }
+
+        .greeting {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: #2d3748;
+        }
+
+        .content-block {
+            margin-bottom: 25px;
+        }
+
+        /* Info Box */
+        .info-box {
+            background-color: #f7fafc;
+            border-left: 4px solid #667eea;
+            padding: 15px 20px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+
+        .info-box h3 {
+            margin: 0 0 10px 0;
+            font-size: 16px;
+            color: #2d3748;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .info-row:last-child {
+            border-bottom: none;
+        }
+
+        .info-label {
+            font-weight: 600;
+            color: #4a5568;
+        }
+
+        .info-value {
+            color: #2d3748;
+        }
+
+        /* Status Badge */
+        .status-badge {
+            display: inline-block;
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .status-pending {
+            background-color: #fef5e7;
+            color: #f39c12;
+        }
+
+        .status-confirmed {
+            background-color: #e8f5e9;
+            color: #27ae60;
+        }
+
+        .status-delivered {
+            background-color: #e3f2fd;
+            color: #2196f3;
+        }
+
+        .status-cancelled {
+            background-color: #ffebee;
+            color: #e74c3c;
+        }
+
+        /* Button */
+        .btn {
+            display: inline-block;
+            padding: 14px 32px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #ffffff !important;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: 600;
+            text-align: center;
+            margin: 15px 0;
+            transition: transform 0.2s;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+
+        /* Table for Product/Service List */
+        .item-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+
+        .item-table th {
+            background-color: #f7fafc;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            color: #4a5568;
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        .item-table td {
+            padding: 12px;
+            border-bottom: 1px solid #e2e8f0;
+            color: #2d3748;
+        }
+
+        /* Highlight Box (for OTP, important info) */
+        .highlight-box {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #ffffff;
+            padding: 25px;
+            text-align: center;
+            border-radius: 8px;
+            margin: 25px 0;
+        }
+
+        .highlight-box .big-text {
+            font-size: 36px;
+            font-weight: bold;
+            letter-spacing: 8px;
+            margin: 10px 0;
+        }
+
+        .highlight-box .small-text {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        /* Warning/Alert Box */
+        .alert-box {
+            background-color: #fff3cd;
+            border-left: 4px solid: #ffc107;
+            padding: 15px 20px;
+            margin: 20px 0;
+            border-radius: 4px;
+            color: #856404;
+        }
+
+        /* Footer */
+        .email-footer {
+            background-color: #2d3748;
+            color: #cbd5e0;
+            padding: 30px 20px;
+            text-align: center;
+            font-size: 13px;
+        }
+
+        .footer-section {
+            margin: 15px 0;
+        }
+
+        .footer-links a {
+            color: #cbd5e0;
+            text-decoration: none;
+            margin: 0 10px;
+        }
+
+        .footer-links a:hover {
+            color: #ffffff;
+        }
+
+        .footer-disclaimer {
+            font-size: 11px;
+            color: #a0aec0;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #4a5568;
+        }
+
+        /* Responsive */
+        @media only screen and (max-width: 600px) {
+            .email-container {
+                width: 100% !important;
+                border-radius: 0;
+            }
+
+            .email-body {
+                padding: 20px 15px;
+            }
+
+            .info-row {
+                flex-direction: column;
+            }
+
+            .info-label {
+                margin-bottom: 5px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="email-wrapper">
+        <div class="email-container">
+            <!-- Header -->
+            <div class="email-header">
+                <div class="logo">{{ business.name }}</div>
+                <div class="tagline">Quality Electrical Solutions</div>
+            </div>
+
+            <!-- Body Content -->
+            <div class="email-body">
+                {% block content %}
+                <!-- Content will be inserted here -->
+                {% endblock %}
+            </div>
+
+            <!-- Footer -->
+            <div class="email-footer">
+                <div class="footer-section">
+                    <strong>{{ business.name }}</strong><br>
+                    {{ business.address }}<br>
+                    Phone: {{ business.phone }}<br>
+                    Email: {{ business.email }}
+                </div>
+
+                <div class="footer-section footer-links">
+                    <a href="{{ business.website }}">Visit Website</a>
+                    <a href="{{ business.website }}/contact">Contact Us</a>
+                    <a href="{{ business.website }}/about">About</a>
+                </div>
+
+                <div class="footer-disclaimer">
+                    <p>This is an automated message from {{ business.name }}. Please do not reply to this email.</p>
+                    <p>&copy; {{ current_year }} {{ business.name }}. All rights reserved.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>

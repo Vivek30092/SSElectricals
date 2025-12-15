@@ -1,0 +1,100 @@
+{% extends 'firstApp/base.html' %}
+
+{% block title %}Verify Login - SS Electricals{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center my-5">
+    <div class="col-md-6 col-lg-5">
+        <div class="card shadow-lg border-0 rounded-lg">
+            <div class="card-header bg-primary text-white text-center py-4">
+                <h3 class="mb-0"><i class="fas fa-lock me-2"></i>Verify Login</h3>
+            </div>
+            <div class="card-body p-5 text-center">
+                <p class="lead mb-2">
+                    We've sent a 6-digit verification code to <br>
+                    <strong>{{ email }}</strong>
+                </p>
+
+                {% if otp_remaining %}
+                <div class="mb-4">
+                    <span class="badge bg-warning text-dark p-2" id="otp-timer-box">
+                        <i class="fas fa-history me-1"></i> <span id="otp-timer">05:00</span>
+                    </span>
+                </div>
+                {% endif %}
+
+                {% if form.errors %}
+                <div class="alert alert-danger alert-dismissible fade show text-start" role="alert">
+                    <strong>Error:</strong> Invalid OTP. Please try again.
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+                {% endif %}
+
+                <form method="post">
+                    {% csrf_token %}
+
+                    <div class="mb-4">
+                        {{ form.otp }}
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-primary btn-lg fw-bold" type="submit" id="verify-btn">Verify &
+                            Login</button>
+                    </div>
+                </form>
+            </div>
+            <div class="card-footer text-center py-3">
+                <div class="small text-muted">Didn't receive code? <a href="{% url 'email_login' %}"
+                        class="text-decoration-none">Resend</a> or Check Spam folder.</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const remainingMs = parseInt("{{ otp_remaining|default:'0' }}"); // Ensure it's treated as number
+        console.log("OTP Remaining MS:", remainingMs);
+
+        const timerElement = document.getElementById('otp-timer');
+        const timerBox = document.getElementById('otp-timer-box');
+        const verifyBtn = document.getElementById('verify-btn');
+
+        // Only start if we have time and the element exists
+        if (remainingMs > 0 && timerElement) {
+            // Calculate absolute expiry time based on client clock
+            const expiryTime = new Date().getTime() + remainingMs;
+
+            const updateTimer = () => {
+                const now = new Date().getTime();
+                const distance = expiryTime - now;
+
+                if (distance < 0) {
+                    clearInterval(interval);
+                    if (timerBox) {
+                        timerBox.classList.remove('bg-warning', 'text-dark');
+                        timerBox.classList.add('bg-danger', 'text-white');
+                        timerBox.innerHTML = "<i class='fas fa-exclamation-circle me-1'></i> Expired";
+                    }
+                    if (verifyBtn) verifyBtn.disabled = true;
+                    return;
+                }
+
+                const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+                const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+
+                // Add leading zeros
+                const mStr = minutes < 10 ? "0" + minutes : minutes;
+                const sStr = seconds < 10 ? "0" + seconds : seconds;
+
+                timerElement.innerText = mStr + ":" + sStr;
+            };
+
+            const interval = setInterval(updateTimer, 1000);
+            updateTimer(); // Initial call to set immediate value
+        } else {
+            console.log("Timer not started. remainingMs:", remainingMs, "Element:", timerElement);
+        }
+    });
+</script>
+{% endblock %}

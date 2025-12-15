@@ -149,6 +149,17 @@
             color: #ffc107 !important;
         }
 
+        /* Navbar Link Styles */
+        .navbar-nav .nav-link {
+            transition: all 0.3s ease;
+        }
+
+        .navbar-nav .nav-link:hover {
+            color: #ffc107 !important;
+            transform: scale(1.1);
+            /* Zoom out effect */
+        }
+
         .card {
             transition: transform 0.2s;
             border: none;
@@ -235,10 +246,15 @@
         .footer-links ul li a {
             color: #dddddd;
             text-decoration: none;
+            transition: all 0.3s ease;
         }
 
         .footer-links ul li a:hover {
-            text-decoration: underline;
+            color: #ffc107;
+            text-decoration: none;
+            font-size: 0.8 rem;
+            padding-left: 5px;
+            /* Optional: adds a slight movement effect */
         }
 
         .footer-bottom {

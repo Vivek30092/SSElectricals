@@ -1,0 +1,57 @@
+{% extends 'firstApp/base.html' %}
+{% load static %}
+
+{% block title %}Customer Reviews - SS Electricals{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <div class="text-center mb-5">
+        <h2 class="fw-bold display-5">What Our Customers Say</h2>
+        <p class="text-muted lead">Based on Google Reviews</p>
+    </div>
+
+    <div class="row justify-content-center">
+        {% if reviews %}
+        {% for review in reviews %}
+        <div class="col-md-6 col-lg-4 mb-4">
+            <div class="card h-100 shadow-sm border-0 rounded-lg">
+                <div class="card-body">
+                    <div class="d-flex align-items-center mb-3">
+                        <img src="{{ review.profile_photo_url }}" alt="{{ review.author_name }}"
+                            class="rounded-circle me-3" width="50" height="50"
+                            onerror="this.src='https://ui-avatars.com/api/?name={{ review.author_name|urlencode }}&background=random'">
+                        <div>
+                            <h5 class="card-title mb-0 fw-bold">{{ review.author_name }}</h5>
+                            <small class="text-muted">{{ review.relative_time_description }}</small>
+                        </div>
+                    </div>
+                    <div class="mb-3 text-warning">
+                        {% with ''|center:review.rating as range %}
+                        {% for _ in range %}
+                        <i class="fas fa-star"></i>
+                        {% endfor %}
+                        {% endwith %}
+                    </div>
+                    <p class="card-text text-secondary">{{ review.text|truncatechars:180 }}</p>
+                </div>
+                {% if review.author_url %}
+                <div class="card-footer bg-white border-0 text-end">
+                    <a href="{{ review.author_url }}" target="_blank"
+                        class="text-primary text-decoration-none small">Read on Google <i
+                            class="fas fa-external-link-alt ms-1"></i></a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+        {% else %}
+        <div class="col-12 text-center">
+            <div class="alert alert-info py-4">
+                <h4><i class="fas fa-info-circle me-2"></i>No reviews available at the moment.</h4>
+                <p class="mb-0">Please fetch our latest reviews from Google later.</p>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

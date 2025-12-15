@@ -1,120 +1,603 @@
 {% extends 'firstApp/base.html' %}
+{% load static %}
 
 {% block content %}
-<h2 class="mb-4">Checkout</h2>
-<div class="row">
-    <div class="col-md-8">
-        <div class="card mb-4">
-            <div class="card-header">
-                <h5 class="mb-0">Shipping & Payment</h5>
-            </div>
-            <div class="card-body">
-                <form method="post">
-                    {% csrf_token %}
-                    <div class="row g-3">
+<div class="container my-5">
+    <div class="row justify-content-center">
+        <!-- Left Column: Checkout Form -->
+        <div class="col-lg-8">
+            <div class="card shadow-lg border-0 rounded-4 overflow-hidden mb-4">
+                <div
+                    class="card-header bg-gradient bg-primary text-white p-4 d-flex align-items-center justify-content-between">
+                    <h2 class="mb-0 fw-bold h3"><i class="fas fa-shopping-cart me-2"></i>Checkout</h2>
+                    <span class="badge bg-white text-primary fs-6 rounded-pill px-3 py-2">Secure Payment</span>
+                </div>
+                <div class="card-body p-5 bg-light">
+                    <form method="post" novalidate id="checkoutForm">
+                        {% csrf_token %}
+                        <!-- Hidden fields for GPS data -->
+                        <input type="hidden" name="latitude" id="id_latitude">
+                        <input type="hidden" name="longitude" id="id_longitude">
+                        <input type="hidden" name="distance_km" id="id_distance_km">
+
                         {% if form.non_field_errors %}
-                        <div class="col-12">
-                            <div class="alert alert-danger">
-                                {{ form.non_field_errors }}
-                            </div>
+                        <div class="alert alert-danger rounded-3 shadow-sm">
+                            {% for error in form.non_field_errors %}
+                            {{ error }}
+                            {% endfor %}
                         </div>
                         {% endif %}
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">House Number <span class="text-danger">*</span></label>
-                            {{ form.house_number }}
-                            {% if form.house_number.errors %}
-                            <div class="text-danger small">{{ form.house_number.errors.0 }}</div>
-                            {% endif %}
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Pincode <span class="text-danger">*</span></label>
-                            {{ form.pincode }}
-                            {% if form.pincode.errors %}
-                            <div class="text-danger small">{{ form.pincode.errors.0 }}</div>
-                            {% endif %}
-                        </div>
-                        <div class="col-12 mb-3">
-                            <label class="form-label">Address Line 1 (Area/Colony) <span
-                                    class="text-danger">*</span></label>
-                            {{ form.address_line1 }}
-                            {% if form.address_line1.errors %}
-                            <div class="text-danger small">{{ form.address_line1.errors.0 }}</div>
-                            {% endif %}
-                        </div>
-                        <div class="col-12 mb-3">
-                            <label class="form-label">Address Line 2 (Optional)</label>
-                            {{ form.address_line2 }}
-                            {% if form.address_line2.errors %}
-                            <div class="text-danger small">{{ form.address_line2.errors.0 }}</div>
-                            {% endif %}
-                        </div>
-                        <div class="col-12 mb-3">
-                            <label class="form-label">City</label>
-                            {{ form.city }}
-                            {% if form.city.errors %}
-                            <div class="text-danger small">{{ form.city.errors.0 }}</div>
-                            {% endif %}
-                        </div>
-                    </div>
 
-                    <div class="mb-3">
-                        <label class="form-label">Payment Method</label>
-                        {% for radio in form.payment_method %}
-                        <div class="form-check">
-                            {{ radio.tag }}
-                            <label class="form-check-label" for="{{ radio.id_for_label }}">
-                                {{ radio.choice_label }}
-                            </label>
-                        </div>
-                        {% endfor %}
-                    </div>
+                        <div class="bg-white p-4 rounded-3 shadow-sm mb-4">
+                            <h5 class="mb-3 text-primary border-bottom pb-2"><i
+                                    class="fas fa-map-marker-alt me-2"></i>Delivery Address</h5>
 
-                    <button type="submit" class="btn btn-primary btn-lg w-100">Place Order</button>
-                    <p class="text-muted mt-2 small text-center">By placing this order, you agree to our terms. Final
-                        delivery charges will be confirmed by our team.</p>
-                </form>
+                            <!-- Google Places Autocomplete Search (Primary Method) -->
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">Search Your Address <span
+                                        class="text-danger">*</span></label>
+                                <input type="text" id="addressAutocomplete" class="form-control form-control-lg"
+                                    placeholder="Start typing your address in Indore..." autocomplete="off" />
+                                <small class="form-text text-muted d-block mt-1">
+                                    <i class="fas fa-info-circle"></i> Select your address from the dropdown for
+                                    accurate distance calculation
+                                </small>
+                            </div>
+
+                            <!-- Optional GPS Assist Button -->
+                            <div class="mb-3">
+                                <button class="btn btn-outline-primary w-100 mb-2" type="button" id="detectLocationBtn">
+                                    <i class="fas fa-crosshairs me-1"></i> Auto-fill Address using GPS
+                                </button>
+                                <div id="locationMsg" class="form-text small"></div>
+                            </div>
+
+                            <!-- Address Details Section (Always Visible) -->
+                            <div class="row g-2">
+                                <div class="col-4">
+                                    <label class="form-label small text-muted">House No. <span
+                                            class="text-danger">*</span></label>
+                                    {{ form.house_number }}
+                                    {% if form.house_number.errors %}
+                                    <div class="text-danger small">{{ form.house_number.errors.0 }}</div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-8">
+                                    <label class="form-label small text-muted">Address Line 1 <span
+                                            class="text-danger">*</span></label>
+                                    {{ form.address_line1 }}
+                                    {% if form.address_line1.errors %}
+                                    <div class="text-danger small">{{ form.address_line1.errors.0 }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="mt-2">
+                                <label class="form-label small text-muted">Address Line 2 (Optional)</label>
+                                {{ form.address_line2 }}
+                            </div>
+                            <div class="row g-2 mt-2">
+                                <div class="col-6">
+                                    <label class="form-label small text-muted">Landmark</label>
+                                    {{ form.landmark }}
+                                </div>
+                                <div class="col-6">
+                                    <label class="form-label small text-muted">Pincode <span
+                                            class="text-danger">*</span></label>
+                                    {{ form.pincode }}
+                                    {% if form.pincode.errors %}
+                                    <div class="text-danger small">{{ form.pincode.errors.0 }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="row g-2 mt-2">
+                                <div class="col-6">
+                                    <label class="form-label small text-muted">City</label>
+                                    {{ form.city }}
+                                </div>
+                                <div class="col-6">
+                                    <label class="form-label small text-muted">Area <span
+                                            class="text-danger">*</span></label>
+                                    {{ form.area }}
+                                    {{ form.other_area }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-white p-4 rounded-3 shadow-sm mb-4">
+                            <h5 class="mb-3 text-primary border-bottom pb-2"><i
+                                    class="fas fa-credit-card me-2"></i>Payment Method</h5>
+                            <div class="mb-3">
+                                {% for radio in form.payment_method %}
+                                <div class="form-check">
+                                    {{ radio.tag }}
+                                    <label class="form-check-label" for="{{ radio.id_for_label }}">
+                                        {{ radio.choice_label }}
+                                    </label>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            <button type="submit"
+                                class="btn btn-primary btn-lg py-3 rounded-3 fw-bold shadow-sm hover-lift"
+                                id="placeOrderBtn">
+                                <i class="fas fa-lock me-2"></i>Place Order
+                            </button>
+                            <p class="text-muted mt-2 small text-center">
+                                * Calculated delivery distance may be approximate. We will contact you to confirm your
+                                address if needed.
+                            </p>
+                        </div>
+                    </form>
+                </div>
             </div>
         </div>
-    </div>
 
-    <div class="col-md-4">
-        <div class="card">
-            <div class="card-header">
-                <h5 class="mb-0">Order Summary</h5>
-            </div>
-            <div class="card-body">
-                <ul class="list-group list-group-flush mb-3">
-                    {% for item in cart.items.all %}
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                        <div>
-                            <h6 class="my-0">{{ item.product.name }}</h6>
-                            <small class="text-muted">Qty: {{ item.quantity }}</small>
+        <!-- Right Column: Order Summary & Charges -->
+        <div class="col-lg-4">
+            <div class="card shadow-sm border-0 rounded-4">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">Order Summary</h5>
+                </div>
+                <div class="card-body p-4">
+                    <!-- Products -->
+                    <div class="mb-4">
+                        <h6 class="text-muted text-uppercase small fw-bold mb-3">Product Name(s)</h6>
+                        <ul class="list-unstyled mb-0">
+                            {% for item in cart.items.all %}
+                            <li class="d-flex justify-content-between align-items-center mb-2">
+                                <div>
+                                    <span class="d-block fw-medium">{{ item.product.name }}</span>
+                                    <small class="text-muted">Qty: {{ item.quantity }}</small>
+                                </div>
+                                <span class="fw-bold">₹{{ item.total_price }}</span>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                        <hr class="my-3">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="fw-bold">Subtotal</span>
+                            <span class="fw-bold">₹{{ cart.total_price }}</span>
                         </div>
-                        <!-- Prices hidden per requirement "No price shown to customer yet" or just finalized total? 
-                             If "User Features" says "Name, Description, Images...", it doesn't explicitly hide price there.
-                             But "Order Placement Flow -> No price shown to customer yet".
-                             I'll hide prices here to be safe and robust to the request. -->
-                        <span class="text-muted">--</span>
-                    </li>
-                    {% endfor %}
-                </ul>
-                <div class="alert alert-info">
-                    <i class="fas fa-info-circle"></i>
-                    Final price (including delivery charges based on distance) will be confirmed by our team via
-                    Call/SMS after you place the order.
-                </div>
+                    </div>
 
-                <div class="d-flex justify-content-between mb-2">
-                    <span>Delivery Charge</span>
-                    <span>Calculated based on distance</span>
-                </div>
-                <hr>
-                <div class="d-flex justify-content-between mb-3">
-                    <span class="fw-bold fs-5">Total Payable</span>
-                    <span class="fw-bold fs-5">To be confirmed</span>
+                    <!-- Delivery Charges Section -->
+                    <div class="mb-4">
+                        <h6 class="text-muted text-uppercase small fw-bold mb-3">[ Delivery Charges ]</h6>
+
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span>Estimated Distance:</span>
+                            <span id="distDisplay" class="fw-bold">--</span>
+                        </div>
+
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span>Estimated Delivery Charge:</span>
+                            <span id="deliveryChargeDisplay" class="fw-bold">--</span>
+                        </div>
+
+                        <!-- Free Delivery Badge (Hidden by default, shown via JS) -->
+                        <div id="freeDeliveryBadge" class="alert alert-success d-flex align-items-center p-2 mb-2"
+                            style="display: none;">
+                            <i class="fas fa-check-circle me-2"></i>
+                            <div>
+                                <strong class="d-block">Free Delivery Applied</strong>
+                                <small>One-Time Offer (Within 3 KM)</small>
+                            </div>
+                        </div>
+
+                        <!-- Not Eligible Notice (Hidden by default, shown via JS) -->
+                        <div id="notEligibleNotice" class="alert alert-info d-flex align-items-center p-2 mb-2"
+                            style="display: none;">
+                            <i class="fas fa-info-circle me-2"></i>
+                            <div>
+                                <small id="notEligibleReason" class="text-muted"></small>
+                            </div>
+                        </div>
+
+                        <div class="alert alert-warning d-flex p-2 mt-3 mb-0 small">
+                            <i class="fas fa-exclamation-triangle mt-1 me-2 text-warning"></i>
+                            <div class="text-muted fst-italic">
+                                Distance and delivery charges shown are approximate. We will contact you soon to confirm
+                                final charges.
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Total -->
+                    <div class="border-top pt-3">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="h5 mb-0">Total Pay:</span>
+                            <span id="totalDisplay" class="h5 mb-0 fw-bold text-primary">₹{{ cart.total_price }}</span>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+<style>
+    .hover-lift:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 .5rem 1rem rgba(0, 0, 0, .15) !important;
+    }
+</style>
+
+<script
+    src="https://maps.googleapis.com/maps/api/js?key={{ GOOGLE_PLACES_API_KEY }}&libraries=places&callback=initAutocomplete"
+    async defer></script>
+
+<script>
+    const isFirstOrder = {{ is_first_order|yesno:"true,false"}};
+    const cartTotal = {{ cart.total_price }};
+    const SHOP_LAT = 22.7624113;
+    const SHOP_LNG = 75.8692938;
+
+    let autocomplete = null;
+    let selectedPlace = null;
+
+    // Initialize Google Places Autocomplete
+    function initAutocomplete() {
+        const input = document.getElementById('addressAutocomplete');
+
+        if (!input) {
+            console.error('Address autocomplete input not found');
+            return;
+        }
+
+        // Restrict to Indore, India
+        const options = {
+            componentRestrictions: { country: 'in' },
+            bounds: {
+                north: 23.0,
+                south: 22.5,
+                east: 76.2,
+                west: 75.5
+            },
+            strictBounds: true,
+            fields: ['formatted_address', 'geometry', 'address_components', 'name']
+        };
+
+        autocomplete = new google.maps.places.Autocomplete(input, options);
+        autocomplete.addListener('place_changed', onPlaceSelected);
+
+        console.log('Google Places Autocomplete initialized');
+    }
+
+    // When user selects a place from autocomplete
+    function onPlaceSelected() {
+        const place = autocomplete.getPlace();
+
+        if (!place.geometry) {
+            showMessage('error', 'Please select a valid address from the dropdown suggestions');
+            return;
+        }
+
+        selectedPlace = place;
+
+        const lat = place.geometry.location.lat();
+        const lng = place.geometry.location.lng();
+        const address = place.formatted_address;
+
+        // Extract pincode, area, city
+        let pincode = '';
+        let area = '';
+        let city = 'Indore';
+        let road = '';
+        let houseNumber = '';
+
+        place.address_components.forEach(component => {
+            if (component.types.includes('postal_code')) {
+                pincode = component.long_name;
+            }
+            if (component.types.includes('sublocality_level_1') ||
+                component.types.includes('sublocality')) {
+                area = component.long_name;
+            }
+            if (component.types.includes('locality')) {
+                city = component.long_name;
+            }
+            if (component.types.includes('route')) {
+                road = component.long_name;
+            }
+            if (component.types.includes('street_number')) {
+                houseNumber = component.long_name;
+            }
+        });
+
+        // Validate pincode (Indore: 452xxx or 453xxx)
+        if (pincode && !pincode.startsWith('452') && !pincode.startsWith('453')) {
+            showMessage('error', 'Service available only in Indore. Selected pincode: ' + pincode);
+            document.getElementById('addressAutocomplete').value = '';
+            return;
+        }
+
+        // Calculate distance and update UI
+        processLocation(lat, lng, address, area, city, pincode, road, houseNumber, 'PLACES');
+    }
+
+    // GPS Assist Button (matches appointment page)
+    document.addEventListener('DOMContentLoaded', function () {
+        const gpsBtn = document.getElementById('detectLocationBtn');
+        if (gpsBtn) {
+            gpsBtn.addEventListener('click', useGpsLocation);
+        }
+
+        // Hide pricing badges initially
+        document.getElementById('freeDeliveryBadge').style.display = 'none';
+        document.getElementById('notEligibleNotice').style.display = 'none';
+        updatePricingUI(0);
+    });
+
+    function useGpsLocation() {
+        if (!navigator.geolocation) {
+            showMessage('error', 'GPS not supported on this device. Please use the address search box above.');
+            return;
+        }
+
+        const btn = document.getElementById('detectLocationBtn');
+        const msgDiv = document.getElementById('locationMsg');
+
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Getting location...';
+        msgDiv.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Getting your current location...';
+        msgDiv.className = 'form-text text-info fw-bold';
+
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                const lat = position.coords.latitude;
+                const lng = position.coords.longitude;
+
+                // Reverse geocode using Google Geocoding API
+                const geocoder = new google.maps.Geocoder();
+                const latlng = { lat: lat, lng: lng };
+
+                geocoder.geocode({ location: latlng }, (results, status) => {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fas fa-crosshairs me-1"></i> Auto-fill Address using GPS';
+
+                    if (status === 'OK' && results[0]) {
+                        // Pre-fill autocomplete
+                        document.getElementById('addressAutocomplete').value = results[0].formatted_address;
+
+                        // Extract address components
+                        let pincode = '';
+                        let area = '';
+                        let city = 'Indore';
+                        let road = '';
+                        let houseNumber = '';
+
+                        results[0].address_components.forEach(component => {
+                            if (component.types.includes('postal_code')) {
+                                pincode = component.long_name;
+                            }
+                            if (component.types.includes('sublocality_level_1') ||
+                                component.types.includes('sublocality')) {
+                                area = component.long_name;
+                            }
+                            if (component.types.includes('locality')) {
+                                city = component.long_name;
+                            }
+                            if (component.types.includes('route')) {
+                                road = component.long_name;
+                            }
+                            if (component.types.includes('street_number')) {
+                                houseNumber = component.long_name;
+                            }
+                        });
+
+                        // Validate if location is in Indore service area
+                        if (pincode && !pincode.startsWith('452') && !pincode.startsWith('453')) {
+                            msgDiv.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Location outside Indore service area. Please use address search for Indore locations.';
+                            msgDiv.className = 'form-text text-danger fw-bold';
+                            return;
+                        }
+
+                        processLocation(lat, lng, results[0].formatted_address, area, city, pincode, road, houseNumber, 'GPS');
+                        msgDiv.innerHTML = '<i class="fas fa-check-circle"></i> Location detected successfully!';
+                        msgDiv.className = 'form-text text-success fw-bold';
+                    } else {
+                        msgDiv.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Could not determine address from GPS. Please use the search box above.';
+                        msgDiv.className = 'form-text text-warning fw-bold';
+                    }
+                });
+            },
+            (error) => {
+                const btn = document.getElementById('detectLocationBtn');
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-crosshairs me-1"></i> Auto-fill Address using GPS';
+
+                const msgDiv = document.getElementById('locationMsg');
+                msgDiv.innerHTML = '<i class="fas fa-info-circle"></i> GPS permission denied. Please use the address search box above.';
+                msgDiv.className = 'form-text text-muted fw-bold';
+            }
+        );
+    }
+
+    // Process location data and calculate distance
+    function processLocation(lat, lng, fullAddress, area, city, pincode, road, houseNumber, source) {
+        // Store in hidden fields
+        document.getElementById('id_latitude').value = lat;
+        document.getElementById('id_longitude').value = lng;
+
+        // Calculate distance
+        const distance = haversineDistance(SHOP_LAT, SHOP_LNG, lat, lng);
+        const distKm = parseFloat(distance.toFixed(2));
+        document.getElementById('id_distance_km').value = distKm;
+
+        console.log('Distance calculated:', distKm, 'km via', source);
+
+        // Auto-fill address fields
+        if (houseNumber) document.getElementById('id_house_number').value = houseNumber;
+        if (road) document.getElementById('id_address_line1').value = road;
+        if (area) document.getElementById('id_address_line2').value = area;
+        if (pincode) document.getElementById('id_pincode').value = pincode;
+        if (city) document.getElementById('id_city').value = city;
+
+        // Try to match area to dropdown
+        if (area) {
+            const areaSelect = document.getElementById('id_area');
+            let matched = false;
+
+            // Try exact match first
+            for (let i = 0; i < areaSelect.options.length; i++) {
+                if (areaSelect.options[i].value === area ||
+                    areaSelect.options[i].text.toLowerCase() === area.toLowerCase()) {
+                    areaSelect.selectedIndex = i;
+                    matched = true;
+                    break;
+                }
+            }
+
+            // If no exact match, try partial match
+            if (!matched) {
+                for (let i = 0; i < areaSelect.options.length; i++) {
+                    const optionText = areaSelect.options[i].text.toLowerCase();
+                    const areaLower = area.toLowerCase();
+                    if (optionText.includes(areaLower) || areaLower.includes(optionText)) {
+                        areaSelect.selectedIndex = i;
+                        matched = true;
+                        break;
+                    }
+                }
+            }
+
+            // If still no match, select "Other" and fill other_area
+            if (!matched) {
+                areaSelect.value = 'Other';
+                document.getElementById('id_other_area').value = area;
+                document.getElementById('id_other_area').style.display = 'block';
+            }
+        }
+
+        // Update pricing UI
+        updatePricingUI(distKm);
+    }
+
+    // Haversine distance calculation
+    function haversineDistance(lat1, lon1, lat2, lon2) {
+        const R = 6371; // Earth radius in km
+        const dLat = deg2rad(lat2 - lat1);
+        const dLon = deg2rad(lon2 - lon1);
+        const a =
+            Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+            Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) *
+            Math.sin(dLon / 2) * Math.sin(dLon / 2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return R * c;
+    }
+
+    function deg2rad(deg) {
+        return deg * (Math.PI / 180);
+    }
+
+    // Show user-friendly messages
+    function showMessage(type, message) {
+        const msgDiv = document.getElementById('locationMsg');
+        const icons = {
+            'success': 'fa-check-circle',
+            'error': 'fa-times-circle',
+            'warning': 'fa-exclamation-triangle',
+            'info': 'fa-spinner fa-spin'
+        };
+        const classes = {
+            'success': 'text-success',
+            'error': 'text-danger',
+            'warning': 'text-warning',
+            'info': 'text-info'
+        };
+
+        msgDiv.innerHTML = `<i class="fas ${icons[type] || 'fa-info-circle'}"></i> ${message}`;
+        msgDiv.className = `form-text small mt-2 fw-bold ${classes[type] || 'text-muted'}`;
+    }
+
+    // Toggle other area field
+    function toggleOtherArea(select) {
+        const otherInput = document.getElementById('id_other_area');
+        if (select.value === 'Other') {
+            otherInput.style.display = 'block';
+            otherInput.required = true;
+        } else {
+            otherInput.style.display = 'none';
+            otherInput.required = false;
+            otherInput.value = '';
+        }
+    }
+
+    // Update pricing UI
+    function updatePricingUI(distKm, isError = false) {
+        let charge = 0;
+        let total = parseFloat(cartTotal);
+
+        const distDisplay = document.getElementById('distDisplay');
+        const chargeDisplay = document.getElementById('deliveryChargeDisplay');
+        const totalDisplay = document.getElementById('totalDisplay');
+        const freeBadge = document.getElementById('freeDeliveryBadge');
+        const notEligibleNotice = document.getElementById('notEligibleNotice');
+        const notEligibleReason = document.getElementById('notEligibleReason');
+
+        // Hide all notices initially
+        freeBadge.style.display = 'none';
+        notEligibleNotice.style.display = 'none';
+
+        if (isError || !distKm) {
+            distDisplay.innerText = "--";
+            chargeDisplay.innerText = "To be confirmed";
+            totalDisplay.innerHTML = "₹" + total.toFixed(2) + " + <span class='small text-muted'>Delivery</span>";
+            return;
+        }
+
+        distDisplay.innerText = "~" + distKm + " KM";
+
+        // Delivery charge logic: 0-3: 50, 3-5: 70, 5-7: 80, >7: Out
+        if (distKm <= 3.0) {
+            charge = 50;
+        } else if (distKm <= 5.0) {
+            charge = 70;
+        } else if (distKm <= 7.0) {
+            charge = 80;
+        } else {
+            // Out of range
+            chargeDisplay.innerText = "Admin Review";
+            chargeDisplay.className = "fw-bold text-danger";
+            totalDisplay.innerText = "₹" + total.toFixed(2) + " + Custom Charges";
+            return;
+        }
+
+        // Apply Free Delivery Logic - ONLY if first order AND distance <= 3 KM
+        if (isFirstOrder && distKm <= 3.0) {
+            chargeDisplay.innerHTML = `<span class="text-secondary text-decoration-line-through me-2">₹${charge}</span> <span class="text-success fw-bold">FREE</span>`;
+            freeBadge.style.display = 'flex';
+            charge = 0;
+        } else {
+            chargeDisplay.innerText = "₹" + charge;
+            chargeDisplay.className = "fw-bold";
+
+            // Show reason for ineligibility
+            if (isFirstOrder && distKm > 3.0) {
+                notEligibleReason.innerText = "Free delivery is only available within 3 KM range.";
+                notEligibleNotice.style.display = 'flex';
+            } else if (!isFirstOrder) {
+                notEligibleReason.innerText = "You have already used your one-time free delivery offer.";
+                notEligibleNotice.style.display = 'flex';
+            }
+        }
+
+        total += charge;
+        totalDisplay.innerText = "₹" + total.toFixed(2);
+    }
+
+    // Form validation before submission
+    document.getElementById('checkoutForm').addEventListener('submit', function (e) {
+        const lat = document.getElementById('id_latitude').value;
+        const lng = document.getElementById('id_longitude').value;
+
+        if (!lat || !lng) {
+            e.preventDefault();
+            alert('Please select your delivery address using the search box above');
+            return false;
+        }
+    });
+</script>
 {% endblock %}

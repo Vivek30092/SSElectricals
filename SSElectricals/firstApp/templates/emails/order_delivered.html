@@ -1,0 +1,86 @@
+{% extends 'emails/base.html' %}
+
+{% block title %}Order Delivered - {{ business.name }}{% endblock %}
+
+{% block content %}
+<div class="greeting">
+    Hello {{ user.first_name|default:user.username }},
+</div>
+
+<div class="content-block">
+    <h2 style="color: #27ae60;">✓ Delivery Confirmed!</h2>
+    <p>We're happy to confirm that your order has been successfully delivered.</p>
+</div>
+
+<div class="info-box">
+    <h3>Order Summary</h3>
+    <div class="info-row">
+        <span class="info-label">Order ID:</span>
+        <span class="info-value">#{{ order.id }}</span>
+    </div>
+    <div class="info-row">
+        <span class="info-label">Delivered On:</span>
+        <span class="info-value">{{ order.updated_at|date:"F d, Y h:i A" }}</span>
+    </div>
+    <div class="info-row">
+        <span class="info-label">Total Amount:</span>
+        <span class="info-value">₹{{ order.grand_total }}</span>
+    </div>
+</div>
+
+<div class="content-block">
+    <h3>Delivered Products:</h3>
+    <table class="item-table">
+        <thead>
+            <tr>
+                <th>Product</th>
+                <th>Qty</th>
+                <th>Price</th>
+                <th>Review</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in items %}
+            <tr>
+                <td>{{ item.product.name }}</td>
+                <td>{{ item.quantity }}</td>
+                <td>₹{{ item.price }}</td>
+                <td><a href="{{ site_url }}/product/{{ item.product.id }}#review"
+                        style="color: #667eea; text-decoration: none; font-weight: bold;">Write Review</a></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<div
+    style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; border-radius: 8px; text-align: center; margin: 30px 0;">
+    <h2 style="color: #ffffff; margin-top: 0;">We'd Love Your Feedback!</h2>
+    <p style="color: #ffffff; opacity: 0.95; font-size: 16px;">
+        Your opinion matters to us. Please take a moment to rate the products you've received.
+    </p>
+    <a href="{{ review_url }}"
+        style="display: inline-block; background-color: #ffffff; color: #667eea; padding: 14px 32px; text-decoration: none; border-radius: 6px; font-weight: 600; margin-top: 15px;">
+        ⭐ Rate Your Products
+    </a>
+</div>
+
+<div class="content-block">
+    <h3>Why Your Review Matters:</h3>
+    <ul style="line-height: 2;">
+        <li>✓ Helps other customers make informed decisions</li>
+        <li>✓ Helps us improve our products and services</li>
+        <li>✓ Takes less than 2 minutes</li>
+        <li>✓ Your honest feedback is valuable to us</li>
+    </ul>
+</div>
+
+<div class="content-block">
+    <p><strong>Need Support?</strong></p>
+    <p>If you have any issues with your order or products, please contact us immediately. We're here to help!</p>
+</div>
+
+<div class="content-block">
+    <p>Thank you for shopping with {{ business.name }}. We look forward to serving you again!</p>
+</div>
+{% endblock %}

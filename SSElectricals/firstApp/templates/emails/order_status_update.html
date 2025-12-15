@@ -1,0 +1,122 @@
+{% extends 'emails/base.html' %}
+
+{% block title %}Order Status Update - {{ business.name }}{% endblock %}
+
+{% block content %}
+<div class="greeting">
+    Hello {{ user.first_name|default:user.username }},
+</div>
+
+<div class="content-block">
+    <p>We're writing to update you about your recent order.</p>
+</div>
+
+<div class="info-box">
+    <h3>Order Information</h3>
+    <div class="info-row">
+        <span class="info-label">Order ID:</span>
+        <span class="info-value">#{{ order.id }}</span>
+    </div>
+    <div class="info-row">
+        <span class="info-label">Order Date:</span>
+        <span class="info-value">{{ order.created_at|date:"F d, Y" }}</span>
+    </div>
+    <div class="info-row">
+        <span class="info-label">Status:</span>
+        <span class="info-value">
+            <span class="status-badge status-{{ order.status|lower }}">
+                {{ status }}
+            </span>
+        </span>
+    </div>
+</div>
+
+{% if order.status == 'Pending' %}
+<div class="content-block">
+    <p>Your order has been received and is currently being processed. We'll notify you once it's confirmed by our team.
+    </p>
+</div>
+{% elif order.status == 'Confirmed' %}
+<div class="content-block">
+    <p>Great news! Your order has been confirmed and will be prepared for delivery soon.</p>
+    <p><strong>Estimated Delivery:</strong> We aim to deliver within 2-3 business days.</p>
+</div>
+{% elif order.status == 'Out for Delivery' %}
+<div class="content-block">
+    <p>Your order is out for delivery! Our delivery partner will reach you soon.</p>
+    <p><strong>Note:</strong> You will receive a separate email with your delivery OTP. Please keep it ready for
+        verification.</p>
+</div>
+{% elif order.status == 'Delivered' %}
+<div class="content-block">
+    <p>Your order has been successfully delivered! We hope you're satisfied with your purchase.</p>
+</div>
+
+<div style="text-align: center;">
+    <a href="{{ business.website }}/orders/{{ order.id }}/review/" class="btn">
+        Rate Your Products
+    </a>
+</div>
+{% elif order.status == 'Cancelled' %}
+<div class="alert-box">
+    <strong>Order Cancelled</strong><br>
+    {% if order.cancellation_reason %}
+    Reason: {{ order.cancellation_reason }}
+    {% endif %}
+</div>
+<div class="content-block">
+    <p>If you have any questions about this cancellation, please feel free to contact us.</p>
+</div>
+{% endif %}
+
+<div class="info-box">
+    <h3>Order Summary</h3>
+    <table class="item-table">
+        <thead>
+            <tr>
+                <th>Product</th>
+                <th>Qty</th>
+                <th>Price</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in items %}
+            <tr>
+                <td>{{ item.product.name }}</td>
+                <td>{{ item.quantity }}</td>
+                <td>₹{{ item.price }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="info-row">
+        <span class="info-label">Subtotal:</span>
+        <span class="info-value">₹{{ order.total_price }}</span>
+    </div>
+    <div class="info-row">
+        <span class="info-label">Delivery Charge:</span>
+        <span class="info-value">
+            {% if order.free_delivery_applied %}
+            <span style="text-decoration: line-through; color: #999;">₹{{ order.delivery_charge }}</span>
+            <span style="color: #27ae60; font-weight: bold;"> FREE</span>
+            {% else %}
+            ₹{{ order.delivery_charge }}
+            {% endif %}
+        </span>
+    </div>
+    <div class="info-row" style="font-size: 18px; font-weight: bold;">
+        <span class="info-label">Grand Total:</span>
+        <span class="info-value">₹{{ order.grand_total }}</span>
+    </div>
+</div>
+
+<div class="content-block">
+    <p><strong>Delivery Address:</strong><br>
+        {{ order.address }}</p>
+</div>
+
+<div class="content-block">
+    <p>If you have any questions or concerns about your order, please don't hesitate to contact us.</p>
+</div>
+{% endblock %}

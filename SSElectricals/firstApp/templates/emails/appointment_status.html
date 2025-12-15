@@ -1,0 +1,109 @@
+{% extends 'emails/base.html' %}
+
+{% block title %}Service Appointment Update - {{ business.name }}{% endblock %}
+
+{% block content %}
+<div class="greeting">
+    Hello {{ customer_name }},
+</div>
+
+<div class="content-block">
+    <p>We're writing to update you about your service appointment.</p>
+</div>
+
+<div class="info-box">
+    <h3>Appointment Details</h3>
+    <div class="info-row">
+        <span class="info-label">Appointment ID:</span>
+        <span class="info-value">#{{ appointment.id }}</span>
+    </div>
+    <div class="info-row">
+        <span class="info-label">Service Type:</span>
+        <span class="info-value">{{ appointment.get_service_type_display }}</span>
+    </div>
+    <div class="info-row">
+        <span class="info-label">Scheduled Date:</span>
+        <span class="info-value">{{ appointment.date|date:"F d, Y" }}</span>
+    </div>
+    <div class="info-row">
+        <span class="info-label">Scheduled Time:</span>
+        <span class="info-value">{{ appointment.time|time:"h:i A" }}</span>
+    </div>
+    <div class="info-row">
+        <span class="info-label">Current Status:</span>
+        <span class="info-value">
+            <span class="status-badge status-{{ appointment.status|lower }}">
+                {{ status }}
+            </span>
+        </span>
+    </div>
+</div>
+
+{% if appointment.status == 'Pending' %}
+<div class="content-block">
+    <p>Your service request has been received and is currently being reviewed by our team.</p>
+    <p>We'll contact you shortly to confirm the appointment details.</p>
+</div>
+{% elif appointment.status == 'Approved' %}
+<div class="content-block">
+    <p>Great news! Your service appointment has been confirmed.</p>
+    <p><strong>Our technician will visit you on {{ appointment.date|date:"F d, Y" }} at {{ appointment.time|time:"h:i A"
+            }}</strong></p>
+</div>
+
+<div class="alert-box">
+    <strong>Please Note:</strong><br>
+    • Ensure someone is available at the scheduled time<br>
+    • Keep the service area accessible<br>
+    • Our technician will carry a valid ID card
+</div>
+{% elif appointment.status == 'Completed' %}
+<div class="content-block">
+    <p>Your service has been successfully completed! We hope you're satisfied with our work.</p>
+</div>
+{% elif appointment.status == 'Cancelled' %}
+<div class="alert-box">
+    <strong>Appointment Cancelled</strong><br>
+    {% if appointment.cancellation_reason %}
+    Reason: {{ appointment.cancellation_reason }}
+    {% endif %}
+</div>
+<div class="content-block">
+    <p>If you'd like to reschedule, please feel free to book another appointment or contact us.</p>
+</div>
+{% endif %}
+
+{% if appointment.visiting_charge or appointment.extra_charge %}
+<div class="info-box">
+    <h3>Service Charges</h3>
+    {% if appointment.visiting_charge %}
+    <div class="info-row">
+        <span class="info-label">Visiting Charge:</span>
+        <span class="info-value">₹{{ appointment.visiting_charge }}</span>
+    </div>
+    {% endif %}
+    {% if appointment.extra_charge %}
+    <div class="info-row">
+        <span class="info-label">Additional Charge:</span>
+        <span class="info-value">₹{{ appointment.extra_charge }}</span>
+    </div>
+    {% endif %}
+    <div class="info-row" style="font-size: 18px; font-weight: bold;">
+        <span class="info-label">Total Charge:</span>
+        <span class="info-value">₹{{ appointment.total_charge }}</span>
+    </div>
+</div>
+{% endif %}
+
+<div class="content-block">
+    <p><strong>Service Address:</strong><br>
+        {{ appointment.house_number }}, {{ appointment.address_line1 }}<br>
+        {% if appointment.address_line2 %}{{ appointment.address_line2 }}<br>{% endif %}
+        {% if appointment.landmark %}Near {{ appointment.landmark }}<br>{% endif %}
+        {{ appointment.city }} - {{ appointment.pincode }}</p>
+</div>
+
+<div class="content-block">
+    <p>If you have any questions or need to make changes, please contact us at {{ business.phone }}.</p>
+</div>
+{% endblock %}

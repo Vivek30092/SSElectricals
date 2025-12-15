@@ -19,6 +19,7 @@
                         <th>Category</th>
                         <th>Price</th>
                         <th>Stock</th>
+                        <th>Trending</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
@@ -53,6 +54,13 @@
                             <span class="badge bg-warning text-dark">{{ product.stock_quantity }}</span>
                             {% else %}
                             <span class="badge bg-danger">Out of Stock</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if product.is_trending %}
+                            <span class="badge bg-primary"><i class="fas fa-star text-warning"></i> Yes</span>
+                            {% else %}
+                            <span class="badge bg-secondary">No</span>
                             {% endif %}
                         </td>
                         <td>

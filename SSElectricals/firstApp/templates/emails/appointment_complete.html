@@ -1,0 +1,72 @@
+{% extends 'emails/base.html' %}
+
+{% block title %}Service Completed - {{ business.name }}{% endblock %}
+
+{% block content %}
+<div class="greeting">
+    Hello {{ customer_name }},
+</div>
+
+<div class="content-block">
+    <h2 style="color: #27ae60;">✓ Service Completed Successfully!</h2>
+    <p>We're pleased to inform you that your service has been completed.</p>
+</div>
+
+<div class="info-box">
+    <h3>Service Summary</h3>
+    <div class="info-row">
+        <span class="info-label">Appointment ID:</span>
+        <span class="info-value">#{{ appointment.id }}</span>
+    </div>
+    <div class="info-row">
+        <span class="info-label">Service Type:</span>
+        <span class="info-value">{{ appointment.get_service_type_display }}</span>
+    </div>
+    <div class="info-row">
+        <span class="info-label">Completed On:</span>
+        <span class="info-value">{{ appointment.date|date:"F d, Y" }}</span>
+    </div>
+    <div class="info-row">
+        <span class="info-label">Total Charge:</span>
+        <span class="info-value">₹{{ appointment.total_charge }}</span>
+    </div>
+</div>
+
+<div
+    style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; border-radius: 8px; text-align: center; margin: 30px 0;">
+    <h2 style="color: #ffffff; margin-top: 0;">How Was Our Service?</h2>
+    <p style="color: #ffffff; opacity: 0.95; font-size: 16px;">
+        Your feedback is invaluable to us. Please take a moment to share your experience.
+    </p>
+    <a href="{{ review_url }}"
+        style="display: inline-block; background-color: #ffffff; color: #667eea; padding: 14px 32px; text-decoration: none; border-radius: 6px; font-weight: 600; margin-top: 15px;">
+        ⭐ Leave a Review
+    </a>
+</div>
+
+<div class="content-block">
+    <h3>What to Share in Your Review:</h3>
+    <ul style="line-height: 2;">
+        <li>✓ Quality of work performed</li>
+        <li>✓ Professionalism of our technician</li>
+        <li>✓ Timeliness and punctuality</li>
+        <li>✓ Overall satisfaction</li>
+    </ul>
+</div>
+
+<div class="content-block">
+    <p><strong>Need Additional Support?</strong></p>
+    <p>If you experience any issues with the completed service, please don't hesitate to contact us. We stand behind our
+        work!</p>
+</div>
+
+<div class="info-box">
+    <h3>Warranty Information</h3>
+    <p>All our services come with a warranty period. Please keep this email for your records.</p>
+    <p><strong>Warranty Period:</strong> As discussed with the technician</p>
+</div>
+
+<div class="content-block">
+    <p>Thank you for choosing {{ business.name }} for your electrical needs. We look forward to serving you again!</p>
+</div>
+{% endblock %}
