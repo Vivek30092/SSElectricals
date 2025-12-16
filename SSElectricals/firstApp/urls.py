@@ -102,6 +102,9 @@ urlpatterns = [
     path('shop-admin/appointments/update/<int:pk>/', admin_views.admin_appointment_update, name='admin_appointment_update'),
     path('shop-admin/appointments/delete/<int:pk>/', admin_views.admin_appointment_delete, name='admin_appointment_delete'),
 
+    # Admin Analytics URLs
+    path('shop-admin/analytics/', admin_views.admin_analytics, name='admin_analytics'),
+
     # Admin User Management
     path('shop-admin/users/', admin_views.admin_user_list, name='admin_user_list'),
     path('shop-admin/users/<int:user_id>/', admin_views.admin_user_detail, name='admin_user_detail'),

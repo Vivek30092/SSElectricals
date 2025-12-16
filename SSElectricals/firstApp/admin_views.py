@@ -168,6 +168,477 @@ def admin_dashboard(request):
     }
     return render(request, 'admin/admin_dashboard.html', context)
 
+@staff_required
+def admin_analytics(request):
+    """
+    Advanced Analytics Dashboard
+    - Multi-level time aggregation (Daily/Monthly/Quarterly/Half-Yearly/Yearly)
+    - Min/Max detection
+    - Growth % calculations
+    - Export functionality
+    """
+    from django.db.models import Sum, Avg, Count, Q, Min, Max
+    from django.db.models.functions import TruncMonth, TruncDate, TruncQuarter, TruncYear
+    from django.http import HttpResponse
+    from django.template.loader import render_to_string
+    import json
+    from datetime import datetime, timedelta
+    from django.utils import timezone
+    import calendar
+    
+    # ==================== FILTERS ====================
+    start_date_str = request.GET.get('start_date')
+    end_date_str = request.GET.get('end_date')
+    month = request.GET.get('month')
+    time_view = request.GET.get('time_view', 'monthly')  # daily, monthly, quarterly, half_yearly, yearly
+    export_format = request.GET.get('export')  # pdf, excel, csv, png
+    
+    # Parse dates
+    start_date = None
+    end_date = None
+    
+    if start_date_str:
+        try:
+            start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+        except:
+            pass
+    
+    if end_date_str:
+        try:
+            end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+        except:
+            pass
+    
+    # Default: Last 12 months
+    if not start_date and not end_date and not month:
+        end_date = timezone.now().date()
+        start_date = end_date - timedelta(days=365)
+    
+    # Build querysets
+    sales_qs = DailySales.objects.all()
+    expenses_qs = DailyExpenditure.objects.all()
+    
+    if start_date:
+        sales_qs = sales_qs.filter(date__gte=start_date)
+        expenses_qs = expenses_qs.filter(date__gte=start_date)
+    if end_date:
+        sales_qs = sales_qs.filter(date__lte=end_date)
+        expenses_qs = expenses_qs.filter(date__lte=end_date)
+    if month:
+        year, mon = month.split('-')
+        sales_qs = sales_qs.filter(date__year=year, date__month=mon)
+        expenses_qs = expenses_qs.filter(date__year=year, date__month=mon)
+    
+    # ==================== BASIC KPIs ====================
+    sales_totals = sales_qs.aggregate(
+        total_sales=Sum('total_sales'),
+        total_online=Sum('online_received'),
+        total_cash=Sum('cash_received'),
+        total_labor=Sum('labor_charge'),
+        total_delivery=Sum('delivery_charge'),
+        avg_sales=Avg('total_sales'),
+        min_sale=Min('total_sales'),
+        max_sale=Max('total_sales')
+    )
+    
+    total_sales = float(sales_totals['total_sales'] or 0)
+    avg_sales = float(sales_totals['avg_sales'] or 0)
+    total_online_sales = float(sales_totals['total_online'] or 0)
+    total_cash_sales = float(sales_totals['total_cash'] or 0)
+    total_labor = float(sales_totals['total_labor'] or 0)
+    total_delivery = float(sales_totals['total_delivery'] or 0)
+    
+    online_pct = (total_online_sales / total_sales * 100) if total_sales > 0 else 0
+    cash_pct = (total_cash_sales / total_sales * 100) if total_sales > 0 else 0
+    
+    expense_totals = expenses_qs.aggregate(
+        total_expense=Sum('total'),
+        total_online_exp=Sum('online_amount'),
+        total_cash_exp=Sum('cash_amount'),
+        avg_expense=Avg('total'),
+        min_expense=Min('total'),
+        max_expense=Max('total')
+    )
+    
+    total_expense = float(expense_totals['total_expense'] or 0)
+    avg_expense = float(expense_totals['avg_expense'] or 0)
+    total_online_exp = float(expense_totals['total_online_exp'] or 0)
+    total_cash_exp = float(expense_totals['total_cash_exp'] or 0)
+    
+    online_exp_pct = (total_online_exp / total_expense * 100) if total_expense > 0 else 0
+    cash_exp_pct = (total_cash_exp / total_expense * 100) if total_expense > 0 else 0
+    
+    # ==================== MIN/MAX DETECTION ====================
+    # Find min/max sales days
+    min_sale_day = sales_qs.filter(total_sales=sales_totals['min_sale']).first()
+    max_sale_day = sales_qs.filter(total_sales=sales_totals['max_sale']).first()
+    
+    # Find min/max expense days
+    min_expense_day = expenses_qs.filter(total=expense_totals['min_expense']).first()
+    max_expense_day = expenses_qs.filter(total=expense_totals['max_expense']).first()
+    
+    # ==================== TIME-BASED AGGREGATIONS ====================
+    
+    # MONTHLY DATA
+    monthly_sales = sales_qs.annotate(month=TruncMonth('date')).values('month').annotate(
+        total=Sum('total_sales'),
+        online=Sum('online_received'),
+        cash=Sum('cash_received'),
+        labor=Sum('labor_charge'),
+        delivery=Sum('delivery_charge')
+    ).order_by('month')
+    
+    monthly_sales_list = list(monthly_sales)
+    monthly_sales_labels = [x['month'].strftime('%B %Y') for x in monthly_sales_list]
+    monthly_sales_values = [float(x['total'] or 0) for x in monthly_sales_list]
+    
+    # Calculate month-on-month growth
+    monthly_growth = []
+    for i in range(len(monthly_sales_values)):
+        if i == 0:
+            monthly_growth.append(0)
+        else:
+            prev = monthly_sales_values[i-1]
+            curr = monthly_sales_values[i]
+            growth = ((curr - prev) / prev * 100) if prev > 0 else 0
+            monthly_growth.append(round(growth, 2))
+    
+    monthly_expenses = expenses_qs.annotate(month=TruncMonth('date')).values('month').annotate(
+        total=Sum('total'),
+        online=Sum('online_amount'),
+        cash=Sum('cash_amount')
+    ).order_by('month')
+    
+    monthly_expense_list = list(monthly_expenses)
+    monthly_expense_labels = [x['month'].strftime('%B %Y') for x in monthly_expense_list]
+    monthly_expense_values = [float(x['total'] or 0) for x in monthly_expense_list]
+    
+    # Monthly averages
+    monthly_avg_sales = sum(monthly_sales_values) / len(monthly_sales_values) if monthly_sales_values else 0
+    monthly_avg_expense = sum(monthly_expense_values) / len(monthly_expense_values) if monthly_expense_values else 0
+    
+    # Find min/max months
+    if monthly_sales_list:
+        max_month_data = max(monthly_sales_list, key=lambda x: x['total'] or 0)
+        min_month_data = min(monthly_sales_list, key=lambda x: x['total'] or 0)
+        max_sales_month = max_month_data['month'].strftime('%B %Y')
+        max_sales_month_value = float(max_month_data['total'] or 0)
+        min_sales_month = min_month_data['month'].strftime('%B %Y')
+        min_sales_month_value = float(min_month_data['total'] or 0)
+    else:
+        max_sales_month = min_sales_month = "N/A"
+        max_sales_month_value = min_sales_month_value = 0
+    
+    # QUARTERLY DATA
+    quarterly_sales = sales_qs.annotate(quarter=TruncQuarter('date')).values('quarter').annotate(
+        total=Sum('total_sales')
+    ).order_by('quarter')
+    
+    quarterly_sales_list = list(quarterly_sales)
+    quarterly_labels = []
+    quarterly_values = []
+    
+    for q in quarterly_sales_list:
+        quarter_num = (q['quarter'].month - 1) // 3 + 1
+        label = f"Q{quarter_num} {q['quarter'].year}"
+        quarterly_labels.append(label)
+        quarterly_values.append(float(q['total'] or 0))
+    
+    # Quarter-on-quarter growth
+    quarterly_growth = []
+    for i in range(len(quarterly_values)):
+        if i == 0:
+            quarterly_growth.append(0)
+        else:
+            prev = quarterly_values[i-1]
+            curr = quarterly_values[i]
+            growth = ((curr - prev) / prev * 100) if prev > 0 else 0
+            quarterly_growth.append(round(growth, 2))
+    
+    quarterly_avg_sales = sum(quarterly_values) / len(quarterly_values) if quarterly_values else 0
+    
+    # HALF-YEARLY DATA
+    half_yearly_sales = []
+    yearly_data = sales_qs.annotate(year=TruncYear('date')).values('year')
+    
+    for year_data in yearly_data.distinct():
+        year = year_data['year'].year
+        
+        # First half (Jan-Jun)
+        h1_sales = sales_qs.filter(date__year=year, date__month__lte=6).aggregate(
+            total=Sum('total_sales')
+        )['total'] or 0
+        
+        # Second half (Jul-Dec)
+        h2_sales = sales_qs.filter(date__year=year, date__month__gte=7).aggregate(
+            total=Sum('total_sales')
+        )['total'] or 0
+        
+        half_yearly_sales.append({
+            'year': year,
+            'h1': float(h1_sales),
+            'h2': float(h2_sales),
+            'h1_label': f'H1 {year}',
+            'h2_label': f'H2 {year}'
+        })
+    
+    # YEARLY DATA
+    yearly_sales = sales_qs.annotate(year=TruncYear('date')).values('year').annotate(
+        total=Sum('total_sales')
+    ).order_by('year')
+    
+    yearly_sales_list = list(yearly_sales)
+    yearly_labels = [str(x['year'].year) for x in yearly_sales_list]
+    yearly_values = [float(x['total'] or 0) for x in yearly_sales_list]
+    
+    # Year-on-year growth
+    yearly_growth = []
+    for i in range(len(yearly_values)):
+        if i == 0:
+            yearly_growth.append(0)
+        else:
+            prev = yearly_values[i-1]
+            curr = yearly_values[i]
+            growth = ((curr - prev) / prev * 100) if prev > 0 else 0
+            yearly_growth.append(round(growth, 2))
+    
+    yearly_avg_sales = sum(yearly_values) / len(yearly_values) if yearly_values else 0
+    
+    # ==================== DAILY TRENDS ====================
+    daily_sales = sales_qs.values('date').annotate(
+        sales=Sum('total_sales'),
+        online=Sum('online_received'),
+        cash=Sum('cash_received')
+    ).order_by('date')
+    
+    sales_dates = [x['date'].strftime('%Y-%m-%d') for x in daily_sales]
+    sales_values = [float(x['sales'] or 0) for x in daily_sales]
+    daily_avg_sales = sum(sales_values) / len(sales_values) if sales_values else 0
+    
+    daily_expenses = expenses_qs.values('date').annotate(
+        expense=Sum('total')
+    ).order_by('date')
+    
+    expense_dates = [x['date'].strftime('%Y-%m-%d') for x in daily_expenses]
+    expense_values = [float(x['expense'] or 0) for x in daily_expenses]
+    
+    # ==================== WEEKDAY PERFORMANCE ====================
+    weekday_sales = sales_qs.values('day').annotate(
+        avg_sales=Avg('total_sales')
+    ).order_by('day')
+    
+    weekday_order = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+    weekday_dict = {x['day']: float(x['avg_sales'] or 0) for x in weekday_sales}
+    weekday_labels = weekday_order
+    weekday_values = [weekday_dict.get(day, 0) for day in weekday_order]
+    
+    # ==================== BEST/WORST PERIODS ====================
+    # Auto-detect best and worst performing months
+    if monthly_sales_list:
+        best_month = max(monthly_sales_list, key=lambda x: x['total'] or 0)
+        worst_month = min(monthly_sales_list, key=lambda x: x['total'] or 0)
+        
+        best_month_info = {
+            'period': best_month['month'].strftime('%B %Y'),
+            'value': float(best_month['total'] or 0),
+            'type': 'Month'
+        }
+        
+        worst_month_info = {
+            'period': worst_month['month'].strftime('%B %Y'),
+            'value': float(worst_month['total'] or 0),
+            'type': 'Month'
+        }
+    else:
+        best_month_info = worst_month_info = None
+    
+    # ==================== NET CONTRIBUTION ====================
+    net_contribution = total_sales - total_labor - total_delivery - total_expense
+    
+    # Performance color  
+    if net_contribution > total_sales * 0.3:
+        contribution_color = 'success'
+    elif net_contribution > 0:
+        contribution_color = 'warning'
+    else:
+        contribution_color = 'danger'
+    
+    # ==================== EXPORT HANDLING ====================
+    if export_format:
+        return handle_analytics_export(
+            export_format,
+            {
+                'sales': monthly_sales_list,
+                'expenses': monthly_expense_list,
+                'start_date': start_date,
+                'end_date': end_date,
+                'total_sales': total_sales,
+                'total_expense': total_expense,
+                'net_contribution': net_contribution
+            }
+        )
+    
+    # ==================== CONTEXT ====================
+    context = {
+        # Filters
+        'start_date': start_date,
+        'end_date': end_date,
+        'month': month,
+        'time_view': time_view,
+        
+        # Basic KPIs
+        'total_sales': total_sales,
+        'avg_sales': avg_sales,
+        'total_online_sales': total_online_sales,
+        'total_cash_sales': total_cash_sales,
+        'online_pct': online_pct,
+        'cash_pct': cash_pct,
+        'total_labor': total_labor,
+        'total_delivery': total_delivery,
+        'total_expense': total_expense,
+        'avg_expense': avg_expense,
+        'total_online_exp': total_online_exp,
+        'total_cash_exp': total_cash_exp,
+        'online_exp_pct': online_exp_pct,
+        'cash_exp_pct': cash_exp_pct,
+        
+        # Min/Max Detection
+        'min_sale_day': min_sale_day,
+        'max_sale_day': max_sale_day,
+        'min_expense_day': min_expense_day,
+        'max_expense_day': max_expense_day,
+        'min_sales_month': min_sales_month,
+        'min_sales_month_value': min_sales_month_value,
+        'max_sales_month': max_sales_month,
+        'max_sales_month_value': max_sales_month_value,
+        
+        # Averages
+        'daily_avg_sales': daily_avg_sales,
+        'monthly_avg_sales': monthly_avg_sales,
+        'quarterly_avg_sales': quarterly_avg_sales,
+        'yearly_avg_sales': yearly_avg_sales,
+        'monthly_avg_expense': monthly_avg_expense,
+        
+        # Growth Rates
+        'monthly_growth_json': json.dumps(monthly_growth),
+        'quarterly_growth_json': json.dumps(quarterly_growth),
+        'yearly_growth_json': json.dumps(yearly_growth),
+        
+        # Time-based data
+        'monthly_sales_labels_json': json.dumps(monthly_sales_labels),
+        'monthly_sales_values_json': json.dumps(monthly_sales_values),
+        'monthly_expense_labels_json': json.dumps(monthly_expense_labels),
+        'monthly_expense_values_json': json.dumps(monthly_expense_values),
+        
+        'quarterly_labels_json': json.dumps(quarterly_labels),
+        'quarterly_values_json': json.dumps(quarterly_values),
+        
+        'yearly_labels_json': json.dumps(yearly_labels),
+        'yearly_values_json': json.dumps(yearly_values),
+        
+        'half_yearly_sales': half_yearly_sales,
+        
+        # Daily data
+        'sales_dates_json': json.dumps(sales_dates),
+        'sales_values_json': json.dumps(sales_values),
+        'expense_dates_json': json.dumps(expense_dates),
+        'expense_values_json': json.dumps(expense_values),
+        
+        # Weekday
+        'weekday_labels_json': json.dumps(weekday_labels),
+        'weekday_values_json': json.dumps(weekday_values),
+        
+        # Best/Worst
+        'best_month_info': best_month_info,
+        'worst_month_info': worst_month_info,
+        
+        # Combined
+        'net_contribution': net_contribution,
+        'contribution_color': contribution_color,
+    }
+    
+    return render(request, 'admin/admin_analytics.html', context)
+
+
+def handle_analytics_export(format_type, data):
+    """
+    Handle export in PDF, Excel, CSV, or PNG format
+    """
+    if format_type == 'csv':
+        import csv
+        from io import StringIO
+        
+        output = StringIO()
+        writer = csv.writer(output)
+        writer.writerow(['Period', 'Sales', 'Expenses', 'Net'])
+        
+        for i, sale in enumerate(data['sales']):
+            expense = data['expenses'][i] if i < len(data['expenses']) else {'total': 0}
+            writer.writerow([
+                sale['month'].strftime('%Y-%m'),
+                sale['total'],
+                expense['total'],
+                sale['total'] - expense['total']
+            ])
+        
+        response = HttpResponse(output.getvalue(), content_type='text/csv')
+        response['Content-Disposition'] = f'attachment; filename="analytics_{timezone.now().strftime("%Y%m%d")}.csv"'
+        return response
+    
+    elif format_type == 'excel':
+        try:
+            import openpyxl
+            from openpyxl.utils import get_column_letter
+            from io import BytesIO
+            
+            wb = openpyxl.Workbook()
+            ws = wb.active
+            ws.title = "Analytics Report"
+            
+            # Headers
+            ws['A1'] = 'Analytics Report'
+            ws['A2'] = f'Generated: {timezone.now().strftime("%Y-%m-%d %H:%M")}'
+            ws['A3'] = f'Period: {data["start_date"]} to {data["end_date"]}'
+            
+            # Data headers
+            ws['A5'] = 'Month'
+            ws['B5'] = 'Sales'
+            ws['C5'] = 'Expenses'
+            ws['D5'] = 'Net Contribution'
+            
+            row = 6
+            for i, sale in enumerate(data['sales']):
+                expense = data['expenses'][i] if i < len(data['expenses']) else {'total': 0}
+                ws[f'A{row}'] = sale['month'].strftime('%B %Y')
+                ws[f'B{row}'] = float(sale['total'])
+                ws[f'C{row}'] = float(expense['total'])
+                ws[f'D{row}'] = float(sale['total']) - float(expense['total'])
+                row += 1
+            
+            # Summary
+            ws[f'A{row+1}'] = 'TOTAL'
+            ws[f'B{row+1}'] = data['total_sales']
+            ws[f'C{row+1}'] = data['total_expense']
+            ws[f'D{row+1}'] = data['net_contribution']
+            
+            output = BytesIO()
+            wb.save(output)
+            output.seek(0)
+            
+            response = HttpResponse(
+                output.getvalue(),
+                content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            )
+            response['Content-Disposition'] = f'attachment; filename="analytics_{timezone.now().strftime("%Y%m%d")}.xlsx"'
+            return response
+        except ImportError:
+            # Fallback to CSV if openpyxl not installed
+            return handle_analytics_export('csv', data)
+    
+    else:
+        # Default to CSV
+        return handle_analytics_export('csv', data)
+
 @staff_member_required
 def admin_activity_log_view(request):
     logs = AdminActivityLog.objects.select_related('admin').all().order_by('-timestamp')
