@@ -58,6 +58,20 @@
 
                                     <h5 class="mb-3 mt-4 text-primary border-bottom pb-2"><i
                                             class="fas fa-map-marker-alt me-2"></i>Location</h5>
+
+                                    <!-- Google Places Autocomplete Search (Primary Method) -->
+                                    <div class="mb-3">
+                                        <label class="form-label fw-semibold">Search Your Address <span
+                                                class="text-danger">*</span></label>
+                                        <input type="text" id="addressAutocomplete" class="form-control form-control-lg"
+                                            placeholder="Start typing your address in Indore..." autocomplete="off" />
+                                        <small class="form-text text-muted d-block mt-1">
+                                            <i class="fas fa-info-circle"></i> Select your address from the dropdown for
+                                            accurate distance calculation
+                                        </small>
+                                    </div>
+
+                                    <!-- Optional GPS Assist Button -->
                                     <div class="mb-3">
                                         <button class="btn btn-outline-primary w-100 mb-2" type="button"
                                             id="detectLocationBtn">
@@ -65,6 +79,35 @@
                                         </button>
                                         <div id="locationMsg" class="form-text small"></div>
                                     </div>
+
+                                    <!-- Interactive Map for Location Confirmation -->
+                                    <div class="mb-3" id="mapSection" style="display: none;">
+                                        <label class="form-label fw-semibold">
+                                            <i class="fas fa-map me-1"></i> Confirm Your Location
+                                        </label>
+                                        <div id="mapContainer"
+                                            style="height: 300px; border-radius: 8px; overflow: hidden; border: 2px solid #dee2e6;">
+                                            <!--Google Map loads here -->
+                                        </div>
+                                        <small class="form-text text-muted d-block mt-1">
+                                            <i class="fas fa-hand-pointer"></i> Drag the red marker to adjust your exact
+                                            location
+                                        </small>
+                                    </div>
+
+                                    <!-- Address Verification Status -->
+                                    <div id="verificationStatus" class="alert alert-info mb-3" style="display:none;">
+                                        <h6 class="mb-2">
+                                            <i class="fas fa-shield-alt me-1"></i> Address Verification
+                                        </h6>
+                                        <div class="progress mb-2" style="height: 24px;">
+                                            <div id="confidenceBar"
+                                                class="progress-bar progress-bar-striped progress-bar-animated"
+                                                role="progressbar" style="width: 0%;"></div>
+                                        </div>
+                                        <small id="verificationDetails" class="d-block"></small>
+                                    </div>
+
                                     <div class="row g-2">
                                         <div class="col-4">
                                             <label for="{{ form.house_number.id_for_label }}"
@@ -191,7 +234,103 @@
     }
 </style>
 
+<script
+    src="https://maps.googleapis.com/maps/api/js?key={{ GOOGLE_PLACES_API_KEY }}&libraries=places&callback=initAutocomplete"
+    async defer></script>
+
 <script>
+    const SHOP_LAT = 22.75981523457073;
+    const SHOP_LNG = 75.86526508628523;
+
+    let autocomplete = null;
+    let selectedPlace = null;
+    let map = null;
+    let marker = null;
+    let shopMarker = null;
+    let accuracyCircle = null;
+    let currentGpsAccuracy = null;
+    let distanceMatrixService = null;
+
+    // Initialize Google Places Autocomplete
+    function initAutocomplete() {
+        const input = document.getElementById('addressAutocomplete');
+
+        if (!input) {
+            console.error('Address autocomplete input not found');
+            return;
+        }
+
+        // Restrict to Indore, India
+        const options = {
+            componentRestrictions: { country: 'in' },
+            bounds: {
+                north: 23.0,
+                south: 22.5,
+                east: 76.2,
+                west: 75.5
+            },
+            strictBounds: true,
+            fields: ['formatted_address', 'geometry', 'address_components', 'name']
+        };
+
+        autocomplete = new google.maps.places.Autocomplete(input, options);
+        autocomplete.addListener('place_changed', onPlaceSelected);
+
+        console.log('Google Places Autocomplete initialized');
+    }
+
+    // When user selects a place from autocomplete
+    function onPlaceSelected() {
+        const place = autocomplete.getPlace();
+
+        if (!place.geometry) {
+            showMessage('error', 'Please select a valid address from the dropdown suggestions');
+            return;
+        }
+
+        selectedPlace = place;
+
+        const lat = place.geometry.location.lat();
+        const lng = place.geometry.location.lng();
+        const address = place.formatted_address;
+
+        // Extract pincode, area, city
+        let pincode = '';
+        let area = '';
+        let city = 'Indore';
+        let road = '';
+        let houseNumber = '';
+
+        place.address_components.forEach(component => {
+            if (component.types.includes('postal_code')) {
+                pincode = component.long_name;
+            }
+            if (component.types.includes('sublocality_level_1') ||
+                component.types.includes('sublocality')) {
+                area = component.long_name;
+            }
+            if (component.types.includes('locality')) {
+                city = component.long_name;
+            }
+            if (component.types.includes('route')) {
+                road = component.long_name;
+            }
+            if (component.types.includes('street_number')) {
+                houseNumber = component.long_name;
+            }
+        });
+
+        // Validate pincode (Indore: 452xxx or 453xxx)
+        if (pincode && !pincode.startsWith('452') && !pincode.startsWith('453')) {
+            showMessage('error', 'Service available only in Indore. Selected pincode: ' + pincode);
+            document.getElementById('addressAutocomplete').value = '';
+            return;
+        }
+
+        // Calculate distance and update UI
+        processLocation(lat, lng, address, area, city, pincode, road, houseNumber, 'PLACES');
+    }
+
     // Simple client-side validation for date (disable past dates)
     document.addEventListener('DOMContentLoaded', function () {
         var today = new Date().toISOString().split('T')[0];
@@ -218,97 +357,417 @@
         }
     });
 
-    document.getElementById('detectLocationBtn').addEventListener('click', function () {
-        var msgDiv = document.getElementById('locationMsg');
-        var btn = this;
+    // GPS Assist Button
+    document.getElementById('detectLocationBtn').addEventListener('click', useGpsLocation);
+
+    function useGpsLocation() {
+        if (!navigator.geolocation) {
+            showMessage('error', 'GPS not supported on this device. Please use the address search box above.');
+            return;
+        }
+
+        const btn = document.getElementById('detectLocationBtn');
+        const msgDiv = document.getElementById('locationMsg');
 
         if (btn.disabled) return;
 
-        msgDiv.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Detecting location...';
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Getting high-precision location...';
+        msgDiv.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Requesting high-accuracy GPS...';
         msgDiv.className = 'form-text text-info fw-bold';
 
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(function (position) {
-                var lat = position.coords.latitude;
-                var lng = position.coords.longitude;
+        const gpsOptions = {
+            enableHighAccuracy: true,  // Request GPS (not WiFi/cell tower)
+            timeout: 10000,            // 10 seconds timeout
+            maximumAge: 0              // No cached location
+        };
 
-                // Shop Location: Shiv Shakti Electricals, Indore (Vijay Nagar)
-                var shopLat = 22.75981523457073;
-                var shopLng = 75.86526508628523;
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                const lat = position.coords.latitude;
+                const lng = position.coords.longitude;
+                const accuracy = position.coords.accuracy; // meters
 
-                // Calculate distance (Haversine formula)
-                var R = 6371; // Radius of the earth in km
-                var dLat = deg2rad(lat - shopLat);
-                var dLon = deg2rad(lng - shopLng);
-                var a =
-                    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-                    Math.cos(deg2rad(shopLat)) * Math.cos(deg2rad(lat)) *
-                    Math.sin(dLon / 2) * Math.sin(dLon / 2)
-                    ;
-                var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-                var d = R * c; // Distance in km
+                // Store GPS accuracy
+                currentGpsAccuracy = accuracy;
 
-                console.log("Distance: " + d.toFixed(2) + " km");
-
-                // Pricing Logic
-                var charge = 0;
-                var message = "";
-                var isOutOfRange = false;
-
-                if (d <= 3) {
-                    charge = 200;
-                    message = "Distance: " + d.toFixed(1) + " KM (Within 3 KM)";
-                } else if (d > 3 && d <= 7) {
-                    charge = 250;
-                    message = "Distance: " + d.toFixed(1) + " KM (3-7 KM Range)";
+                // Show accuracy feedback
+                if (accuracy > 100) {
+                    showMessage('warning', `GPS accuracy: ±${Math.round(accuracy)}m - Please verify address carefully`);
+                } else if (accuracy > 50) {
+                    showMessage('success', `GPS accuracy: ±${Math.round(accuracy)}m - Good precision`);
                 } else {
-                    isOutOfRange = true;
-                    message = "Distance: " + d.toFixed(1) + " KM (Out of Quick Service Range)";
+                    showMessage('success', `GPS accuracy: ±${Math.round(accuracy)}m - Excellent precision!`);
                 }
 
-                updateServiceChargeUI(charge, message, isOutOfRange);
+                // Reverse geocode using Google Geocoding API
+                const geocoder = new google.maps.Geocoder();
+                const latlng = { lat: lat, lng: lng };
 
-                msgDiv.innerHTML = '<i class="fas fa-check-circle"></i> Location verified.';
-                msgDiv.className = 'form-text text-success fw-bold';
+                geocoder.geocode({ location: latlng }, (results, status) => {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fas fa-crosshairs me-1"></i> Auto-fill Address using GPS';
 
-                // Fetch address details using Nominatim API
-                fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`, {
-                    headers: {
-                        'User-Agent': 'SSElectricals/1.0'
-                    }
-                })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data && data.address) {
-                            var addr = data.address;
+                    if (status === 'OK' && results[0]) {
+                        // Pre-fill autocomplete
+                        document.getElementById('addressAutocomplete').value = results[0].formatted_address;
 
-                            // Validate Pincode for Indore (Starts with 452 or 453)
-                            if (addr.postcode && !(addr.postcode.startsWith('452') || addr.postcode.startsWith('453'))) {
-                                alert("Service is available only in Indore (Pincode starting with 452 or 453). Detected: " + addr.postcode);
-                                msgDiv.innerHTML = '<i class="fas fa-times-circle"></i> Location outside Indore service area.';
-                                msgDiv.className = 'form-text text-danger fw-bold';
-                                return; // Stop processing
+                        // Extract address components
+                        let pincode = '';
+                        let area = '';
+                        let city = 'Indore';
+                        let road = '';
+                        let houseNumber = '';
+
+                        results[0].address_components.forEach(component => {
+                            if (component.types.includes('postal_code')) {
+                                pincode = component.long_name;
                             }
+                            if (component.types.includes('sublocality_level_1') ||
+                                component.types.includes('sublocality')) {
+                                area = component.long_name;
+                            }
+                            if (component.types.includes('locality')) {
+                                city = component.long_name;
+                            }
+                            if (component.types.includes('route')) {
+                                road = component.long_name;
+                            }
+                            if (component.types.includes('street_number')) {
+                                houseNumber = component.long_name;
+                            }
+                        });
 
-                            // Auto-fill logic REMOVED as per user request.
-                            // Location is used ONLY for distance/charge calculation.
+                        // Validate if location is in Indore service area
+                        if (pincode && !pincode.startsWith('452') && !pincode.startsWith('453')) {
+                            msgDiv.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Location outside Indore service area. Please use address search for Indore locations.';
+                            msgDiv.className = 'form-text text-danger fw-bold';
+                            return;
                         }
-                    })
-                    .catch(error => {
-                        console.error('Error fetching address:', error);
-                    });
 
-            }, function (error) {
-                msgDiv.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Location access denied. Please enter manually.';
-                msgDiv.className = 'form-text text-warning';
+                        processLocation(lat, lng, results[0].formatted_address, area, city, pincode, road, houseNumber, 'GPS');
+                        msgDiv.innerHTML = '<i class="fas fa-check-circle"></i> Location detected successfully!';
+                        msgDiv.className = 'form-text text-success fw-bold';
+                    } else {
+                        msgDiv.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Could not determine address from GPS. Please use the search box above.';
+                        msgDiv.className = 'form-text text-warning fw-bold';
+                    }
+                });
+            },
+            (error) => {
+                const btn = document.getElementById('detectLocationBtn');
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-crosshairs me-1"></i> Auto-fill Address using GPS';
+
+                const msgDiv = document.getElementById('locationMsg');
+                msgDiv.innerHTML = '<i class="fas fa-info-circle"></i> GPS permission denied. Please use the address search box above.';
+                msgDiv.className = 'form-text text-muted fw-bold';
+            },
+            gpsOptions  // Use high-accuracy GPS settings
+        );
+    }
+
+    // Process location data and calculate distance
+    function processLocation(lat, lng, fullAddress, area, city, pincode, road, houseNumber, source) {
+        console.log('Processing location:', lat, lng, 'via', source);
+
+        // Auto-fill address fields
+        if (houseNumber) document.getElementById('id_house_number').value = houseNumber;
+        if (road) document.getElementById('id_address_line1').value = road;
+        if (area) document.getElementById('id_address_line2').value = area;
+        if (pincode) document.getElementById('id_pincode').value = pincode;
+        if (city) document.getElementById('id_city').value = city;
+
+        // Try to match area to dropdown
+        if (area) {
+            const areaSelect = document.getElementById('id_area');
+            let matched = false;
+
+            // Try exact match first
+            for (let i = 0; i < areaSelect.options.length; i++) {
+                if (areaSelect.options[i].value === area ||
+                    areaSelect.options[i].text.toLowerCase() === area.toLowerCase()) {
+                    areaSelect.selectedIndex = i;
+                    matched = true;
+                    break;
+                }
+            }
+
+            // If no exact match, try partial match
+            if (!matched) {
+                for (let i = 0; i < areaSelect.options.length; i++) {
+                    const optionText = areaSelect.options[i].text.toLowerCase();
+                    const areaLower = area.toLowerCase();
+                    if (optionText.includes(areaLower) || areaLower.includes(optionText)) {
+                        areaSelect.selectedIndex = i;
+                        matched = true;
+                        break;
+                    }
+                }
+            }
+
+            // If still no match, select "Other" and fill other_area
+            if (!matched) {
+                areaSelect.value = 'Other';
+                document.getElementById('id_other_area').value = area;
+                document.getElementById('id_other_area').style.display = 'block';
+            }
+        }
+
+        // Show location on map
+        showLocationOnMap(lat, lng, fullAddress);
+
+        // Calculate road distance using Distance Matrix API
+        calculateRoadDistance(lat, lng);
+    }
+
+    // Calculate accurate road distance using Distance Matrix API
+    function calculateRoadDistance(userLat, userLng) {
+        if (!distanceMatrixService) {
+            distanceMatrixService = new google.maps.DistanceMatrixService();
+        }
+
+        const shopLocation = new google.maps.LatLng(SHOP_LAT, SHOP_LNG);
+        const userLocation = new google.maps.LatLng(userLat, userLng);
+
+        showMessage('info', 'Calculating precise road distance...');
+
+        distanceMatrixService.getDistanceMatrix({
+            origins: [shopLocation],
+            destinations: [userLocation],
+            travelMode: google.maps.TravelMode.DRIVING,
+            unitSystem: google.maps.UnitSystem.METRIC,
+            avoidHighways: false,
+            avoidTolls: false
+        }, (response, status) => {
+            if (status === 'OK' && response.rows[0].elements[0].status === 'OK') {
+                const element = response.rows[0].elements[0];
+                const distanceKm = element.distance.value / 1000; // meters to km
+                const duration = element.duration.text;
+
+                console.log(`✓ Road distance: ${distanceKm.toFixed(2)} km, ETA: ${duration}`);
+                showMessage('success', `Distance: ${element.distance.text}, Service ETA: ${duration}`);
+
+                // Update service charge UI
+                updateServiceChargeUI(distanceKm);
+
+                // Run verification
+                performLocationVerification(userLat, userLng, distanceKm);
+            } else {
+                // Fallback to Haversine if Distance Matrix API fails
+                console.warn('Distance Matrix API failed, using Haversine fallback');
+                const straightDist = haversineDistance(SHOP_LAT, SHOP_LNG, userLat, userLng);
+
+                showMessage('warning', 'Using approximate straight-line distance. Actual distance may vary.');
+                updateServiceChargeUI(straightDist);
+
+                performLocationVerification(userLat, userLng, straightDist);
+            }
+        });
+    }
+
+    // Show location on interactive map
+    function showLocationOnMap(lat, lng, address) {
+        const mapContainer = document.getElementById('mapContainer');
+        const mapSection = document.getElementById('mapSection');
+        mapSection.style.display = 'block';
+
+        // Initialize map if not already done
+        if (!map) {
+            map = new google.maps.Map(mapContainer, {
+                zoom: 15,
+                center: { lat: lat, lng: lng },
+                mapTypeControl: false,
+                streetViewControl: false,
+                fullscreenControl: true,
+                zoomControl: true
+            });
+
+            // Add shop marker (blue)
+            shopMarker = new google.maps.Marker({
+                position: { lat: SHOP_LAT, lng: SHOP_LNG },
+                map: map,
+                icon: {
+                    url: 'http://maps.google.com/mapfiles/ms/icons/blue-dot.png'
+                },
+                title: 'Shiv Shakti Electricals (Shop Location)'
+            });
+
+            // Add service range circle (7 KM)
+            new google.maps.Circle({
+                map: map,
+                center: { lat: SHOP_LAT, lng: SHOP_LNG },
+                radius: 7000, // 7 KM
+                fillColor: '#FFC107',
+                fillOpacity: 0.08,
+                strokeColor: '#FFC107',
+                strokeOpacity: 0.4,
+                strokeWeight: 2
             });
         } else {
-            msgDiv.innerHTML = "Geolocation is not supported by this browser.";
+            map.setCenter({ lat: lat, lng: lng });
         }
-    });
+
+        // Add/update customer marker (red, draggable)
+        if (marker) {
+            marker.setPosition({ lat: lat, lng: lng });
+        } else {
+            marker = new google.maps.Marker({
+                position: { lat: lat, lng: lng },
+                map: map,
+                draggable: true,
+                animation: google.maps.Animation.DROP,
+                title: 'Your Service Location (Drag to adjust)'
+            });
+
+            // Update when marker is dragged
+            marker.addListener('dragend', (event) => {
+                const newLat = event.latLng.lat();
+                const newLng = event.latLng.lng();
+
+                // Reverse geocode new position
+                const geocoder = new google.maps.Geocoder();
+                geocoder.geocode({ location: { lat: newLat, lng: newLng } }, (results, status) => {
+                    if (status === 'OK' && results[0]) {
+                        document.getElementById('addressAutocomplete').value = results[0].formatted_address;
+
+                        // Extract components and reprocess
+                        let pincode = '', area = '', city = 'Indore', road = '', houseNumber = '';
+                        results[0].address_components.forEach(component => {
+                            if (component.types.includes('postal_code')) pincode = component.long_name;
+                            if (component.types.includes('sublocality_level_1') || component.types.includes('sublocality')) area = component.long_name;
+                            if (component.types.includes('locality')) city = component.long_name;
+                            if (component.types.includes('route')) road = component.long_name;
+                            if (component.types.includes('street_number')) houseNumber = component.long_name;
+                        });
+
+                        processLocation(newLat, newLng, results[0].formatted_address, area, city, pincode, road, houseNumber, 'MAP_DRAG');
+                    }
+                });
+            });
+        }
+
+        // Show GPS accuracy circle if available
+        if (currentGpsAccuracy) {
+            if (accuracyCircle) {
+                accuracyCircle.setMap(null);
+            }
+            accuracyCircle = new google.maps.Circle({
+                map: map,
+                center: { lat: lat, lng: lng },
+                radius: currentGpsAccuracy,
+                fillColor: '#FF5722',
+                fillOpacity: 0.1,
+                strokeColor: '#FF5722',
+                strokeOpacity: 0.3,
+                strokeWeight: 1
+            });
+        }
+    }
+
+    // Perform address verification
+    function performLocationVerification(lat, lng, distKm) {
+        const checks = {
+            gpsAccuracy: currentGpsAccuracy ? currentGpsAccuracy <= 50 : false,
+            roadDistanceOK: distKm <= 7,
+            pincodeValid: false,
+            withinServiceArea: false,
+            addressComplete: false
+        };
+
+        // Check pincode
+        const pincode = document.getElementById('id_pincode').value;
+        if (pincode && (pincode.startsWith('452') || pincode.startsWith('453'))) {
+            checks.pincodeValid = true;
+            checks.withinServiceArea = true;
+        }
+
+        // Check address completeness
+        const house = document.getElementById('id_house_number').value;
+        const line1 = document.getElementById('id_address_line1').value;
+        if (house && line1 && pincode) {
+            checks.addressComplete = true;
+        }
+
+        // Calculate confidence score
+        const totalChecks = Object.keys(checks).length;
+        const passedChecks = Object.values(checks).filter(v => v).length;
+        const confidence = (passedChecks / totalChecks) * 100;
+
+        displayVerificationStatus(checks, confidence);
+    }
+
+    // Display verification status
+    function displayVerificationStatus(checks, confidence) {
+        const statusDiv = document.getElementById('verificationStatus');
+        const bar = document.getElementById('confidenceBar');
+        const details = document.getElementById('verificationDetails');
+
+        statusDiv.style.display = 'block';
+
+        // Update progress bar
+        bar.style.width = confidence + '%';
+        bar.textContent = Math.round(confidence) + '% Verified';
+
+        if (confidence >= 80) {
+            bar.className = 'progress-bar bg-success progress-bar-striped progress-bar-animated';
+            statusDiv.className = 'alert alert-success mb-3';
+        } else if (confidence >= 60) {
+            bar.className = 'progress-bar bg-warning progress-bar-striped progress-bar-animated';
+            statusDiv.className = 'alert alert-warning mb-3';
+        } else {
+            bar.className = 'progress-bar bg-danger progress-bar-striped progress-bar-animated';
+            statusDiv.className = 'alert alert-danger mb-3';
+        }
+
+        // Show verification details
+        let detailsHTML = '<ul class="mb-0 small ps-3">';
+        detailsHTML += `<li>${checks.gpsAccuracy ? '✓' : '✗'} GPS Accuracy ${currentGpsAccuracy ? `(±${Math.round(currentGpsAccuracy)}m)` : ''}</li>`;
+        detailsHTML += `<li>${checks.roadDistanceOK ? '✓' : '✗'} Within Service Range (≤7 KM)</li>`;
+        detailsHTML += `<li>${checks.pincodeValid ? '✓' : '✗'} Valid Indore Pincode</li>`;
+        detailsHTML += `<li>${checks.withinServiceArea ? '✓' : '✗'} Service Area Confirmed</li>`;
+        detailsHTML += `<li>${checks.addressComplete ? '✓' : '✗'} Address Complete</li>`;
+        detailsHTML += '</ul>';
+
+        details.innerHTML = detailsHTML;
+    }
+
+
+    // Haversine distance calculation
+    function haversineDistance(lat1, lon1, lat2, lon2) {
+        const R = 6371; // Earth radius in km
+        const dLat = deg2rad(lat2 - lat1);
+        const dLon = deg2rad(lon2 - lon1);
+        const a =
+            Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+            Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) *
+            Math.sin(dLon / 2) * Math.sin(dLon / 2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return R * c;
+    }
 
     function deg2rad(deg) {
-        return deg * (Math.PI / 180)
+        return deg * (Math.PI / 180);
+    }
+
+    // Show user-friendly messages
+    function showMessage(type, message) {
+        const msgDiv = document.getElementById('locationMsg');
+        const icons = {
+            'success': 'fa-check-circle',
+            'error': 'fa-times-circle',
+            'warning': 'fa-exclamation-triangle',
+            'info': 'fa-spinner fa-spin'
+        };
+        const classes = {
+            'success': 'text-success',
+            'error': 'text-danger',
+            'warning': 'text-warning',
+            'info': 'text-info'
+        };
+
+        msgDiv.innerHTML = `<i class="fas ${icons[type] || 'fa-info-circle'}"></i> ${message}`;
+        msgDiv.className = `form-text small mt-2 fw-bold ${classes[type] || 'text-muted'}`;
     }
 
     function toggleOtherArea(select) {
@@ -323,9 +782,25 @@
         }
     }
 
-    function updateServiceChargeUI(charge, message, isOutOfRange) {
+    function updateServiceChargeUI(distKm) {
         var chargeDisplay = document.getElementById('chargeDisplay');
         var card = document.getElementById('costSummaryCard');
+
+        // Pricing Logic
+        var charge = 0;
+        var message = "";
+        var isOutOfRange = false;
+
+        if (distKm <= 3) {
+            charge = 200;
+            message = "Distance: " + distKm.toFixed(1) + " KM (Within 3 KM)";
+        } else if (distKm > 3 && distKm <= 7) {
+            charge = 250;
+            message = "Distance: " + distKm.toFixed(1) + " KM (3-7 KM Range)";
+        } else {
+            isOutOfRange = true;
+            message = "Distance: " + distKm.toFixed(1) + " KM (Out of Quick Service Range)";
+        }
 
         // Update hidden field
         var chargeInput = document.getElementById('id_visiting_charge');

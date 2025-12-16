@@ -403,24 +403,152 @@ class ReviewForm(forms.ModelForm):
 class DailySalesForm(forms.ModelForm):
     class Meta:
         model = DailySales
-        fields = ['date', 'total_sales', 'online_received', 'cash_received', 'subtotal', 'remark', 'other_remark']
+        fields = ['date', 'total_sales', 'online_received', 'cash_received', 'labor_charge', 'delivery_charge', 'subtotal', 'remark', 'other_remark']
         widgets = {
             'date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
-            'total_sales': forms.NumberInput(attrs={'class': 'form-control'}),
-            'online_received': forms.NumberInput(attrs={'class': 'form-control'}),
-            'cash_received': forms.NumberInput(attrs={'class': 'form-control'}),
-            'subtotal': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Leave empty to auto-calculate'}),
+            'total_sales': forms.NumberInput(attrs={
+                'class': 'form-control smart-default-field',
+                'placeholder': '0',
+                'step': '0.01',
+                'min': '0',
+                'data-default': '0'
+            }),
+            'online_received': forms.NumberInput(attrs={
+                'class': 'form-control smart-default-field',
+                'placeholder': '0',
+                'step': '0.01',
+                'min': '0',
+                'data-default': '0'
+            }),
+            'cash_received': forms.NumberInput(attrs={
+                'class': 'form-control smart-default-field',
+                'placeholder': '0',
+                'step': '0.01',
+                'min': '0',
+                'data-default': '0'
+            }),
+            'labor_charge': forms.NumberInput(attrs={
+                'class': 'form-control smart-default-field', 
+                'placeholder': '0',
+                'step': '0.01',
+                'min': '0',
+                'data-default': '0'
+            }),
+            'delivery_charge': forms.NumberInput(attrs={
+                'class': 'form-control smart-default-field',
+                'placeholder': '0', 
+                'step': '0.01',
+                'min': '0',
+                'data-default': '0'
+            }),
+            'subtotal': forms.NumberInput(attrs={
+                'class': 'form-control smart-default-field',
+                'placeholder': '0',
+                'step': '0.01',
+                'min': '0',
+                'data-default': '0'
+            }),
             'remark': forms.Select(attrs={'class': 'form-select', 'onchange': 'if(this.value=="Other"){document.getElementById("id_other_remark").parentElement.style.display="block";}else{document.getElementById("id_other_remark").parentElement.style.display="none";}'}),
             'other_remark': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
         }
+        help_texts = {
+            'labor_charge': 'Optional – enter only if applicable',
+            'delivery_charge': 'Optional – enter only if applicable',
+            'subtotal': 'Leave empty to auto-calculate (Online + Cash)',
+        }
+    
+    def clean_date(self):
+        date = self.cleaned_data.get('date')
+        # Check if entry already exists for this date (excluding current instance when editing)
+        existing = DailySales.objects.filter(date=date)
+        if self.instance.pk:
+            existing = existing.exclude(pk=self.instance.pk)
+        
+        if existing.exists():
+            raise forms.ValidationError(
+                f"⚠️ Data for {date.strftime('%B %d, %Y')} already exists. "
+                f"Please edit the existing entry instead of creating a new one."
+            )
+        return date
+    
+    def clean(self):
+        cleaned_data = super().clean()
+        total_sales = cleaned_data.get('total_sales')
+        online_received = cleaned_data.get('online_received')
+        cash_received = cleaned_data.get('cash_received')
+        subtotal = cleaned_data.get('subtotal')
+        
+        # Convert None to 0 for calculation
+        total_sales = total_sales or 0
+        online_received = online_received or 0
+        cash_received = cash_received or 0
+        subtotal = subtotal or 0
+        
+        # Calculate expected subtotal
+        expected_subtotal = online_received + cash_received
+        
+        # Rule 1: Subtotal should equal Online + Cash
+        if subtotal != expected_subtotal:
+            raise forms.ValidationError(
+                f"⚠️ Subtotal Mismatch: Subtotal (₹{subtotal}) must equal "
+                f"Online + Cash (₹{online_received} + ₹{cash_received} = ₹{expected_subtotal}). "
+                f"Please correct the values."
+            )
+        
+        # Rule 2: Total Sales should equal Subtotal
+        if total_sales != subtotal:
+            raise forms.ValidationError(
+                f"⚠️ Total Sales Mismatch: Total Sales (₹{total_sales}) must equal "
+                f"Subtotal (₹{subtotal}). "
+                f"Please ensure Total Sales matches the Subtotal amount."
+            )
+        
+        return cleaned_data
+
 
 class DailyExpenditureForm(forms.ModelForm):
     class Meta:
         model = DailyExpenditure
-        fields = ['date', 'amount', 'payment_method', 'description']
+        fields = ['date', 'online_amount', 'cash_amount', 'total', 'description']
         widgets = {
             'date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
-            'amount': forms.NumberInput(attrs={'class': 'form-control'}),
-            'payment_method': forms.Select(attrs={'class': 'form-select'}),
+            'online_amount': forms.NumberInput(attrs={
+                'class': 'form-control smart-default-field',
+                'placeholder': '0',
+                'step': '0.01',
+                'min': '0',
+                'data-default': '0'
+            }),
+            'cash_amount': forms.NumberInput(attrs={
+                'class': 'form-control smart-default-field',
+                'placeholder': '0',
+                'step': '0.01',
+                'min': '0',
+                'data-default': '0'
+            }),
+            'total': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'readonly': 'readonly',
+                'style': 'background-color: #e9ecef;'
+            }),
             'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
         }
+        help_texts = {
+            'online_amount': 'Online expenses for the day',
+            'cash_amount': 'Cash expenses for the day',
+            'total': 'Auto-calculated (Online + Cash)',
+        }
+    
+    def clean_date(self):
+        date = self.cleaned_data.get('date')
+        # Check if entry already exists for this date (excluding current instance when editing)
+        existing = DailyExpenditure.objects.filter(date=date)
+        if self.instance.pk:
+            existing = existing.exclude(pk=self.instance.pk)
+        
+        if existing.exists():
+            raise forms.ValidationError(
+                f"⚠️ Expense data for {date.strftime('%B %d, %Y')} already exists. "
+                f"Please edit the existing entry instead of creating a new one."
+            )
+        return date

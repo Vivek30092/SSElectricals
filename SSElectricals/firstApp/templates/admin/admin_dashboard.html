@@ -10,46 +10,71 @@
 <!-- KPI Cards -->
 <div class="row mb-4">
     <div class="col-md-3">
-        <div class="card text-white bg-primary h-100">
+        <div class="card stat-card-primary h-100">
             <div class="card-body">
-                <h6 class="card-title mb-0">Total Revenue</h6>
-                <h3 class="my-2">₹{{ total_revenue|stringformat:".2f" }}</h3>
-                <small class="text-white-50">Online: ₹{{ order_revenue }} | Shop: ₹{{ offline_sales }}</small>
+                <h6 class="card-title mb-0">
+                    <i class="fas fa-hand-holding-usd me-2"></i>Total Revenue
+                    <small class="d-block mt-1" style="font-size: 0.7rem; opacity: 0.7;">
+                        (Manual Entry Only)
+                    </small>
+                </h6>
+                <h3 class="my-2 stat-value">₹{{ total_revenue|stringformat:".2f" }}</h3>
+                <small style="opacity: 0.7;">Cash: ₹{{ total_cash_received|stringformat:".0f" }} | Online:
+                    ₹{{total_online_received|stringformat:".0f" }}
+                </small>
             </div>
         </div>
     </div>
 
     <div class="col-md-3">
-        <div class="card text-white bg-danger h-100">
+        <div class="card stat-card-danger h-100">
             <div class="card-body">
-                <h6 class="card-title mb-0">Total Expenses</h6>
-                <h3 class="my-2">₹{{ total_expenses|stringformat:".2f" }}</h3>
-                <small class="text-white-50">Online: ₹{{ online_expenses }} | Cash: ₹{{ cash_expenses }}</small>
+                <h6 class="card-title mb-0">
+                    <i class="fas fa-wallet me-2"></i>Total Expenses
+                    <small class="d-block mt-1" style="font-size: 0.7rem; opacity: 0.7;">
+                        (Manual Entry Only)
+                    </small>
+                </h6>
+                <h3 class="my-2 stat-value">₹{{ total_expenses|stringformat:".2f" }}</h3>
+                <small style="opacity: 0.7;">Online: ₹{{ online_expenses|stringformat:".0f" }} | Cash:
+                    ₹{{cash_expenses|stringformat:".0f" }}
+                </small>
             </div>
         </div>
     </div>
 
     <div class="col-md-3">
-        <div class="card text-white bg-{% if profit_loss >= 0 %}success{% else %}warning{% endif %} h-100">
+        <div class="card stat-card-{% if profit_loss >= 0 %}success{% else %}warning{% endif %} h-100">
             <div class="card-body">
-                <h6 class="card-title mb-0">Net Profit/Loss</h6>
-                <h3 class="my-2">₹{{ profit_loss|stringformat:".2f" }}</h3>
+                <h6 class="card-title mb-0">
+                    <i class="fas fa-chart-line me-2"></i>Net Profit/Loss
+                    <small class="d-block mt-1" style="font-size: 0.7rem; opacity: 0.7;">
+                        (Manual Entry Only)
+                    </small>
+                </h6>
+                <h3 class="my-2 stat-value">₹{{ profit_loss|stringformat:".2f" }}</h3>
             </div>
         </div>
     </div>
 
     <div class="col-md-3">
-        <div class="card text-white bg-info h-100">
+        <div class="card stat-card-primary h-100">
             <div class="card-body">
-                <h6 class="card-title mb-0">Pending Orders</h6>
-                <h3 class="my-2">{{ pending_orders }}</h3>
-                <small class="text-white-50">Appts: {{ pending_appointments }}</small>
+                <h6 class="card-title mb-0">
+                    <i class="fas fa-tasks me-2"></i>Pending Orders
+                    <small class="d-block mt-1" style="font-size: 0.7rem; opacity: 0.7;">
+                        (Operational Only)
+                    </small>
+                </h6>
+                <h3 class="my-2 stat-value">{{ pending_orders }}</h3>
+                <small style="opacity: 0.7;">Appts: {{ pending_appointments }}</small>
             </div>
         </div>
     </div>
 </div>
 
 </div>
+
 
 <!-- Quick Actions -->
 <div class="row mb-4">
@@ -113,6 +138,37 @@
             <div class="card-header">Product Categories</div>
             <div class="card-body" style="position: relative; height: 400px;">
                 <canvas id="statusChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Sales vs Expenses Comparison Chart -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="fas fa-chart-line me-2"></i>Sales vs Expenses Comparison</span>
+
+                <form method="get" id="comparisonFilterForm" class="d-inline-block">
+                    <select name="range" class="form-select form-select-sm"
+                        onchange="document.getElementById('comparisonFilterForm').submit()">
+
+                        <option value="30" {% if current_range == "30" %}selected{% endif %}>Last 30 Days</option>
+                        <option value="90" {% if current_range == "90" %}selected{% endif %}>Last 3 Months</option>
+                        <option value="180" {% if current_range == "180" %}selected{% endif %}>Last 6 Months</option>
+                        <option value="270" {% if current_range == "270" %}selected{% endif %}>Last 9 Months</option>
+                        <option value="365" {% if current_range == "365" %}selected{% endif %}>Last 1 Year</option>
+                        <option value="730" {% if current_range == "730" %}selected{% endif %}>Last 2 Years</option>
+                        <option value="1095" {% if current_range == "1095" %}selected{% endif %}>Last 3 Years</option>
+                        <option value="all" {% if current_range == "all" %}selected{% endif %}>All Time</option>
+
+                    </select>
+                </form>
+            </div>
+
+            <div class="card-body" style="position: relative; height: 400px;">
+                <canvas id="comparisonChart"></canvas>
             </div>
         </div>
     </div>
@@ -241,6 +297,70 @@
         options: {
             responsive: true,
             maintainAspectRatio: false
+        }
+    });
+
+    // Sales vs Expenses Comparison Chart
+    const comparisonCtx = document.getElementById('comparisonChart').getContext('2d');
+    const comparisonChart = new Chart(comparisonCtx, {
+        type: 'line',
+        data: {
+            labels: JSON.parse('{{ dates_json|escapejs }}'),
+            datasets: [
+                {
+                    label: 'Daily Sales (₹)',
+                    data: JSON.parse('{{ sales_json|escapejs }}'),
+                    borderColor: '#10b981',
+                    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                    fill: true,
+                    tension: 0.4,
+                    borderWidth: 3,
+                    pointRadius: 4,
+                    pointHoverRadius: 6
+                },
+                {
+                    label: 'Daily Expenses (₹)',
+                    data: JSON.parse('{{ expenses_json|escapejs }}'),
+                    borderColor: '#ec4899',
+                    backgroundColor: 'rgba(236, 72, 153, 0.1)',
+                    fill: true,
+                    tension: 0.4,
+                    borderWidth: 3,
+                    pointRadius: 4,
+                    pointHoverRadius: 6
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+                mode: 'index',
+                intersect: false,
+            },
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'top',
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function (context) {
+                            return context.dataset.label + ': ₹' + context.parsed.y.toFixed(2);
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function (value) {
+                            return '₹' + value;
+                        }
+                    }
+                }
+            }
         }
     });
 </script>

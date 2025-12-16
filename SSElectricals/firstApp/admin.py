@@ -3,8 +3,13 @@ from django.contrib.auth.admin import UserAdmin
 from django.contrib.auth.signals import user_logged_in, user_logged_out
 from django.db.models.signals import post_save, post_delete, pre_save
 from django.dispatch import receiver
-from .models import CustomUser, Category, Product, ProductImage, Cart, CartItem, Order, OrderItem, AdminSession, AdminActivityLog, Appointment, DailySales, DailyExpenditure, PurchaseEntry
+from .models import (
+    CustomUser, Category, Product, ProductImage, Cart, CartItem, Order, OrderItem,
+    AdminSession, AdminActivityLog, Appointment, DailySales, DailyExpenditure, 
+    PurchaseEntry, EmailLog, FinancialValidationLog
+)
 from .utils import save_csv_entry
+
 
 class CustomUserAdmin(UserAdmin):
     fieldsets = UserAdmin.fieldsets + (
@@ -124,8 +129,8 @@ class DailySalesAdmin(admin.ModelAdmin):
         super().save_model(request, obj, form, change)
 
 class DailyExpenditureAdmin(admin.ModelAdmin):
-    list_display = ('date', 'amount', 'payment_method', 'description', 'admin')
-    list_filter = ('date', 'payment_method')
+    list_display = ('date', 'online_amount', 'cash_amount', 'total', 'description', 'admin')
+    list_filter = ('date',)
     search_fields = ('description',)
 
     def save_model(self, request, obj, form, change):
@@ -133,10 +138,25 @@ class DailyExpenditureAdmin(admin.ModelAdmin):
             obj.admin = request.user
         super().save_model(request, obj, form, change)
 
+class FinancialValidationLogAdmin(admin.ModelAdmin):
+    """Admin interface for Financial Validation Logs - Read-only for audit purposes"""
+    list_display = ('violation_type', 'detected_at', 'source_module', 'order', 'user')
+    list_filter = ('violation_type', 'detected_at')
+    search_fields = ('description', 'source_module')
+    readonly_fields = ('violation_type', 'description', 'source_module', 'order', 'detected_at', 'ip_address', 'user')
+    
+    def has_add_permission(self, request):
+        return False  # Prevent manual creation - only created by system
+    
+    def has_delete_permission(self, request, obj=None):
+        return request.user.is_superuser  # Only superusers can delete audit logs
+
 admin.site.register(Appointment, AppointmentAdmin)
 admin.site.register(DailySales, DailySalesAdmin)
 admin.site.register(DailyExpenditure, DailyExpenditureAdmin)
 admin.site.register(PurchaseEntry)
+admin.site.register(FinancialValidationLog, FinancialValidationLogAdmin)
+
 
 
 # Signal Handlers for Session Tracking and Activity Logging
@@ -341,23 +361,27 @@ def log_daily_sales_csv(sender, instance, created, **kwargs):
             'Daily sales amount': str(instance.total_sales),
             'Total online money received': str(instance.online_received),
             'Total cash received': str(instance.cash_received),
+            'Labor Charge': str(instance.labor_charge) if instance.labor_charge is not None else '0.00',
+            'Delivery Charge': str(instance.delivery_charge) if instance.delivery_charge is not None else '0.00',
             'Subtotal': str(instance.subtotal),
             'Remark': instance.remark,
             'Admin ID': instance.admin.username if instance.admin else 'Unknown'
         }
-        headers = ['Date', 'Day', 'Daily sales amount', 'Total online money received', 'Total cash received', 'Subtotal', 'Remark', 'Admin ID']
+        headers = ['Date', 'Day', 'Daily sales amount', 'Total online money received', 'Total cash received', 'Labor Charge', 'Delivery Charge', 'Subtotal', 'Remark', 'Admin ID']
         save_csv_entry('daily_sales.csv', data, headers)
+
 
 @receiver(post_save, sender=DailyExpenditure)
 def log_expenses_csv(sender, instance, created, **kwargs):
     if created:
         data = {
             'Date': str(instance.date),
-            'Amount': str(instance.amount),
-            'Payment method': instance.payment_method,
+            'Online Amount': str(instance.online_amount) if instance.online_amount is not None else '0.00',
+            'Cash Amount': str(instance.cash_amount) if instance.cash_amount is not None else '0.00',
+            'Total': str(instance.total),
             'Added by': instance.admin.username if instance.admin else 'Unknown',
             'Description': instance.description
         }
-        headers = ['Date', 'Amount', 'Payment method', 'Added by', 'Description']
+        headers = ['Date', 'Online Amount', 'Cash Amount', 'Total', 'Added by', 'Description']
         save_csv_entry('expenses.csv', data, headers)
 

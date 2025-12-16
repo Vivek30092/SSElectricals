@@ -78,26 +78,47 @@
 {% if total_expenses > 0 %}
 <div class="row mb-4 g-3">
     <div class="col-md-4">
-        <div class="card bg-danger text-white shadow-sm border-0">
+        <div class="card shadow-sm border-0 stat-card-danger h-100">
             <div class="card-body">
-                <h6 class="card-title text-uppercase small opacity-75">Total Expenses (Filtered)</h6>
-                <h3 class="mb-0">₹{{ total_expenses }}</h3>
+                <h6 class="card-title mb-0">
+                    <i class="fas fa-wallet me-2"></i>Total Expenses
+                    <small class="d-block mt-1" style="font-size: 0.7rem; opacity: 0.7;">
+                        (Filtered Results)
+                    </small>
+                </h6>
+                <h3 class="my-2 stat-value">₹{{ total_expenses }}</h3>
+                <div class="badge rounded-circle bg-danger status-indicator"
+                    style="position: absolute; top: 15px; right: 15px;"></div>
             </div>
         </div>
     </div>
     <div class="col-md-4">
-        <div class="card bg-success text-white shadow-sm border-0">
+        <div class="card shadow-sm border-0 stat-card-success h-100">
             <div class="card-body">
-                <h6 class="card-title text-uppercase small opacity-75">Online Expenses</h6>
-                <h3 class="mb-0">₹{{ total_online_expenses }}</h3>
+                <h6 class="card-title mb-0">
+                    <i class="fas fa-credit-card me-2"></i>Online Expenses
+                    <small class="d-block mt-1" style="font-size: 0.7rem; opacity: 0.7;">
+                        (Manual Entry)
+                    </small>
+                </h6>
+                <h3 class="my-2 stat-value">₹{{ total_online_expenses }}</h3>
+                <div class="badge rounded-circle bg-success status-indicator"
+                    style="position: absolute; top: 15px; right: 15px;"></div>
             </div>
         </div>
     </div>
     <div class="col-md-4">
-        <div class="card bg-warning text-dark shadow-sm border-0">
+        <div class="card shadow-sm border-0 stat-card-warning h-100">
             <div class="card-body">
-                <h6 class="card-title text-uppercase small opacity-75">Cash Expenses</h6>
-                <h3 class="mb-0">₹{{ total_cash_expenses }}</h3>
+                <h6 class="card-title mb-0">
+                    <i class="fas fa-money-bill-wave me-2"></i>Cash Expenses
+                    <small class="d-block mt-1" style="font-size: 0.7rem; opacity: 0.7;">
+                        (Manual Entry)
+                    </small>
+                </h6>
+                <h3 class="my-2 stat-value">₹{{ total_cash_expenses }}</h3>
+                <div class="badge rounded-circle bg-warning status-indicator"
+                    style="position: absolute; top: 15px; right: 15px;"></div>
             </div>
         </div>
     </div>
@@ -112,8 +133,9 @@
                     <tr>
                         <th class="py-3 ps-3">Date</th>
                         <th class="py-3">Day</th>
-                        <th class="py-3">Amount</th>
-                        <th class="py-3">Method</th>
+                        <th class="py-3">Online Amount</th>
+                        <th class="py-3">Cash Amount</th>
+                        <th class="py-3">Total</th>
                         <th class="py-3">Description</th>
                         <th class="py-3">Admin</th>
                         <th class="py-3 pe-3 text-end">Actions</th>
@@ -124,8 +146,9 @@
                     <tr>
                         <td class="ps-3">{{ expense.date }}</td>
                         <td>{{ expense.day }}</td>
-                        <td class="fw-bold text-danger">₹{{ expense.amount }}</td>
-                        <td><span class="badge bg-secondary">{{ expense.payment_method }}</span></td>
+                        <td class="text-success">₹{{ expense.online_amount|default:"0.00" }}</td>
+                        <td class="text-info">₹{{ expense.cash_amount|default:"0.00" }}</td>
+                        <td class="fw-bold text-danger">₹{{ expense.total|default:"0.00" }}</td>
                         <td>{{ expense.description }}</td>
                         <td><span class="badge bg-light text-dark border">{{ expense.admin.username }}</span></td>
                         <td class="text-end pe-3">
@@ -138,7 +161,7 @@
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="7" class="text-center py-5 text-muted">No expenses found.</td>
+                        <td colspan="8" class="text-center py-5 text-muted">No expenses found.</td>
                     </tr>
                     {% endfor %}
                 </tbody>

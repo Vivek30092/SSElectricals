@@ -8,6 +8,26 @@
                 <h4 class="mb-0">{{ title|default:"Add Daily Expenditure" }}</h4>
             </div>
             <div class="card-body">
+                <!-- Display Form Errors -->
+                {% if form.errors %}
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    <h5 class="alert-heading">
+                        <i class="fas fa-exclamation-triangle me-2"></i>Unable to Save
+                    </h5>
+                    {% if form.non_field_errors %}
+                    {% for error in form.non_field_errors %}
+                    <p class="mb-1">{{ error }}</p>
+                    {% endfor %}
+                    {% endif %}
+                    {% for field in form %}
+                    {% if field.errors %}
+                    <p class="mb-1"><strong>{{ field.label }}:</strong> {{ field.errors|striptags }}</p>
+                    {% endif %}
+                    {% endfor %}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+                {% endif %}
+
                 <form method="post">
                     {% csrf_token %}
 
@@ -20,13 +40,30 @@
 
                     <div class="row mb-3">
                         <div class="col-md-6">
-                            <label class="form-label">Amount (₹)</label>
-                            {{ form.amount }}
+                            <label class="form-label">
+                                Online Amount (₹)
+                                <span class="badge bg-secondary badge-sm ms-1">Auto-clears</span>
+                            </label>
+                            {{ form.online_amount }}
+                            <div class="form-text">{{ form.online_amount.help_text }}</div>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label">Payment Method</label>
-                            {{ form.payment_method }}
+                            <label class="form-label">
+                                Cash Amount (₹)
+                                <span class="badge bg-secondary badge-sm ms-1">Auto-clears</span>
+                            </label>
+                            {{ form.cash_amount }}
+                            <div class="form-text">{{ form.cash_amount.help_text }}</div>
                         </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">
+                            Total (₹)
+                            <span class="badge bg-success badge-sm ms-1">Auto-calculated</span>
+                        </label>
+                        {{ form.total }}
+                        <div class="form-text">{{ form.total.help_text }}</div>
                     </div>
 
                     <div class="mb-3">
@@ -43,4 +80,61 @@
         </div>
     </div>
 </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // Smart Default Behavior for Online & Cash Amount Fields
+        const smartDefaultFields = document.querySelectorAll('.smart-default-field');
+        const onlineField = document.querySelector('input[name="online_amount"]');
+        const cashField = document.querySelector('input[name="cash_amount"]');
+        const totalField = document.querySelector('input[name="total"]');
+
+        // Auto-calculate total
+        function calculateTotal() {
+            const online = parseFloat(onlineField.value) || 0;
+            const cash = parseFloat(cashField.value) || 0;
+            const total = online + cash;
+            totalField.value = total.toFixed(2);
+        }
+
+        smartDefaultFields.forEach(field => {
+            // Track if field has been interacted with
+            let hasBeenFocused = false;
+
+            // On focus: clear if showing default value
+            field.addEventListener('focus', function () {
+                if (!hasBeenFocused && (this.value === '0' || this.value === '0.00' || this.value === '0.0')) {
+                    this.value = '';
+                    hasBeenFocused = true;
+                }
+            });
+
+            // Prevent negative values and auto-calculate
+            field.addEventListener('input', function () {
+                if (parseFloat(this.value) < 0) {
+                    this.value = '';
+                }
+                calculateTotal();
+            });
+
+            // Set initial value to 0 if field is empty (for new entries)
+            if (!field.value || field.value === '') {
+                field.value = '0';
+            }
+        });
+
+        // Initial calculation
+        calculateTotal();
+
+        // Pre-populate with 0 for new form loads
+        window.addEventListener('load', function () {
+            smartDefaultFields.forEach(field => {
+                if (!field.value || field.value === '') {
+                    field.value = '0';
+                }
+            });
+            calculateTotal();
+        });
+    });
+</script>
 {% endblock %}

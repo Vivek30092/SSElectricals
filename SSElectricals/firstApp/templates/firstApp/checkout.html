@@ -52,6 +52,34 @@
                                 <div id="locationMsg" class="form-text small"></div>
                             </div>
 
+                            <!-- Interactive Map for Location Confirmation -->
+                            <div class="mb-3" id="mapSection" style="display: none;">
+                                <label class="form-label fw-semibold">
+                                    <i class="fas fa-map me-1"></i> Confirm Your Location
+                                </label>
+                                <div id="mapContainer"
+                                    style="height: 300px; border-radius: 8px; overflow: hidden; border: 2px solid #dee2e6;">
+                                    <!-- Google Map loads here -->
+                                </div>
+                                <small class="form-text text-muted d-block mt-1">
+                                    <i class="fas fa-hand-pointer"></i> Drag the red marker to adjust your exact
+                                    location
+                                </small>
+                            </div>
+
+                            <!-- Address Verification Status -->
+                            <div id="verificationStatus" class="alert alert-info mb-3" style="display:none;">
+                                <h6 class="mb-2">
+                                    <i class="fas fa-shield-alt me-1"></i> Address Verification
+                                </h6>
+                                <div class="progress mb-2" style="height: 24px;">
+                                    <div id="confidenceBar"
+                                        class="progress-bar progress-bar-striped progress-bar-animated"
+                                        role="progressbar" style="width: 0%;"></div>
+                                </div>
+                                <small id="verificationDetails" class="d-block"></small>
+                            </div>
+
                             <!-- Address Details Section (Always Visible) -->
                             <div class="row g-2">
                                 <div class="col-4">
@@ -229,13 +257,19 @@
     async defer></script>
 
 <script>
-    const isFirstOrder = {{ is_first_order|yesno:"true,false"}};
+    const isFirstOrder = {{ is_first_order| yesno:"true,false"}};
     const cartTotal = {{ cart.total_price }};
     const SHOP_LAT = 22.7624113;
     const SHOP_LNG = 75.8692938;
 
     let autocomplete = null;
     let selectedPlace = null;
+    let map = null;
+    let marker = null;
+    let shopMarker = null;
+    let accuracyCircle = null;
+    let currentGpsAccuracy = null;
+    let distanceMatrixService = null;
 
     // Initialize Google Places Autocomplete
     function initAutocomplete() {
@@ -340,14 +374,33 @@
         const msgDiv = document.getElementById('locationMsg');
 
         btn.disabled = true;
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Getting location...';
-        msgDiv.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Getting your current location...';
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Getting high-precision location...';
+        msgDiv.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Requesting high-accuracy GPS...';
         msgDiv.className = 'form-text text-info fw-bold';
+
+        const gpsOptions = {
+            enableHighAccuracy: true,  // Request GPS (not WiFi/cell tower)
+            timeout: 10000,            // 10 seconds timeout
+            maximumAge: 0              // No cached location
+        };
 
         navigator.geolocation.getCurrentPosition(
             (position) => {
                 const lat = position.coords.latitude;
                 const lng = position.coords.longitude;
+                const accuracy = position.coords.accuracy; // meters
+
+                // Store GPS accuracy
+                currentGpsAccuracy = accuracy;
+
+                // Show accuracy feedback
+                if (accuracy > 100) {
+                    showMessage('warning', `GPS accuracy: ±${Math.round(accuracy)}m - Please verify address carefully`);
+                } else if (accuracy > 50) {
+                    showMessage('success', `GPS accuracy: ±${Math.round(accuracy)}m - Good precision`);
+                } else {
+                    showMessage('success', `GPS accuracy: ±${Math.round(accuracy)}m - Excellent precision!`);
+                }
 
                 // Reverse geocode using Google Geocoding API
                 const geocoder = new google.maps.Geocoder();
@@ -411,7 +464,8 @@
                 const msgDiv = document.getElementById('locationMsg');
                 msgDiv.innerHTML = '<i class="fas fa-info-circle"></i> GPS permission denied. Please use the address search box above.';
                 msgDiv.className = 'form-text text-muted fw-bold';
-            }
+            },
+            gpsOptions  // Use high-accuracy GPS settings
         );
     }
 
@@ -421,12 +475,7 @@
         document.getElementById('id_latitude').value = lat;
         document.getElementById('id_longitude').value = lng;
 
-        // Calculate distance
-        const distance = haversineDistance(SHOP_LAT, SHOP_LNG, lat, lng);
-        const distKm = parseFloat(distance.toFixed(2));
-        document.getElementById('id_distance_km').value = distKm;
-
-        console.log('Distance calculated:', distKm, 'km via', source);
+        console.log('Processing location:', lat, lng, 'via', source);
 
         // Auto-fill address fields
         if (houseNumber) document.getElementById('id_house_number').value = houseNumber;
@@ -471,8 +520,225 @@
             }
         }
 
-        // Update pricing UI
-        updatePricingUI(distKm);
+        // Show location on map
+        showLocationOnMap(lat, lng, fullAddress);
+
+        // Calculate road distance using Distance Matrix API
+        calculateRoadDistance(lat, lng);
+    }
+
+    //Calculate accurate road distance using Distance Matrix API
+    function calculateRoadDistance(userLat, userLng) {
+        if (!distanceMatrixService) {
+            distanceMatrixService = new google.maps.DistanceMatrixService();
+        }
+
+        const shopLocation = new google.maps.LatLng(SHOP_LAT, SHOP_LNG);
+        const userLocation = new google.maps.LatLng(userLat, userLng);
+
+        showMessage('info', 'Calculating precise road distance...');
+
+        distanceMatrixService.getDistanceMatrix({
+            origins: [shopLocation],
+            destinations: [userLocation],
+            travelMode: google.maps.TravelMode.DRIVING,
+            unitSystem: google.maps.UnitSystem.METRIC,
+            avoidHighways: false,
+            avoidTolls: false
+        }, (response, status) => {
+            if (status === 'OK' && response.rows[0].elements[0].status === 'OK') {
+                const element = response.rows[0].elements[0];
+                const distanceKm = element.distance.value / 1000; // meters to km
+                const duration = element.duration.text;
+
+                document.getElementById('id_distance_km').value = distanceKm.toFixed(2);
+
+                console.log(`✓ Road distance: ${distanceKm.toFixed(2)} km, ETA: ${duration}`);
+                showMessage('success', `Distance: ${element.distance.text}, Delivery ETA: ${duration}`);
+
+                // Update pricing UI
+                updatePricingUI(distanceKm);
+
+                // Run verification
+                performLocationVerification(userLat, userLng, distanceKm);
+            } else {
+                // Fallback to Haversine if Distance Matrix API fails
+                console.warn('Distance Matrix API failed, using Haversine fallback');
+                const straightDist = haversineDistance(SHOP_LAT, SHOP_LNG, userLat, userLng);
+                document.getElementById('id_distance_km').value = straightDist.toFixed(2);
+
+                showMessage('warning', 'Using approximate straight-line distance. Actual delivery distance may vary.');
+                updatePricingUI(straightDist);
+
+                performLocationVerification(userLat, userLng, straightDist);
+            }
+        });
+    }
+
+    // Show location on interactive map
+    function showLocationOnMap(lat, lng, address) {
+        const mapContainer = document.getElementById('mapContainer');
+        const mapSection = document.getElementById('mapSection');
+        mapSection.style.display = 'block';
+
+        // Initialize map if not already done
+        if (!map) {
+            map = new google.maps.Map(mapContainer, {
+                zoom: 15,
+                center: { lat: lat, lng: lng },
+                mapTypeControl: false,
+                streetViewControl: false,
+                fullscreenControl: true,
+                zoomControl: true
+            });
+
+            // Add shop marker (blue)
+            shopMarker = new google.maps.Marker({
+                position: { lat: SHOP_LAT, lng: SHOP_LNG },
+                map: map,
+                icon: {
+                    url: 'http://maps.google.com/mapfiles/ms/icons/blue-dot.png'
+                },
+                title: 'Shiv Shakti Electricals (Shop Location)'
+            });
+
+            // Add delivery range circle (7 KM)
+            new google.maps.Circle({
+                map: map,
+                center: { lat: SHOP_LAT, lng: SHOP_LNG },
+                radius: 7000, // 7 KM
+                fillColor: '#4CAF50',
+                fillOpacity: 0.08,
+                strokeColor: '#4CAF50',
+                strokeOpacity: 0.4,
+                strokeWeight: 2
+            });
+        } else {
+            map.setCenter({ lat: lat, lng: lng });
+        }
+
+        // Add/update customer marker (red, draggable)
+        if (marker) {
+            marker.setPosition({ lat: lat, lng: lng });
+        } else {
+            marker = new google.maps.Marker({
+                position: { lat: lat, lng: lng },
+                map: map,
+                draggable: true,
+                animation: google.maps.Animation.DROP,
+                title: 'Your Delivery Location (Drag to adjust)'
+            });
+
+            // Update when marker is dragged
+            marker.addListener('dragend', (event) => {
+                const newLat = event.latLng.lat();
+                const newLng = event.latLng.lng();
+
+                // Reverse geocode new position
+                const geocoder = new google.maps.Geocoder();
+                geocoder.geocode({ location: { lat: newLat, lng: newLng } }, (results, status) => {
+                    if (status === 'OK' && results[0]) {
+                        document.getElementById('addressAutocomplete').value = results[0].formatted_address;
+
+                        // Extract components and reprocess
+                        let pincode = '', area = '', city = 'Indore', road = '', houseNumber = '';
+                        results[0].address_components.forEach(component => {
+                            if (component.types.includes('postal_code')) pincode = component.long_name;
+                            if (component.types.includes('sublocality_level_1') || component.types.includes('sublocality')) area = component.long_name;
+                            if (component.types.includes('locality')) city = component.long_name;
+                            if (component.types.includes('route')) road = component.long_name;
+                            if (component.types.includes('street_number')) houseNumber = component.long_name;
+                        });
+
+                        processLocation(newLat, newLng, results[0].formatted_address, area, city, pincode, road, houseNumber, 'MAP_DRAG');
+                    }
+                });
+            });
+        }
+
+        // Show GPS accuracy circle if available
+        if (currentGpsAccuracy) {
+            if (accuracyCircle) {
+                accuracyCircle.setMap(null);
+            }
+            accuracyCircle = new google.maps.Circle({
+                map: map,
+                center: { lat: lat, lng: lng },
+                radius: currentGpsAccuracy,
+                fillColor: '#FF5722',
+                fillOpacity: 0.1,
+                strokeColor: '#FF5722',
+                strokeOpacity: 0.3,
+                strokeWeight: 1
+            });
+        }
+    }
+
+    // Perform address verification
+    function performLocationVerification(lat, lng, distKm) {
+        const checks = {
+            gpsAccuracy: currentGpsAccuracy ? currentGpsAccuracy <= 50 : false,
+            roadDistanceOK: distKm <= 7,
+            pincodeValid: false,
+            withinServiceArea: false,
+            addressComplete: false
+        };
+
+        // Check pincode
+        const pincode = document.getElementById('id_pincode').value;
+        if (pincode && (pincode.startsWith('452') || pincode.startsWith('453'))) {
+            checks.pincodeValid = true;
+            checks.withinServiceArea = true;
+        }
+
+        // Check address completeness
+        const house = document.getElementById('id_house_number').value;
+        const line1 = document.getElementById('id_address_line1').value;
+        if (house && line1 && pincode) {
+            checks.addressComplete = true;
+        }
+
+        // Calculate confidence score
+        const totalChecks = Object.keys(checks).length;
+        const passedChecks = Object.values(checks).filter(v => v).length;
+        const confidence = (passedChecks / totalChecks) * 100;
+
+        displayVerificationStatus(checks, confidence);
+    }
+
+    // Display verification status
+    function displayVerificationStatus(checks, confidence) {
+        const statusDiv = document.getElementById('verificationStatus');
+        const bar = document.getElementById('confidenceBar');
+        const details = document.getElementById('verificationDetails');
+
+        statusDiv.style.display = 'block';
+
+        // Update progress bar
+        bar.style.width = confidence + '%';
+        bar.textContent = Math.round(confidence) + '% Verified';
+
+        if (confidence >= 80) {
+            bar.className = 'progress-bar bg-success progress-bar-striped progress-bar-animated';
+            statusDiv.className = 'alert alert-success mb-3';
+        } else if (confidence >= 60) {
+            bar.className = 'progress-bar bg-warning progress-bar-striped progress-bar-animated';
+            statusDiv.className = 'alert alert-warning mb-3';
+        } else {
+            bar.className = 'progress-bar bg-danger progress-bar-striped progress-bar-animated';
+            statusDiv.className = 'alert alert-danger mb-3';
+        }
+
+        // Show verification details
+        let detailsHTML = '<ul class="mb-0 small ps-3">';
+        detailsHTML += `<li>${checks.gpsAccuracy ? '✓' : '✗'} GPS Accuracy ${currentGpsAccuracy ? `(±${Math.round(currentGpsAccuracy)}m)` : ''}</li>`;
+        detailsHTML += `<li>${checks.roadDistanceOK ? '✓' : '✗'} Within Delivery Range (≤7 KM)</li>`;
+        detailsHTML += `<li>${checks.pincodeValid ? '✓' : '✗'} Valid Indore Pincode</li>`;
+        detailsHTML += `<li>${checks.withinServiceArea ? '✓' : '✗'} Service Area Confirmed</li>`;
+        detailsHTML += `<li>${checks.addressComplete ? '✓' : '✗'} Address Complete</li>`;
+        detailsHTML += '</ul>';
+
+        details.innerHTML = detailsHTML;
     }
 
     // Haversine distance calculation

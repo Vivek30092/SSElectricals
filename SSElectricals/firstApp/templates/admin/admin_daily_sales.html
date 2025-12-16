@@ -78,26 +78,71 @@
 {% if total_sales > 0 %}
 <div class="row mb-4 g-3">
     <div class="col-md-4">
-        <div class="card bg-primary text-white shadow-sm border-0">
+        <div class="card stat-card-primary shadow-sm border-0 h-100">
             <div class="card-body">
-                <h6 class="card-title text-uppercase small opacity-75">Total Sales (Filtered)</h6>
-                <h3 class="mb-0">₹{{ total_sales }}</h3>
+                <h6 class="card-title mb-0">
+                    <i class="fas fa-hand-holding-usd me-2"></i>Total Sales
+                    <small class="d-block mt-1" style="font-size: 0.7rem; opacity: 0.7;">
+                        (Filtered Results)
+                    </small>
+                </h6>
+                <h3 class="my-2 stat-value">₹{{ total_sales }}</h3>
             </div>
         </div>
     </div>
     <div class="col-md-4">
-        <div class="card bg-success text-white shadow-sm border-0">
+        <div class="card stat-card-success shadow-sm border-0 h-100">
             <div class="card-body">
-                <h6 class="card-title text-uppercase small opacity-75">Online Received</h6>
-                <h3 class="mb-0">₹{{ total_online }}</h3>
+                <h6 class="card-title mb-0">
+                    <i class="fas fa-credit-card me-2"></i>Online Received
+                    <small class="d-block mt-1" style="font-size: 0.7rem; opacity: 0.7;">
+                        (Manual Entry)
+                    </small>
+                </h6>
+                <h3 class="my-2 stat-value">₹{{ total_online }}</h3>
             </div>
         </div>
     </div>
     <div class="col-md-4">
-        <div class="card bg-info text-white shadow-sm border-0">
+        <div class="card stat-card-warning shadow-sm border-0 h-100">
             <div class="card-body">
-                <h6 class="card-title text-uppercase small opacity-75">Cash Received</h6>
-                <h3 class="mb-0">₹{{ total_cash }}</h3>
+                <h6 class="card-title mb-0">
+                    <i class="fas fa-money-bill-wave me-2"></i>Cash Received
+                    <small class="d-block mt-1" style="font-size: 0.7rem; opacity: 0.7;">
+                        (Manual Entry)
+                    </small>
+                </h6>
+                <h3 class="my-2 stat-value">₹{{ total_cash }}</h3>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Second Row - Additional Charges -->
+<div class="row mb-4 g-3">
+    <div class="col-md-4 offset-md-2">
+        <div class="card stat-card-danger shadow-sm border-0 h-100">
+            <div class="card-body">
+                <h6 class="card-title mb-0">
+                    <i class="fas fa-tools me-2"></i>Labor Charge
+                    <small class="d-block mt-1" style="font-size: 0.7rem; opacity: 0.7;">
+                        (Additional Charges)
+                    </small>
+                </h6>
+                <h3 class="my-2 stat-value">₹{{ total_labor }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card stat-card-success shadow-sm border-0 h-100">
+            <div class="card-body">
+                <h6 class="card-title mb-0">
+                    <i class="fas fa-truck me-2"></i>Delivery Charge
+                    <small class="d-block mt-1" style="font-size: 0.7rem; opacity: 0.7;">
+                        (Additional Charges)
+                    </small>
+                </h6>
+                <h3 class="my-2 stat-value">₹{{ total_delivery }}</h3>
             </div>
         </div>
     </div>
@@ -115,6 +160,8 @@
                         <th class="py-3">Total Sales</th>
                         <th class="py-3">Online Received</th>
                         <th class="py-3">Cash Received</th>
+                        <th class="py-3">Labor Charge</th>
+                        <th class="py-3">Delivery Charge</th>
                         <th class="py-3">Subtotal</th>
                         <th class="py-3">Remark</th>
                         <th class="py-3">Admin</th>
@@ -129,6 +176,8 @@
                         <td class="fw-bold text-primary">₹{{ sale.total_sales }}</td>
                         <td class="text-success">₹{{ sale.online_received }}</td>
                         <td class="text-info">₹{{ sale.cash_received }}</td>
+                        <td class="text-warning">₹{{ sale.labor_charge|default:"0.00" }}</td>
+                        <td class="text-secondary">₹{{ sale.delivery_charge|default:"0.00" }}</td>
                         <td><strong>₹{{ sale.subtotal }}</strong></td>
                         <td>
                             {{ sale.remark }}
@@ -147,7 +196,7 @@
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="9" class="text-center py-5 text-muted">No sales records found for the selected
+                        <td colspan="11" class="text-center py-5 text-muted">No sales records found for the selected
                             criteria.</td>
                     </tr>
                     {% endfor %}

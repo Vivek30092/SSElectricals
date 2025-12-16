@@ -22,30 +22,61 @@ import numpy as np
 
 @staff_required # Updated to custom decorator
 def admin_dashboard(request):
-    # 1. KPI Cards
-    # Updated Dashboard Logic
+    """
+    Admin Dashboard - Financial Metrics
     
-    # Revenue from Orders
-    order_revenue = Order.objects.filter(status='Delivered').aggregate(Sum('total_price'))['total_price__sum'] or 0
-    # Revenue from Daily Sales (Offline)
-    offline_sales = DailySales.objects.aggregate(Sum('total_sales'))['total_sales__sum'] or 0
-    total_revenue = float(order_revenue) + float(offline_sales)
+    CRITICAL BUSINESS RULE (Non-Negotiable):
+    ========================================
+    All financial metrics (revenue, sales, profit) are calculated EXCLUSIVELY from:
+      - Manual DailySales entries
+      - Manual DailyExpenditure entries
+      - Manual PurchaseEntry records
+    
+    Orders and deliveries are OPERATIONAL records only.
+    They do NOT affect financial calculations under any circumstances.
+    
+    This ensures:
+      - Clean separation between operations and accounting
+      - Accurate real-world financial tracking
+      - No accidental double-counting
+      - Admin retains full control of business numbers
+    """
+    
+    # ==================================================================================
+    # FINANCIAL METRICS - MANUAL ENTRY ONLY (NO ORDER DATA)
+    # ==================================================================================
+    
+    # Total Revenue: ONLY from manually entered daily sales
+    total_revenue = DailySales.objects.aggregate(Sum('total_sales'))['total_sales__sum'] or 0
+    
+    # Cash vs Online breakdown from manual sales entries
+    total_cash_received = DailySales.objects.aggregate(Sum('cash_received'))['cash_received__sum'] or 0
+    total_online_received = DailySales.objects.aggregate(Sum('online_received'))['online_received__sum'] or 0
 
-    # Expenses
-    total_expenses = DailyExpenditure.objects.aggregate(Sum('amount'))['amount__sum'] or 0
-    online_expenses = DailyExpenditure.objects.filter(payment_method='Online').aggregate(Sum('amount'))['amount__sum'] or 0
-    cash_expenses = DailyExpenditure.objects.filter(payment_method='Cash').aggregate(Sum('amount'))['amount__sum'] or 0
+
+    # Expenses: From manual daily expenditure entries (using combined online + cash model)
+    total_expenses = DailyExpenditure.objects.aggregate(Sum('total'))['total__sum'] or 0
+    online_expenses = DailyExpenditure.objects.aggregate(Sum('online_amount'))['online_amount__sum'] or 0
+    cash_expenses = DailyExpenditure.objects.aggregate(Sum('cash_amount'))['cash_amount__sum'] or 0
     
-    # Purchases (Inventory Cost)
+    # Purchases (Inventory Cost): From manual purchase entries
     total_purchases = PurchaseEntry.objects.aggregate(Sum('total_cost'))['total_cost__sum'] or 0
 
-    profit_loss = total_revenue - float(total_expenses) - float(total_purchases)
+    # Net Profit Calculation: Revenue - Expenses - Purchases (NO ORDER DATA)
+    profit_loss = float(total_revenue) - float(total_expenses) - float(total_purchases)
 
+    # ==================================================================================
+    # OPERATIONAL METRICS (FOR REFERENCE ONLY - NOT USED IN FINANCIAL CALCULATIONS)
+    # ==================================================================================
+    
     total_orders = Order.objects.count()
     pending_orders = Order.objects.filter(status='Pending').count()
     pending_appointments = Appointment.objects.filter(status='Pending').count()
 
-    # Charts Data
+    # ==================================================================================
+    # SALES TREND CHART DATA (FROM MANUAL DAILY SALES ONLY)
+    # ==================================================================================
+    
     today = timezone.now().date()
     
     # Date Range Filter logic
@@ -70,11 +101,8 @@ def admin_dashboard(request):
          start_date = None # All time
     else:
         start_date = today - datetime.timedelta(days=30)
-        
-    # Minimum date fallback if start_date is too recent (logic handled by start_date being None for ALL, or fixed range)
-    # However, user requested "minimum 15 days view". If data is sparse, chart just shows what there is.
     
-    # Fetch DailySales
+    # Fetch DailySales for chart
     sales_qs = DailySales.objects.all()
     if start_date:
         sales_qs = sales_qs.filter(date__gte=start_date)
@@ -86,30 +114,54 @@ def admin_dashboard(request):
     dates = [x['date'].strftime('%Y-%m-%d') for x in daily_sales_data]
     sales = [float(x['sales'] or 0) for x in daily_sales_data]
 
-    # Category Statistics
+    # Fetch DailyExpenditure for comparison chart
+    expenses_qs = DailyExpenditure.objects.all()
+    if start_date:
+        expenses_qs = expenses_qs.filter(date__gte=start_date)
+    
+    daily_expenses_data = expenses_qs.values('date') \
+        .annotate(expense=Sum('total')) \
+        .order_by('date')
+    
+    # Create a dictionary for quick lookup
+    expenses_dict = {x['date'].strftime('%Y-%m-%d'): float(x['expense'] or 0) for x in daily_expenses_data}
+    
+    # Match expenses to sales dates (fill with 0 if no expense for that date)
+    expenses = [expenses_dict.get(date, 0) for date in dates]
+
+    # Category Statistics (for product management reference)
     category_stats = Product.objects.values('category__name').annotate(count=Count('id')).order_by('-count')
     cat_labels = [x['category__name'] or 'Uncategorized' for x in category_stats]
     cat_data = [x['count'] for x in category_stats]
 
-    recent_orders = Order.objects.select_related('user').order_by('-created_at')[:5]
-    recent_appointments = Appointment.objects.order_by('-created_at')[:5]
+    # Recent operational records (for quick reference)
+    recent_orders = Order.objects.select_related('user').order_by('-created_at')[:10]
+    recent_appointments = Appointment.objects.order_by('-created_at')[:10]
 
     context = {
+        # Financial Metrics (Manual Entry Only)
         'total_revenue': total_revenue,
-        'order_revenue': order_revenue,
-        'offline_sales': offline_sales,
+        'total_cash_received': total_cash_received,
+        'total_online_received': total_online_received,
         'total_expenses': total_expenses,
         'online_expenses': online_expenses,
         'cash_expenses': cash_expenses,
         'total_purchases': total_purchases,
         'profit_loss': profit_loss,
+        
+        # Operational Metrics (Not used in financial calculations)
         'total_orders': total_orders,
         'pending_orders': pending_orders,
         'pending_appointments': pending_appointments,
+        
+        # Chart Data (From Manual Sales Only)
         'dates_json': json.dumps(dates),
         'sales_json': json.dumps(sales),
+        'expenses_json': json.dumps(expenses),
         'cat_labels_json': json.dumps(cat_labels),
         'cat_data_json': json.dumps(cat_data),
+        
+        # Quick Reference
         'recent_orders': recent_orders,
         'recent_appointments': recent_appointments,
         'current_range': range_option,
@@ -648,6 +700,8 @@ def admin_daily_sales(request):
     total_sales = sales_list.aggregate(Sum('total_sales'))['total_sales__sum'] or 0
     total_online = sales_list.aggregate(Sum('online_received'))['online_received__sum'] or 0
     total_cash = sales_list.aggregate(Sum('cash_received'))['cash_received__sum'] or 0
+    total_labor = sales_list.aggregate(Sum('labor_charge'))['labor_charge__sum'] or 0
+    total_delivery = sales_list.aggregate(Sum('delivery_charge'))['delivery_charge__sum'] or 0
 
     paginator = Paginator(sales_list, 20)
     page_number = request.GET.get('page')
@@ -657,7 +711,9 @@ def admin_daily_sales(request):
         'sales_records': sales_records,
         'total_sales': total_sales,
         'total_online': total_online,
-        'total_cash': total_cash
+        'total_cash': total_cash,
+        'total_labor': total_labor,
+        'total_delivery': total_delivery
     }
 
     return render(request, 'admin/admin_daily_sales.html', context)
@@ -743,10 +799,11 @@ def admin_daily_expenses(request):
     if day_name:
         expenses_list = expenses_list.filter(day__iexact=day_name.strip())
 
-    # Calculate Totals
-    total_expenses = expenses_list.aggregate(Sum('amount'))['amount__sum'] or 0
-    total_online_expenses = expenses_list.filter(payment_method='Online').aggregate(Sum('amount'))['amount__sum'] or 0
-    total_cash_expenses = expenses_list.filter(payment_method='Cash').aggregate(Sum('amount'))['amount__sum'] or 0
+
+    # Calculate Totals (using combined online + cash model)
+    total_expenses = expenses_list.aggregate(Sum('total'))['total__sum'] or 0
+    total_online_expenses = expenses_list.aggregate(Sum('online_amount'))['online_amount__sum'] or 0
+    total_cash_expenses = expenses_list.aggregate(Sum('cash_amount'))['cash_amount__sum'] or 0
 
     paginator = Paginator(expenses_list, 20)
     page_number = request.GET.get('page')
@@ -804,8 +861,8 @@ def admin_export_sales(request):
     fmt = request.GET.get('format', 'csv')
     sales = DailySales.objects.all().order_by('-date')
     
-    # Define columns
-    columns = ['Date', 'Day', 'Total Sales', 'Online', 'Cash', 'Remark', 'Admin']
+    # Define columns - updated to include labor and delivery charges
+    columns = ['Date', 'Day', 'Total Sales', 'Online', 'Cash', 'Labor Charge', 'Delivery Charge', 'Subtotal', 'Remark', 'Admin']
     data = []
     for sale in sales:
         data.append([
@@ -813,7 +870,10 @@ def admin_export_sales(request):
             sale.day, 
             str(sale.total_sales), 
             str(sale.online_received), 
-            str(sale.cash_received), 
+            str(sale.cash_received),
+            str(sale.labor_charge) if sale.labor_charge is not None else '0.00',
+            str(sale.delivery_charge) if sale.delivery_charge is not None else '0.00',
+            str(sale.subtotal),
             sale.remark, 
             sale.admin.username if sale.admin else 'Unknown'
         ])
@@ -828,7 +888,7 @@ def admin_export_sales(request):
         return response
 
     elif fmt == 'pdf':
-        from reportlab.lib.pagesizes import letter
+        from reportlab.lib.pagesizes import letter, landscape
         from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph
         from reportlab.lib import colors
         from reportlab.lib.styles import getSampleStyleSheet
@@ -836,7 +896,8 @@ def admin_export_sales(request):
         response = HttpResponse(content_type='application/pdf')
         response['Content-Disposition'] = 'attachment; filename="daily_sales.pdf"'
         
-        doc = SimpleDocTemplate(response, pagesize=letter)
+        # Use landscape mode for wider table with more columns
+        doc = SimpleDocTemplate(response, pagesize=landscape(letter))
         elements = []
         styles = getSampleStyleSheet()
         
@@ -852,7 +913,7 @@ def admin_export_sales(request):
             ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
             ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
             ('GRID', (0, 0), (-1, -1), 1, colors.black),
-            ('FONTSIZE', (0, 0), (-1, -1), 8),
+            ('FONTSIZE', (0, 0), (-1, -1), 6),
         ]))
         elements.append(t)
         doc.build(elements)
@@ -894,14 +955,15 @@ def admin_export_expenses(request):
     fmt = request.GET.get('format', 'csv')
     expenses = DailyExpenditure.objects.all().order_by('-date')
     
-    columns = ['Date', 'Day', 'Amount', 'Method', 'Description', 'Admin']
+    columns = ['Date', 'Day', 'Online Amount', 'Cash Amount', 'Total', 'Description', 'Admin']
     data = []
     for ex in expenses:
         data.append([
             str(ex.date), 
             ex.day, 
-            str(ex.amount), 
-            ex.payment_method, 
+            str(ex.online_amount) if ex.online_amount is not None else '0.00',
+            str(ex.cash_amount) if ex.cash_amount is not None else '0.00',
+            str(ex.total),
             ex.description, 
             ex.admin.username if ex.admin else 'Unknown'
         ])
@@ -1091,9 +1153,9 @@ def admin_upload_expenses(request):
                 messages.error(request, "Invalid file format. Please upload CSV, TSV, or XLSX.")
                 return redirect('admin_daily_expenses')
 
-            # Required: Date, Amount, Payment Method, Description
+            # Required: Date, Online Amount, Cash Amount
             # Mappable column names
-            required = ['date', 'amount']
+            required = ['date']
             missing = validate_columns(df, required)
             if missing:
                 messages.error(request, f"Missing required columns: {', '.join(missing)}")
@@ -1105,8 +1167,8 @@ def admin_upload_expenses(request):
                     date_val = pd.to_datetime(row['date']).date()
                     DailyExpenditure.objects.create(
                         date=date_val,
-                        amount=row['amount'],
-                        payment_method=row.get('payment_method', 'Cash'), # Default to Cash if missing
+                        online_amount=row.get('online_amount', 0) or 0,
+                        cash_amount=row.get('cash_amount', 0) or 0,
                         description=row.get('description', 'Imported Expense'),
                         admin=request.user
                     )

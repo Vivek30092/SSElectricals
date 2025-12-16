@@ -8,6 +8,26 @@
                 <h4 class="mb-0">{{ title|default:"Add Daily Sales Entry" }}</h4>
             </div>
             <div class="card-body">
+                <!-- Display Form Errors -->
+                {% if form.errors %}
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    <h5 class="alert-heading">
+                        <i class="fas fa-exclamation-triangle me-2"></i>Unable to Save
+                    </h5>
+                    {% if form.non_field_errors %}
+                    {% for error in form.non_field_errors %}
+                    <p class="mb-1">{{ error }}</p>
+                    {% endfor %}
+                    {% endif %}
+                    {% for field in form %}
+                    {% if field.errors %}
+                    <p class="mb-1"><strong>{{ field.label }}:</strong> {{ field.errors|striptags }}</p>
+                    {% endif %}
+                    {% endfor %}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+                {% endif %}
+
                 <form method="post">
                     {% csrf_token %}
 
@@ -31,6 +51,26 @@
                         <div class="col-md-6">
                             <label class="form-label">Cash Received (₹)</label>
                             {{ form.cash_received }}
+                        </div>
+                    </div>
+
+                    <!-- New Optional Charge Fields -->
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">
+                                Labor Charge (₹)
+                                <span class="badge bg-secondary badge-sm ms-1">Optional</span>
+                            </label>
+                            {{ form.labor_charge }}
+                            <div class="form-text">{{ form.labor_charge.help_text }}</div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">
+                                Delivery Charge (₹)
+                                <span class="badge bg-secondary badge-sm ms-1">Optional</span>
+                            </label>
+                            {{ form.delivery_charge }}
+                            <div class="form-text">{{ form.delivery_charge.help_text }}</div>
                         </div>
                     </div>
 
@@ -61,25 +101,59 @@
 </div>
 
 <script>
-    // Simple script to handle 'Other' remark visibility if inline JS in form widget isn't enough or for initial load
     document.addEventListener('DOMContentLoaded', function () {
+        // Handle 'Other' remark visibility
         const remarkSelect = document.querySelector('select[name="remark"]');
         const otherRemarkDiv = document.querySelector('textarea[name="other_remark"]').closest('div');
 
-        function toggleOther() {
-            if (remarkSelect.value === 'Other') {
-                otherRemarkDiv.style.display = 'block';
-            } else {
-                otherRemarkDiv.style.display = 'none';
-            }
-        }
-
-        // Initial check
-        // toggleOther(); -- Form widget onchange handles it, but maybe initial state needs checking?
-        // The widget onchange handles dynamic. If validation fails and reloads, we need to check.
         if (remarkSelect.value === 'Other') {
             otherRemarkDiv.style.display = 'block';
         }
+
+        // Smart Default Behavior for Labor & Delivery Charge Fields
+        const smartDefaultFields = document.querySelectorAll('.smart-default-field');
+
+        smartDefaultFields.forEach(field => {
+            // Track if field has been interacted with
+            let hasBeenFocused = false;
+
+            // On focus: clear if showing default value
+            field.addEventListener('focus', function () {
+                if (!hasBeenFocused && (this.value === '0' || this.value === '0.00' || this.value === '0.0')) {
+                    this.value = '';
+                    hasBeenFocused = true;
+                }
+            });
+
+            // On blur: if empty and was focused, leave empty (will save as NULL)
+            // If untouched, keep 0 (will save as 0)
+            field.addEventListener('blur', function () {
+                // If it's empty after focus, we leave it empty (NULL)
+                // If never focused and still 0, we keep the 0
+                // No action needed here as empty field will be submitted as empty
+            });
+
+            // Prevent negative values
+            field.addEventListener('input', function () {
+                if (parseFloat(this.value) < 0) {
+                    this.value = '';
+                }
+            });
+
+            // Set initial value to 0 if field is empty (for new entries)
+            if (this.value === '' || this.value === null) {
+                field.value = '0';
+            }
+        });
+
+        // Pre-populate with 0 for new form loads
+        window.addEventListener('load', function () {
+            smartDefaultFields.forEach(field => {
+                if (!field.value || field.value === '') {
+                    field.value = '0';
+                }
+            });
+        });
     });
 </script>
 {% endblock %}

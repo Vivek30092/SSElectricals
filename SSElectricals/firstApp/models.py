@@ -434,6 +434,7 @@ class Review(models.Model):
         return f"{self.user.username}'s review on {self.product.name}"
 
 # 8. Daily Sales Entry
+# 8. Daily Sales Entry
 class DailySales(models.Model):
     REMARK_CHOICES = [
         ('NILL', 'NILL'),
@@ -446,6 +447,25 @@ class DailySales(models.Model):
     total_sales = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     online_received = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     cash_received = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    
+    # Optional charges - default to 0, nullable to support NULL when cleared
+    labor_charge = models.DecimalField(
+        max_digits=10, 
+        decimal_places=2, 
+        default=0.00, 
+        null=True, 
+        blank=True,
+        help_text="Labor charges for the day (optional)"
+    )
+    delivery_charge = models.DecimalField(
+        max_digits=10, 
+        decimal_places=2, 
+        default=0.00, 
+        null=True, 
+        blank=True,
+        help_text="Delivery charges collected (optional)"
+    )
+    
     subtotal = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     remark = models.CharField(max_length=20, choices=REMARK_CHOICES, default='NILL')
     other_remark = models.TextField(blank=True, null=True)
@@ -454,8 +474,12 @@ class DailySales(models.Model):
 
     class Meta:
         ordering = ['-date']
+        constraints = [
+            models.UniqueConstraint(fields=['date'], name='unique_daily_sales_date')
+        ]
 
     def save(self, *args, **kwargs):
+        # Subtotal calculation: Online + Cash (labor and delivery NOT included)
         if not self.subtotal:
             self.subtotal = self.online_received + self.cash_received
         if not self.day and self.date:
@@ -467,29 +491,58 @@ class DailySales(models.Model):
 
 # 9. Daily Investment / Expenditure
 class DailyExpenditure(models.Model):
-    PAYMENT_METHOD_CHOICES = [
-        ('Online', 'Online'),
-        ('Cash', 'Cash'),
-    ]
-
     date = models.DateField()
     day = models.CharField(max_length=20)
-    amount = models.DecimalField(max_digits=10, decimal_places=2)
-    payment_method = models.CharField(max_length=10, choices=PAYMENT_METHOD_CHOICES)
+    
+    # Combined online and cash amounts in single entry
+    online_amount = models.DecimalField(
+        max_digits=10, 
+        decimal_places=2, 
+        default=0.00,
+        null=True,
+        blank=True,
+        help_text="Online expenses for the day"
+    )
+    cash_amount = models.DecimalField(
+        max_digits=10, 
+        decimal_places=2, 
+        default=0.00,
+        null=True,
+        blank=True,
+        help_text="Cash expenses for the day"
+    )
+    total = models.DecimalField(
+        max_digits=10, 
+        decimal_places=2, 
+        default=0.00,
+        help_text="Auto-calculated total (Online + Cash)"
+    )
+    
     description = models.TextField()
     admin = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         ordering = ['-date']
+        constraints = [
+            # One entry per day with combined online and cash
+            models.UniqueConstraint(fields=['date'], name='unique_daily_expenditure_date')
+        ]
 
     def save(self, *args, **kwargs):
+        # Auto-calculate day
         if self.date:
             self.day = self.date.strftime('%A')
+        
+        # Auto-calculate total (Online + Cash)
+        online = self.online_amount or 0
+        cash = self.cash_amount or 0
+        self.total = online + cash
+        
         super().save(*args, **kwargs)
 
     def __str__(self):
-        return f"Expense on {self.date}: ₹{self.amount}"
+        return f"Expense on {self.date}: ₹{self.total}"
 
 # 10. Wishlist
 class Wishlist(models.Model):
@@ -568,3 +621,44 @@ class EmailLog(models.Model):
     
     def __str__(self):
         return f"{self.email_type} to {self.recipient} - {self.status}"
+
+# 13. Financial Validation & Audit Log
+class FinancialValidationLog(models.Model):
+    """
+    Logs any accidental attempts to update financial data from order workflows.
+    
+    CRITICAL BUSINESS RULE:
+    ======================= 
+    Orders should NEVER automatically update financial metrics.
+    This model logs violations of this rule for audit purposes.
+    """
+    
+    VIOLATION_TYPE_CHOICES = [
+        ('AUTO_REVENUE_UPDATE', 'Attempted Auto Revenue Update'),
+        ('AUTO_SALES_UPDATE', 'Attempted Auto Sales Update'),
+        ('ORDER_TO_FINANCE', 'Order Data Used in Finance Calculation'),
+        ('OTHER', 'Other Violation'),
+    ]
+    
+    violation_type = models.CharField(max_length=30, choices=VIOLATION_TYPE_CHOICES)
+    description = models.TextField(help_text="Details of the attempted violation")
+    source_module = models.CharField(max_length=100, help_text="Module/function that attempted the update")
+    
+    # Reference fields
+    order = models.ForeignKey(Order, on_delete=models.SET_NULL, null=True, blank=True)
+    
+    # Tracking
+    detected_at = models.DateTimeField(auto_now_add=True)
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
+    
+    class Meta:
+        ordering = ['-detected_at']
+        verbose_name = "Financial Validation Log"
+        verbose_name_plural = "Financial Validation Logs"
+        indexes = [
+            models.Index(fields=['violation_type', 'detected_at']),
+        ]
+    
+    def __str__(self):
+        return f"{self.violation_type} - {self.detected_at.strftime('%Y-%m-%d %H:%M')}"
