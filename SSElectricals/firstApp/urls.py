@@ -51,7 +51,7 @@ urlpatterns = [
     path('shop-admin/dashboard/', admin_views.admin_dashboard, name='admin_dashboard'),
     path('shop-admin/activity-log/', admin_views.admin_activity_log_view, name='admin_activity_log'),
     path('shop-admin/terminate-session/<int:session_id>/', admin_views.terminate_session, name='terminate_session'),
-    path('shop-admin/analytics/', admin_views.admin_analytics, name='admin_analytics'),
+    path('shop-admin/analytics/', admin_views.admin_analytics_new, name='admin_analytics'),
     path('shop-admin/analytics/delete/', admin_views.admin_delete_analytics_file, name='admin_delete_analytics_file'),
     
     # Admin Product Management
@@ -103,7 +103,7 @@ urlpatterns = [
     path('shop-admin/appointments/delete/<int:pk>/', admin_views.admin_appointment_delete, name='admin_appointment_delete'),
 
     # Admin Analytics URLs
-    path('shop-admin/analytics/', admin_views.admin_analytics, name='admin_analytics'),
+    path('shop-admin/analytics/', admin_views.admin_analytics_new, name='admin_analytics'),
 
     # Admin User Management
     path('shop-admin/users/', admin_views.admin_user_list, name='admin_user_list'),

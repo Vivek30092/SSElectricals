@@ -266,15 +266,26 @@
 
 {% block extra_js %}
 <script>
+    // Safe JSON parse helper
+    function safeJSONParse(jsonString) {
+        if (!jsonString || jsonString.trim() === '') return [];
+        try {
+            return JSON.parse(jsonString);
+        } catch (e) {
+            console.error('JSON parse error:', e);
+            return [];
+        }
+    }
+
     // Sales Chart
     const salesCtx = document.getElementById('salesChart').getContext('2d');
     const salesChart = new Chart(salesCtx, {
         type: 'line',
         data: {
-            labels: JSON.parse('{{ dates_json|escapejs }}'),
+            labels: safeJSONParse('{{ dates_json|escapejs }}'),
             datasets: [{
                 label: 'Sales (₹)',
-                data: JSON.parse('{{ sales_json|escapejs }}'),
+                data: safeJSONParse('{{ sales_json|escapejs }}'),
                 borderColor: '#0d6efd',
                 backgroundColor: 'rgba(13, 110, 253, 0.1)',
                 fill: true,
@@ -289,9 +300,9 @@
     const statusChart = new Chart(statusCtx, {
         type: 'doughnut',
         data: {
-            labels: JSON.parse('{{ cat_labels_json|escapejs }}'),
+            labels: safeJSONParse('{{ cat_labels_json|escapejs }}'),
             datasets: [{
-                data: JSON.parse('{{ cat_data_json|escapejs }}'),
+                data: safeJSONParse('{{ cat_data_json|escapejs }}'),
             }]
         },
         options: {
@@ -305,11 +316,11 @@
     const comparisonChart = new Chart(comparisonCtx, {
         type: 'line',
         data: {
-            labels: JSON.parse('{{ dates_json|escapejs }}'),
+            labels: safeJSONParse('{{ dates_json|escapejs }}'),
             datasets: [
                 {
                     label: 'Daily Sales (₹)',
-                    data: JSON.parse('{{ sales_json|escapejs }}'),
+                    data: safeJSONParse('{{ sales_json|escapejs }}'),
                     borderColor: '#10b981',
                     backgroundColor: 'rgba(16, 185, 129, 0.1)',
                     fill: true,
@@ -320,7 +331,7 @@
                 },
                 {
                     label: 'Daily Expenses (₹)',
-                    data: JSON.parse('{{ expenses_json|escapejs }}'),
+                    data: safeJSONParse('{{ expenses_json|escapejs }}'),
                     borderColor: '#ec4899',
                     backgroundColor: 'rgba(236, 72, 153, 0.1)',
                     fill: true,

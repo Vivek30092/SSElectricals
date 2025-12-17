@@ -708,6 +708,24 @@ body.dark-mode .form-control::placeholder {
     color: #7a7a7a;
 }
 
+/* Readonly Total Field - Match other inputs while keeping readonly appearance */
+body.dark-mode input[name="total"][readonly],
+body.dark-mode .form-control[readonly] {
+    background-color: #150a2e !important; /* Match other inputs */
+    border-color: rgba(76, 93, 215, 0.3) !important; /* Match other inputs */
+    color: #e8e8e8 !important; /* Match other inputs */
+    cursor: default; /* Indicate non-editable */
+    opacity: 1; /* Override browser default opacity for readonly */
+}
+
+body.dark-mode input[name="total"][readonly]:focus,
+body.dark-mode .form-control[readonly]:focus {
+    background-color: #150a2e !important; /* Keep same on focus */
+    border-color: rgba(76, 93, 215, 0.5) !important; /* Slightly brighter border on focus */
+    color: #e8e8e8 !important;
+    box-shadow: none; /* No glow on readonly field */
+}
+
 body.dark-mode .invalid-feedback,
 body.dark-mode .text-danger {
     color: #C231C9 !important;
@@ -949,4 +967,264 @@ body.dark-mode ::-webkit-scrollbar-thumb {
 
 body.dark-mode ::-webkit-scrollbar-thumb:hover {
     background: #4C5DD7;
+}
+
+
+
+/* ========================================
+   USER PAGE ENHANCEMENTS - Dark Mode
+   ======================================== */
+
+/* Enhanced Call User Button */
+body.dark-mode .btn-outline-success {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    border: 2px solid #10b981;
+    color: #ffffff;
+    font-weight: 600;
+    box-shadow: 0 0 15px rgba(16, 185, 129, 0.3);
+    transition: all 0.3s ease;
+}
+
+body.dark-mode .btn-outline-success:hover {
+    background: linear-gradient(135deg, #059669 0%, #047857 100%);
+    border-color: #059669;
+    box-shadow: 0 0 25px rgba(16, 185, 129, 0.6), 0 0 40px rgba(16, 185, 129, 0.4);
+    transform: translateY(-2px);
+    color: #ffffff;
+}
+
+body.dark-mode .btn-outline-success:active {
+    transform: translateY(0);
+    box-shadow: 0 0 15px rgba(16, 185, 129, 0.5);
+}
+
+/* Enhanced Email User Button */
+body.dark-mode .btn-outline-primary {
+    background: linear-gradient(135deg, #4C5DD7 0%, #3b4ac4 100%);
+    border: 2px solid #4C5DD7;
+    color: #ffffff;
+    font-weight: 600;
+    box-shadow: 0 0 15px rgba(76, 93, 215, 0.3);
+    transition: all 0.3s ease;
+}
+
+body.dark-mode .btn-outline-primary:hover {
+    background: linear-gradient(135deg, #3b4ac4 0%, #2a39b1 100%);
+    border-color: #3b4ac4;
+    box-shadow: 0 0 25px rgba(76, 93, 215, 0.6), 0 0 40px rgba(76, 93, 215, 0.4);
+    transform: translateY(-2px);
+    color: #ffffff;
+}
+
+body.dark-mode .btn-outline-primary:active {
+    transform: translateY(0);
+    box-shadow: 0 0 15px rgba(76, 93, 215, 0.5);
+}
+
+/* Breadcrumb Navigation as Buttons */
+body.dark-mode .breadcrumb-item a {
+    background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
+    color: #10b981;
+    padding: 0.4rem 1rem;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.15);
+    transition: all 0.3s ease;
+}
+
+/* Add icons before breadcrumb links */
+body.dark-mode .breadcrumb-item:first-child a::before {
+    content: '\f3fd';
+    /* Dashboard icon */
+    font-family: 'Font Awesome 5 Free';
+    font-weight: 900;
+    margin-right: 0.3rem;
+}
+
+body.dark-mode .breadcrumb-item:nth-child(2) a::before {
+    content: '\f0c0';
+    /* Users icon */
+    font-family: 'Font Awesome 5 Free';
+    font-weight: 900;
+    margin-right: 0.3rem;
+}
+
+body.dark-mode .breadcrumb-item a:hover {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: #ffffff;
+    border-color: #10b981;
+    box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4), 0 0 20px rgba(16, 185, 129, 0.3);
+    transform: translateY(-2px);
+}
+
+body.dark-mode .breadcrumb-item a:active {
+    transform: translateY(0);
+}
+
+/* Active breadcrumb item */
+body.dark-mode .breadcrumb-item.active {
+    color: #a0aec0;
+    font-weight: 600;
+}
+
+/* Breadcrumb separator */
+body.dark-mode .breadcrumb-item+.breadcrumb-item::before {
+    content: "\f105";
+    /* Chevron right */
+    font-family: 'Font Awesome 5 Free';
+    font-weight: 900;
+    color: #4C5DD7;
+    opacity: 0.6;
+}
+
+
+/* ========================================
+   DASHBOARD QUICK ACTION BUTTONS - Enhanced
+   ======================================== */
+
+/* Manage Categories Button Enhancement (Dark Mode) */
+body.dark-mode .btn-outline-secondary {
+    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+    border: 2px solid #6366f1;
+    color: #ffffff;
+    font-weight: 600;
+    box-shadow: 0 0 15px rgba(99, 102, 241, 0.3);
+    transition: all 0.3s ease;
+}
+
+body.dark-mode .btn-outline-secondary:hover {
+    background: linear-gradient(135deg, #8b5cf6 0%, #a78bfa 100%);
+    border-color: #8b5cf6;
+    box-shadow: 0 0 25px rgba(139, 92, 246, 0.6), 0 0 40px rgba(139, 92, 246, 0.4);
+    transform: translateY(-2px);
+    color: #ffffff;
+}
+
+body.dark-mode .btn-outline-secondary:active {
+    transform: translateY(0);
+    box-shadow: 0 0 15px rgba(99, 102, 241, 0.5);
+}
+
+/* Upload Expenses Button Enhancement (Dark Mode) */
+body.dark-mode .btn-outline-danger {
+    background: linear-gradient(135deg, #ec4899 0%, #f43f5e 100%);
+    border: 2px solid #ec4899;
+    color: #ffffff;
+    font-weight: 600;
+    box-shadow: 0 0 15px rgba(236, 72, 153, 0.3);
+    transition: all 0.3s ease;
+}
+
+body.dark-mode .btn-outline-danger:hover {
+    background: linear-gradient(135deg, #f43f5e 0%, #fb7185 100%);
+    border-color: #f43f5e;
+    box-shadow: 0 0 25px rgba(244, 63, 94, 0.6), 0 0 40px rgba(244, 63, 94, 0.4);
+    transform: translateY(-2px);
+    color: #ffffff;
+}
+
+body.dark-mode .btn-outline-danger:active {
+    transform: translateY(0);
+    box-shadow: 0 0 15px rgba(236, 72, 153, 0.5);
+}
+
+/* Light Mode Enhancements (Optional - Subtle) */
+.btn-outline-secondary {
+    transition: all 0.3s ease;
+}
+
+.btn-outline-secondary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.btn-outline-danger {
+    transition: all 0.3s ease;
+}
+
+.btn-outline-danger:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);
+}
+
+/* ========================================
+   TABLE SORTING STYLES
+   ======================================== */
+
+/* Sortable Headers */
+.sortable-header {
+    cursor: pointer;
+    user-select: none;
+    transition: all 0.2s ease;
+    position: relative;
+}
+
+.sortable-header:hover {
+    background-color: rgba(var(--bs-primary-rgb), 0.1);
+}
+
+.sortable-header.sorted {
+    background-color: rgba(var(--bs-primary-rgb), 0.15);
+    font-weight: 600;
+}
+
+.sort-icon {
+    font-size: 0.875rem;
+    transition: all 0.2s ease;
+}
+
+.sortable-header:hover .sort-icon i.fa-sort {
+    opacity: 1 !important;
+    color: var(--bs-primary) !important;
+}
+
+/* Reset Sort Button */
+.btn-reset-sort {
+    transition: all 0.3s ease;
+}
+
+.btn-reset-sort:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* Dark Mode Sorting Styles */
+body.dark-mode .sortable-header:hover {
+    background-color: rgba(76, 93, 215, 0.2);
+}
+
+body.dark-mode .sortable-header.sorted {
+    background-color: rgba(76, 93, 215, 0.25);
+    font-weight: 700;
+}
+
+body.dark-mode .sort-icon i {
+    color: #68A2EB;
+}
+
+body.dark-mode .sortable-header:hover .sort-icon i.fa-sort {
+    color: #4C5DD7 !important;
+}
+
+/* Sorting Info Badge */
+.sorting-info {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.375rem 0.75rem;
+    background: linear-gradient(135deg, rgba(var(--bs-primary-rgb), 0.1) 0%, rgba(var(--bs-primary-rgb), 0.05) 100%);
+    border: 1px solid rgba(var(--bs-primary-rgb), 0.2);
+    border-radius: 0.375rem;
+    font-size: 0.875rem;
+}
+
+body.dark-mode .sorting-info {
+    background: linear-gradient(135deg, rgba(76, 93, 215, 0.2) 0%, rgba(76, 93, 215, 0.1) 100%);
+    border-color: rgba(76, 93, 215, 0.3);
+    color: #68A2EB;
 }

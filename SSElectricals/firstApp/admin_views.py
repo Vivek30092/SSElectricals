@@ -169,15 +169,203 @@ def admin_dashboard(request):
     return render(request, 'admin/admin_dashboard.html', context)
 
 @staff_required
-def admin_analytics(request):
-    """
-    Advanced Analytics Dashboard
-    - Multi-level time aggregation (Daily/Monthly/Quarterly/Half-Yearly/Yearly)
-    - Min/Max detection
-    - Growth % calculations
-    - Export functionality
-    """
-    from django.db.models import Sum, Avg, Count, Q, Min, Max
+def admin_analytics_new(request):
+    """Working Analytics Dashboard"""
+    from django.db.models import Sum, Avg
+    from decimal import Decimal
+    import json
+    
+    # Direct queries - get ALL data
+    from firstApp.models import DailySales, DailyExpenditure
+    
+    # Get totals with proper Decimal handling (no Avg to avoid naming conflicts)
+    sales_agg = DailySales.objects.aggregate(
+        total=Sum('total_sales'),
+        online=Sum('online_received'),
+        cash=Sum('cash_received'),
+        labor=Sum('labor_charge'),
+        delivery=Sum('delivery_charge')
+    )
+    
+    expense_agg = DailyExpenditure.objects.aggregate(
+        total=Sum('total'),
+        online=Sum('online_amount'),
+        cash=Sum('cash_amount')
+    )
+    
+    # Get counts for manual average calculation
+    sales_count = DailySales.objects.count()
+    expense_count = DailyExpenditure.objects.count()
+    
+    # Convert Decimal to float safely
+    def safe_float(val):
+        return float(val) if val else 0.0
+    
+    total_sales = safe_float(sales_agg['total'])
+    total_online_sales = safe_float(sales_agg['online'])
+    total_cash_sales = safe_float(sales_agg['cash'])
+    total_labor = safe_float(sales_agg['labor'])
+    total_delivery = safe_float(sales_agg['delivery'])
+    
+    total_expense = safe_float(expense_agg['total'])
+    total_online_exp = safe_float(expense_agg['online'])
+    total_cash_exp = safe_float(expense_agg['cash'])
+    
+    # Calculate averages manually
+    avg_sales = (total_sales / sales_count) if sales_count > 0 else 0.0
+    avg_expense = (total_expense / expense_count) if expense_count > 0 else 0.0
+    
+    # Calculate percentages
+    online_pct = (total_online_sales / total_sales * 100) if total_sales > 0 else 0
+    cash_pct = (total_cash_sales / total_sales * 100) if total_sales > 0 else 0
+    online_exp_pct = (total_online_exp / total_expense * 100) if total_expense > 0 else 0
+    cash_exp_pct = (total_cash_exp / total_expense * 100) if total_expense > 0 else 0
+    
+    # Get all sales for charts and min/max
+    all_sales = DailySales.objects.all().order_by('date').values('date', 'total_sales')
+    sales_dates = [s['date'].strftime('%Y-%m-%d') for s in all_sales]
+    sales_values = [safe_float(s['total_sales']) for s in all_sales]
+    
+    # Find min/max sales days
+    min_sale_day = DailySales.objects.order_by('total_sales').first()
+    max_sale_day = DailySales.objects.order_by('-total_sales').first()
+    
+    # Calculate daily average (already have it)
+    daily_avg_sales = avg_sales
+    
+    # For monthly - need to aggregate by month
+    from django.db.models.functions import TruncMonth
+    monthly_sales = DailySales.objects.annotate(
+        month=TruncMonth('date')
+    ).values('month').annotate(
+        total=Sum('total_sales')
+    ).order_by('month')
+    
+    monthly_sales_list = list(monthly_sales)
+    if monthly_sales_list:
+        monthly_values = [safe_float(m['total']) for m in monthly_sales_list]
+        monthly_avg_sales = sum(monthly_values) / len(monthly_values) if monthly_values else 0
+        
+        # Prepare data for monthly chart
+        monthly_sales_labels = [m['month'].strftime('%b %Y') for m in monthly_sales_list]
+        monthly_sales_values = monthly_values
+        
+        # Find best month
+        max_month = max(monthly_sales_list, key=lambda x: safe_float(x['total']))
+        max_sales_month = max_month['month'].strftime('%B %Y')
+        max_sales_month_value = safe_float(max_month['total'])
+        
+        min_month = min(monthly_sales_list, key=lambda x: safe_float(x['total']))
+        min_sales_month = min_month['month'].strftime('%B %Y')
+        min_sales_month_value = safe_float(min_month['total'])
+    else:
+        monthly_avg_sales = 0
+        monthly_sales_labels = []
+        monthly_sales_values = []
+        max_sales_month = 'N/A'
+        max_sales_month_value = 0
+        min_sales_month = 'N/A'
+        min_sales_month_value = 0
+    
+    # Quarterly aggregation
+    from django.db.models.functions import TruncQuarter
+    quarterly_sales = DailySales.objects.annotate(
+        quarter=TruncQuarter('date')
+    ).values('quarter').annotate(
+        total=Sum('total_sales')
+    ).order_by('quarter')
+    
+    quarterly_list = list(quarterly_sales)
+    quarterly_labels = []
+    quarterly_values = []
+    for q in quarterly_list:
+        quarter_date = q['quarter']
+        quarter_num = (quarter_date.month - 1) // 3 + 1
+        label = f"Q{quarter_num} {quarter_date.year}"
+        quarterly_labels.append(label)
+        quarterly_values.append(safe_float(q['total']))
+    
+    # Yearly aggregation
+    from django.db.models.functions import TruncYear
+    yearly_sales = DailySales.objects.annotate(
+        year=TruncYear('date')
+    ).values('year').annotate(
+        total=Sum('total_sales')
+    ).order_by('year')
+    
+    yearly_list = list(yearly_sales)
+    yearly_labels = [y['year'].strftime('%Y') for y in yearly_list]
+    yearly_values = [safe_float(y['total']) for y in yearly_list]
+    
+    # Weekday aggregation
+    from django.db.models import Case, When, Value, CharField
+    weekday_sales = DailySales.objects.values('day').annotate(
+        total=Sum('total_sales')
+    ).order_by()  # Remove default ordering
+    
+    # Order by weekday
+    weekday_order = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+    weekday_dict = {w['day']: safe_float(w['total']) for w in weekday_sales}
+    weekday_labels = weekday_order
+    weekday_values = [weekday_dict.get(day, 0) for day in weekday_order]
+    
+    all_expenses = DailyExpenditure.objects.all().order_by('date').values('date', 'total')
+    expense_dates = [e['date'].strftime('%Y-%m-%d') for e in all_expenses]
+    expense_values = [safe_float(e['total']) for e in all_expenses]
+    
+    context = {
+        'total_sales': total_sales,
+        'total_expense': total_expense,
+        'total_online_sales': total_online_sales,
+        'total_cash_sales': total_cash_sales,
+        'avg_sales': avg_sales,
+        'online_pct': round(online_pct, 1),
+        'cash_pct': round(cash_pct, 1),
+        'total_labor': total_labor,
+        'total_delivery': total_delivery,
+        'avg_expense': avg_expense,
+        'total_online_exp': total_online_exp,
+        'total_cash_exp': total_cash_exp,
+        'online_exp_pct': round(online_exp_pct, 1),
+        'cash_exp_pct': round(cash_exp_pct, 1),
+        'start_date': None,
+        'end_date': None,
+        'month': None,
+        'time_view': 'daily',
+        'sales_dates_json': json.dumps(sales_dates),
+        'sales_values_json': json.dumps(sales_values),
+        'expense_dates_json': json.dumps(expense_dates),
+        'expense_values_json': json.dumps(expense_values),
+        'monthly_sales_labels_json': json.dumps(monthly_sales_labels),
+        'monthly_sales_values_json': json.dumps(monthly_sales_values),
+        'monthly_expense_labels_json': json.dumps([]),
+        'monthly_expense_values_json': json.dumps([]),
+        'quarterly_labels_json': json.dumps(quarterly_labels),
+        'quarterly_values_json': json.dumps(quarterly_values),
+        'yearly_labels_json': json.dumps(yearly_labels),
+        'yearly_values_json': json.dumps(yearly_values),
+        'weekday_labels_json': json.dumps(weekday_labels),
+        'weekday_values_json': json.dumps(weekday_values),
+        'min_sale_day': min_sale_day,
+        'max_sale_day': max_sale_day,
+        'min_expense_day': None,
+        'max_expense_day': None,
+        'min_sales_month': min_sales_month,
+        'min_sales_month_value': min_sales_month_value,
+        'max_sales_month': max_sales_month,
+        'max_sales_month_value': max_sales_month_value,
+        'daily_avg_sales': daily_avg_sales,
+        'monthly_avg_sales': monthly_avg_sales,
+        'quarterly_avg_sales': 0,
+        'yearly_avg_sales': 0,
+        'monthly_avg_expense': 0,
+        'best_month_info': None,
+        'worst_month_info': None,
+        'net_contribution': total_sales - total_labor - total_delivery - total_expense,
+        'contribution_color': 'success',
+    }
+    
+    return render(request, 'admin/admin_analytics.html', context)
     from django.db.models.functions import TruncMonth, TruncDate, TruncQuarter, TruncYear
     from django.http import HttpResponse
     from django.template.loader import render_to_string
@@ -209,10 +397,11 @@ def admin_analytics(request):
         except:
             pass
     
-    # Default: Last 12 months
-    if not start_date and not end_date and not month:
-        end_date = timezone.now().date()
-        start_date = end_date - timedelta(days=365)
+    # Default: Show all data (no date filter)
+    # Users can apply filters manually if needed
+    # if not start_date and not end_date and not month:
+    #     end_date = timezone.now().date()
+    #     start_date = end_date - timedelta(days=365)
     
     # Build querysets
     sales_qs = DailySales.objects.all()
@@ -228,6 +417,16 @@ def admin_analytics(request):
         year, mon = month.split('-')
         sales_qs = sales_qs.filter(date__year=year, date__month=mon)
         expenses_qs = expenses_qs.filter(date__year=year, date__month=mon)
+    
+    # DEBUG: Print what we're querying
+    import sys
+    print("=" * 80, flush=True)
+    print(f"DEBUG Analytics: Date range: {start_date} to {end_date}", flush=True)
+    print(f"DEBUG Analytics: Sales count: {sales_qs.count()}", flush=True)
+    print(f"DEBUG Analytics: Expenses count: {expenses_qs.count()}", flush=True)
+    print(f"DEBUG Analytics: Sales QS: {sales_qs.query}", flush=True)
+    print("=" * 80, flush=True)
+    sys.stdout.flush()
     
     # ==================== BASIC KPIs ====================
     sales_totals = sales_qs.aggregate(
@@ -247,6 +446,8 @@ def admin_analytics(request):
     total_cash_sales = float(sales_totals['total_cash'] or 0)
     total_labor = float(sales_totals['total_labor'] or 0)
     total_delivery = float(sales_totals['total_delivery'] or 0)
+    
+    print(f"DEBUG Analytics: Total sales value: {total_sales}")
     
     online_pct = (total_online_sales / total_sales * 100) if total_sales > 0 else 0
     cash_pct = (total_cash_sales / total_sales * 100) if total_sales > 0 else 0
@@ -772,9 +973,8 @@ def admin_appointment_delete(request, pk):
     messages.success(request, "Appointment deleted successfully.")
     return redirect('admin_appointment_list')
 
-@staff_member_required
-def admin_analytics(request):
-    data_dir = os.path.join(settings.MEDIA_ROOT, 'data')
+
+
     if not os.path.exists(data_dir):
         os.makedirs(data_dir)
 
@@ -1146,7 +1346,24 @@ def admin_approve_review(request, review_id):
 
 @staff_member_required
 def admin_daily_sales(request):
-    sales_list = DailySales.objects.all().order_by('date')
+    # Default: Date DESC (most recent first)
+    sort_by = request.GET.get('sort_by', 'date')
+    sort_order = request.GET.get('sort_order', 'desc')
+    
+    # Validate sortable fields
+    sortable_fields = ['date', 'day', 'total_sales', 'online_received', 'cash_received', 
+                       'labor_charge', 'delivery_charge', 'subtotal', 'admin__username']
+    
+    if sort_by not in sortable_fields:
+        sort_by = 'date'
+    
+    # Build order_by string
+    if sort_order == 'desc':
+        order_field = f'-{sort_by}'
+    else:
+        order_field = sort_by
+    
+    sales_list = DailySales.objects.all().order_by(order_field)
     
     # Filters
     month = request.GET.get('month') # standard format YYYY-MM
@@ -1174,7 +1391,7 @@ def admin_daily_sales(request):
     total_labor = sales_list.aggregate(Sum('labor_charge'))['labor_charge__sum'] or 0
     total_delivery = sales_list.aggregate(Sum('delivery_charge'))['delivery_charge__sum'] or 0
 
-    paginator = Paginator(sales_list, 20)
+    paginator = Paginator(sales_list, 50)  # Show 50 records per page
     page_number = request.GET.get('page')
     sales_records = paginator.get_page(page_number)
 
@@ -1184,7 +1401,9 @@ def admin_daily_sales(request):
         'total_online': total_online,
         'total_cash': total_cash,
         'total_labor': total_labor,
-        'total_delivery': total_delivery
+        'total_delivery': total_delivery,
+        'current_sort_by': sort_by,
+        'current_sort_order': sort_order,
     }
 
     return render(request, 'admin/admin_daily_sales.html', context)
@@ -1249,7 +1468,23 @@ def admin_export_sales(request):
 
 @staff_member_required
 def admin_daily_expenses(request):
-    expenses_list = DailyExpenditure.objects.all().order_by('date', 'created_at')
+    # Default: Date DESC (most recent first)
+    sort_by = request.GET.get('sort_by', 'date')
+    sort_order = request.GET.get('sort_order', 'desc')
+    
+    # Validate sortable fields
+    sortable_fields = ['date', 'day', 'online_amount', 'cash_amount', 'total', 'admin__username']
+    
+    if sort_by not in sortable_fields:
+        sort_by = 'date'
+    
+    # Build order_by string
+    if sort_order == 'desc':
+        order_field = f'-{sort_by}'
+    else:
+        order_field = sort_by
+    
+    expenses_list = DailyExpenditure.objects.all().order_by(order_field, '-created_at')
     
     # Filters
     month = request.GET.get('month')
@@ -1276,7 +1511,7 @@ def admin_daily_expenses(request):
     total_online_expenses = expenses_list.aggregate(Sum('online_amount'))['online_amount__sum'] or 0
     total_cash_expenses = expenses_list.aggregate(Sum('cash_amount'))['cash_amount__sum'] or 0
 
-    paginator = Paginator(expenses_list, 20)
+    paginator = Paginator(expenses_list, 50)  # Show 50 records per page
     page_number = request.GET.get('page')
     expenses = paginator.get_page(page_number)
 
@@ -1284,7 +1519,9 @@ def admin_daily_expenses(request):
         'expenses': expenses,
         'total_expenses': total_expenses,
         'total_online_expenses': total_online_expenses,
-        'total_cash_expenses': total_cash_expenses
+        'total_cash_expenses': total_cash_expenses,
+        'current_sort_by': sort_by,
+        'current_sort_order': sort_order,
     }
 
     return render(request, 'admin/admin_daily_expenses.html', context)

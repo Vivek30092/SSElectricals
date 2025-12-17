@@ -1117,7 +1117,7 @@ def order_receipt(request, order_id):
     else:
         grand_total = calculated_total
         
-    return render(request, 'firstApp/order_receipt.html', {'order': order, 'order_items': order_items, 'grand_total': grand_total})
+    return render(request, 'admin/admin_order_receipt.html', {'order': order, 'order_items': order_items, 'grand_total': grand_total})
 
 def google_reviews(request):
     reviews = fetch_google_reviews()

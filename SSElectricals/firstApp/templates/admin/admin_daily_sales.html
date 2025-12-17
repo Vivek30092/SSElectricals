@@ -152,20 +152,29 @@
 <div class="card shadow border-0">
     <div class="card-body p-0">
         <div class="table-responsive">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div class="sorting-info">
+                    <i class="fas fa-info-circle"></i>
+                    <span>Sorted by: <strong>{{ current_sort|title }}</strong> ({{ current_order|upper }})</span>
+                </div>
+                <a href="?sort=date&order=desc" class="btn btn-sm btn-outline-secondary btn-reset-sort">
+                    <i class="fas fa-undo me-1"></i> Reset to Default
+                </a>
+            </div>
             <table class="table table-hover table-striped mb-0 align-middle">
-                <thead class="bg-light">
+                <thead class="bg-primary text-white">
                     <tr>
-                        <th class="py-3 ps-3">Date</th>
-                        <th class="py-3">Day</th>
-                        <th class="py-3">Total Sales</th>
-                        <th class="py-3">Online Received</th>
-                        <th class="py-3">Cash Received</th>
-                        <th class="py-3">Labor Charge</th>
-                        <th class="py-3">Delivery Charge</th>
-                        <th class="py-3">Subtotal</th>
-                        <th class="py-3">Remark</th>
-                        <th class="py-3">Admin</th>
-                        <th class="py-3 pe-3 text-end">Actions</th>
+                        {% include 'admin/includes/sortable_header.html' with column='date' label='Date' %}
+                        {% include 'admin/includes/sortable_header.html' with column='day' label='Day' %}
+                        {% include 'admin/includes/sortable_header.html' with column='total_sales' label='Total Sales(₹)' %}
+                        {% include 'admin/includes/sortable_header.html' with column='online_received' label='Online(₹)' %}
+                        {% include 'admin/includes/sortable_header.html' with column='cash_received' label='Cash(₹)' %}
+                        {% include 'admin/includes/sortable_header.html' with column='labor_charge' label='Labor(₹)' %}
+                        {% include 'admin/includes/sortable_header.html' with column='delivery_charge' label='Delivery(₹)' %}
+                        {% include 'admin/includes/sortable_header.html' with column='subtotal' label='Subtotal(₹)' %}
+                        <th>Remarks</th>
+                        <th>Admin</th>
+                        <th class="text-end">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -222,8 +231,8 @@
                 <li class="page-item active"><span class="page-link">{{ i }}</span></li>
                 {% else %}
                 <li class="page-item"><a class="page-link"
-                        href="?page={{ i }}&date={{ request.GET.date }}&month={{ request.GET.month }}&year={{ request.GET.year }}&start_date={{ request.GET.start_date }}&end_date={{ request.GET.end_date }}">{{
-                        i }}</a></li>
+                        href="?page={{ i }}&date={{ request.GET.date }}&month={{ request.GET.month }}&year={{ request.GET.year }}&start_date={{ request.GET.start_date }}&end_date={{ request.GET.end_date }}">
+                        {{ i }}</a></li>
                 {% endif %}
                 {% endfor %}
 
