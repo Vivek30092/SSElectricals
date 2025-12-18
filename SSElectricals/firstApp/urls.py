@@ -116,6 +116,7 @@ urlpatterns = [
 
     # Admin Analytics URLs
     path('shop-admin/analytics/', admin_views.admin_analytics_new, name='admin_analytics'),
+    path('shop-admin/api/analytics/', admin_views.analytics_api, name='analytics_api'),
 
     # Admin User Management
     path('shop-admin/users/', admin_views.admin_user_list, name='admin_user_list'),

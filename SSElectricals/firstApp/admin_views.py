@@ -12,7 +12,7 @@ from django.db.models.functions import TruncDate, TruncMonth
 from django.utils import timezone
 from .forms import ProductForm, ReviewForm, DailySalesForm, DailyExpenditureForm
 from django.core.mail import send_mail
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.core.paginator import Paginator
 import csv
 import datetime
@@ -428,10 +428,308 @@ def admin_analytics_new(request):
         # Daily sales trend data (all time)
         'sales_dates_json': json.dumps([s['date'].strftime('%Y-%m-%d') for s in DailySales.objects.all().order_by('date').values('date', 'total_sales')]),
         'sales_values_json': json.dumps([safe_float(s['total_sales']) for s in DailySales.objects.all().order_by('date').values('date', 'total_sales')]),
+        
+        # Combined tab data
+        'net_contribution': total_sales - (total_labor + total_delivery + total_expense),
+        'contribution_color': 'success' if (total_sales - (total_labor + total_delivery + total_expense)) >= 0 else 'danger',
     }
     
     return render(request, 'admin/admin_analytics.html', context)
 
+
+@staff_required
+def analytics_api(request):
+    """
+    Unified Analytics API endpoint for dynamic filtering
+    
+    Accepts:
+        - start_date: YYYY-MM-DD format
+        - end_date: YYYY-MM-DD format  
+        - month: YYYY-MM format (overrides start_date/end_date if provided)
+        - mode: 'sales' | 'expenses' | 'combined'
+        
+    Returns JSON with:
+        - Summary cards data
+        - Insight cards (best/worst days, averages)
+        - Chart data for the selected period
+    """
+    from django.db.models import Sum, Avg, Min, Max
+    from django.db.models.functions import TruncMonth, TruncYear
+    from firstApp.models import DailySales, DailyExpenditure
+    from calendar import monthrange
+    
+    def safe_float(val):
+        return float(val) if val else 0.0
+    
+    # Parse filter parameters
+    start_date_str = request.GET.get('start_date', '')
+    end_date_str = request.GET.get('end_date', '')
+    month_str = request.GET.get('month', '')
+    mode = request.GET.get('mode', 'sales')  # sales, expenses, combined
+    
+    # Determine date range
+    start_date = None
+    end_date = None
+    
+    if month_str:
+        # Month takes priority - parse YYYY-MM format
+        try:
+            year, month = map(int, month_str.split('-'))
+            start_date = datetime.date(year, month, 1)
+            _, last_day = monthrange(year, month)
+            end_date = datetime.date(year, month, last_day)
+        except (ValueError, TypeError):
+            pass
+    elif start_date_str and end_date_str:
+        # Use custom date range
+        try:
+            start_date = datetime.datetime.strptime(start_date_str, '%Y-%m-%d').date()
+            end_date = datetime.datetime.strptime(end_date_str, '%Y-%m-%d').date()
+        except ValueError:
+            pass
+    
+    # Build querysets with filters
+    sales_qs = DailySales.objects.all()
+    expenses_qs = DailyExpenditure.objects.all()
+    
+    if start_date and end_date:
+        sales_qs = sales_qs.filter(date__range=[start_date, end_date])
+        expenses_qs = expenses_qs.filter(date__range=[start_date, end_date])
+    
+    # Calculate number of days in range for averages
+    if start_date and end_date:
+        days_in_range = (end_date - start_date).days + 1
+    else:
+        # Use total days with data
+        days_in_range = sales_qs.count() or 1
+    
+    # Calculate months in range for monthly average
+    if start_date and end_date:
+        months_diff = (end_date.year - start_date.year) * 12 + (end_date.month - start_date.month)
+        months_in_range = max(months_diff, 1)
+    else:
+        months_in_range = 1
+    
+    # Prepare response based on mode
+    response_data = {
+        'success': True,
+        'timestamp': timezone.now().isoformat(),
+        'mode': mode,
+        'filters': {
+            'start_date': start_date_str if start_date else '',
+            'end_date': end_date_str if end_date else '',
+            'month': month_str,
+        }
+    }
+    
+    if mode == 'sales':
+        # ===== SALES DATA =====
+        sales_agg = sales_qs.aggregate(
+            total=Sum('total_sales'),
+            online=Sum('online_received'),
+            cash=Sum('cash_received'),
+            labor=Sum('labor_charge'),
+            delivery=Sum('delivery_charge'),
+            count=Count('id')
+        )
+        
+        total_sales = safe_float(sales_agg['total'])
+        total_online = safe_float(sales_agg['online'])
+        total_cash = safe_float(sales_agg['cash'])
+        total_labor = safe_float(sales_agg['labor'])
+        total_delivery = safe_float(sales_agg['delivery'])
+        sales_count = sales_agg['count'] or 0
+        
+        # Calculate percentages
+        online_pct = (total_online / total_sales * 100) if total_sales > 0 else 0
+        
+        # Calculate averages
+        daily_avg = (total_sales / days_in_range) if days_in_range > 0 else 0
+        monthly_avg = (total_sales / months_in_range) if months_in_range > 0 else 0
+        
+        # Best/Worst days
+        best_day = sales_qs.order_by('-total_sales').first()
+        worst_day = sales_qs.filter(total_sales__gt=0).order_by('total_sales').first()
+        
+        # Best month (within filtered range)
+        monthly_data = sales_qs.annotate(
+            month=TruncMonth('date')
+        ).values('month').annotate(
+            total=Sum('total_sales')
+        ).order_by('-total')
+        
+        best_month_data = monthly_data.first() if monthly_data else None
+        
+        response_data['summary'] = {
+            'total_sales': round(total_sales, 2),
+            'avg_daily': round(daily_avg, 2),
+            'online_amount': round(total_online, 2),
+            'online_percentage': round(online_pct, 1),
+            'labor_total': round(total_labor, 2),
+            'delivery_total': round(total_delivery, 2),
+            'cash_total': round(total_cash, 2),
+        }
+        
+        response_data['insights'] = {
+            'best_day': {
+                'date': best_day.date.strftime('%d %b, %Y') if best_day else 'No data',
+                'amount': round(safe_float(best_day.total_sales), 2) if best_day else 0,
+            },
+            'worst_day': {
+                'date': worst_day.date.strftime('%d %b, %Y') if worst_day else 'No data',  
+                'amount': round(safe_float(worst_day.total_sales), 2) if worst_day else 0,
+            },
+            'best_month': {
+                'month': best_month_data['month'].strftime('%B %Y') if best_month_data else 'No data',
+                'amount': round(safe_float(best_month_data['total']), 2) if best_month_data else 0,
+            },
+            'averages': {
+                'daily': round(daily_avg, 2),
+                'monthly': round(monthly_avg, 2),
+            }
+        }
+        
+        # Chart data for filtered range
+        daily_data = sales_qs.order_by('date').values('date', 'total_sales')
+        response_data['chart'] = {
+            'dates': [d['date'].strftime('%Y-%m-%d') for d in daily_data],
+            'values': [round(safe_float(d['total_sales']), 2) for d in daily_data],
+        }
+        
+    elif mode == 'expenses':
+        # ===== EXPENSES DATA =====
+        expense_agg = expenses_qs.aggregate(
+            total=Sum('total'),
+            online=Sum('online_amount'),
+            cash=Sum('cash_amount'),
+            count=Count('id')
+        )
+        
+        total_expense = safe_float(expense_agg['total'])
+        total_online_exp = safe_float(expense_agg['online'])
+        total_cash_exp = safe_float(expense_agg['cash'])
+        expense_count = expense_agg['count'] or 0
+        
+        # Calculate percentages
+        online_exp_pct = (total_online_exp / total_expense * 100) if total_expense > 0 else 0
+        
+        # Calculate averages
+        daily_avg = (total_expense / days_in_range) if days_in_range > 0 else 0
+        monthly_avg = (total_expense / months_in_range) if months_in_range > 0 else 0
+        
+        # Best/Worst expense days
+        highest_exp_day = expenses_qs.order_by('-total').first()
+        lowest_exp_day = expenses_qs.filter(total__gt=0).order_by('total').first()
+        
+        # Highest expense month
+        monthly_exp_data = expenses_qs.annotate(
+            month=TruncMonth('date')
+        ).values('month').annotate(
+            total=Sum('total')
+        ).order_by('-total')
+        
+        highest_month_data = monthly_exp_data.first() if monthly_exp_data else None
+        
+        response_data['summary'] = {
+            'total_expenses': round(total_expense, 2),
+            'avg_daily': round(daily_avg, 2),
+            'online_amount': round(total_online_exp, 2),
+            'online_percentage': round(online_exp_pct, 1),
+            'cash_total': round(total_cash_exp, 2),
+        }
+        
+        response_data['insights'] = {
+            'highest_day': {
+                'date': highest_exp_day.date.strftime('%d %b, %Y') if highest_exp_day else 'No data',
+                'amount': round(safe_float(highest_exp_day.total), 2) if highest_exp_day else 0,
+            },
+            'lowest_day': {
+                'date': lowest_exp_day.date.strftime('%d %b, %Y') if lowest_exp_day else 'No data',
+                'amount': round(safe_float(lowest_exp_day.total), 2) if lowest_exp_day else 0,
+            },
+            'highest_month': {
+                'month': highest_month_data['month'].strftime('%B %Y') if highest_month_data else 'No data',
+                'amount': round(safe_float(highest_month_data['total']), 2) if highest_month_data else 0,
+            },
+            'averages': {
+                'daily': round(daily_avg, 2),
+                'monthly': round(monthly_avg, 2),
+            }
+        }
+        
+        # Chart data for filtered range
+        daily_exp_data = expenses_qs.order_by('date').values('date', 'total')
+        response_data['chart'] = {
+            'dates': [d['date'].strftime('%Y-%m-%d') for d in daily_exp_data],
+            'values': [round(safe_float(d['total']), 2) for d in daily_exp_data],
+        }
+        
+    else:  # combined
+        # ===== COMBINED DATA (Sales - Expenses) =====
+        sales_agg = sales_qs.aggregate(
+            total=Sum('total_sales'),
+            labor=Sum('labor_charge'),
+            delivery=Sum('delivery_charge')
+        )
+        expense_agg = expenses_qs.aggregate(
+            total=Sum('total')
+        )
+        
+        total_sales = safe_float(sales_agg['total'])
+        total_labor = safe_float(sales_agg['labor'])
+        total_delivery = safe_float(sales_agg['delivery'])
+        total_expense = safe_float(expense_agg['total'])
+        
+        # Net Contribution: Sales - (Labor + Delivery + Expenses)
+        net_contribution = total_sales - (total_labor + total_delivery + total_expense)
+        contribution_color = 'success' if net_contribution >= 0 else 'danger'
+        
+        # Calculate averages
+        daily_avg = (net_contribution / days_in_range) if days_in_range > 0 else 0
+        monthly_avg = (net_contribution / months_in_range) if months_in_range > 0 else 0
+        
+        # Get monthly comparison data
+        sales_monthly = sales_qs.annotate(
+            month=TruncMonth('date')
+        ).values('month').annotate(
+            total=Sum('total_sales')
+        ).order_by('month')
+        
+        expenses_monthly = expenses_qs.annotate(
+            month=TruncMonth('date')
+        ).values('month').annotate(
+            total=Sum('total')
+        ).order_by('month')
+        
+        # Build comparison chart
+        expenses_dict = {e['month']: safe_float(e['total']) for e in expenses_monthly}
+        comparison_labels = [s['month'].strftime('%b %Y') for s in sales_monthly]
+        comparison_sales = [round(safe_float(s['total']), 2) for s in sales_monthly]
+        comparison_expenses = [round(expenses_dict.get(s['month'], 0), 2) for s in sales_monthly]
+        
+        response_data['summary'] = {
+            'total_sales': round(total_sales, 2),
+            'total_expenses': round(total_expense, 2),
+            'labor_total': round(total_labor, 2),
+            'delivery_total': round(total_delivery, 2),
+            'net_contribution': round(net_contribution, 2),
+            'contribution_color': contribution_color,
+        }
+        
+        response_data['insights'] = {
+            'averages': {
+                'daily': round(daily_avg, 2),
+                'monthly': round(monthly_avg, 2),
+            }
+        }
+        
+        response_data['chart'] = {
+            'labels': comparison_labels,
+            'sales': comparison_sales,
+            'expenses': comparison_expenses,
+        }
+    
+    return JsonResponse(response_data)
 
 def handle_analytics_export(format_type, data):
     """

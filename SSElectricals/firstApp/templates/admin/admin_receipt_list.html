@@ -78,8 +78,7 @@
                                         <br><small class="text-muted">{{ receipt.buyer_email }}</small>
                                         {% endif %}
                                     </td>
-                                    <td>{{ receipt.created_at|date:"d-M-Y" }}<br><small class="text-muted">{{
-                                            receipt.created_at|date:"h:i A" }}</small></td>
+                                    <td>{{ receipt.created_at|date:"d-M-Y" }}<br><small class="text-muted">{{ receipt.created_at|date:"h:i A" }}</small></td>
                                     <td><span class="badge bg-secondary">{{ receipt.financial_year }}</span></td>
                                     <td><strong>₹{{ receipt.grand_total }}</strong></td>
                                     <td>

@@ -4,155 +4,192 @@
 
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h2><i class="fas fa-chart-bar me-2"></i>Analytics & Insights</h2>
+    <small class="text-muted" id="lastUpdated">
+        <i class="fas fa-clock me-1"></i>Last updated: <span id="lastUpdatedTime">Just now</span>
+    </small>
 </div>
 
 <!-- Global Filters -->
-<div class="card shadow-sm border-0 mb-4">
+<div class="card shadow-sm border-0 mb-4" id="filterCard">
     <div class="card-body">
-        <form method="get" class="row g-3">
+        <form id="analyticsFilterForm" class="row g-3">
             <div class="col-md-3">
                 <label class="form-label small text-muted">Start Date</label>
-                <input type="date" name="start_date" class="form-control" value="{{ start_date|date:'Y-m-d' }}">
+                <input type="date" name="start_date" id="startDate" class="form-control"
+                    value="{{ start_date|date:'Y-m-d' }}">
             </div>
             <div class="col-md-3">
                 <label class="form-label small text-muted">End Date</label>
-                <input type="date" name="end_date" class="form-control" value="{{ end_date|date:'Y-m-d' }}">
+                <input type="date" name="end_date" id="endDate" class="form-control"
+                    value="{{ end_date|date:'Y-m-d' }}">
             </div>
             <div class="col-md-3">
                 <label class="form-label small text-muted">Month</label>
-                <input type="month" name="month" class="form-control" value="{{ month }}">
+                <input type="month" name="month" id="monthFilter" class="form-control" value="{{ month }}">
             </div>
             <div class="col-md-3">
-                <button type="submit" class="btn btn-primary mt-4 w-100">
-                    <i class="fas fa-filter me-1"></i> Apply Filters
+                <button type="submit" id="applyFiltersBtn" class="btn btn-primary mt-4 w-100">
+                    <i class="fas fa-filter me-1"></i>
+                    <span class="btn-text">Apply Filters</span>
+                    <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
                 </button>
             </div>
         </form>
     </div>
 </div>
 
-<!-- Time View & Export Bar -->
-
 <!-- Tab Navigation -->
-<ul class="nav nav-tabs mb-4">
+<ul class="nav nav-tabs mb-4" id="analyticsTabs" role="tablist">
     <li class="nav-item">
-        <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#sales">
+        <button class="nav-link active" id="sales-tab" data-bs-toggle="tab" data-bs-target="#sales" data-mode="sales"
+            type="button" role="tab">
             <i class="fas fa-dollar-sign me-2"></i>Sales
         </button>
     </li>
     <li class="nav-item">
-        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#expenses">
+        <button class="nav-link" id="expenses-tab" data-bs-toggle="tab" data-bs-target="#expenses" data-mode="expenses"
+            type="button" role="tab">
             <i class="fas fa-wallet me-2"></i>Expenses
         </button>
     </li>
     <li class="nav-item">
-        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#combined">
+        <button class="nav-link" id="combined-tab" data-bs-toggle="tab" data-bs-target="#combined" data-mode="combined"
+            type="button" role="tab">
             <i class="fas fa-chart-line me-2"></i>Combined
         </button>
     </li>
 </ul>
 
 <!-- Tab Content -->
-<div class="tab-content">
+<div class="tab-content" id="analyticsTabContent">
 
     <!-- SALES TAB -->
-    <div class="tab-pane fade show active" id="sales">
+    <div class="tab-pane fade show active" id="sales" role="tabpanel">
 
         <!-- KPI Cards -->
-        <div class="row mb-4 g-3">
+        <div class="row mb-4 g-3" id="salesKpiCards">
             <div class="col-md-2-4">
-                <div class="card stat-card-primary h-100">
+                <div class="card stat-card-primary h-100 analytics-card">
                     <div class="card-body text-center">
                         <h6 class="text-muted mb-2">Total Sales</h6>
-                        <h3 class="stat-value">₹{{ total_sales|floatformat:2 }}</h3>
+                        <h3 class="stat-value" data-field="total_sales">₹{{ total_sales|floatformat:2 }}</h3>
+                    </div>
+                    <div class="card-loading-overlay d-none">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
                     </div>
                 </div>
             </div>
             <div class="col-md-2-4">
-                <div class="card stat-card-success h-100">
+                <div class="card stat-card-success h-100 analytics-card">
                     <div class="card-body text-center">
                         <h6 class="text-muted mb-2">Avg Daily</h6>
-                        <h3 class="stat-value">₹{{ avg_sales|floatformat:2 }}</h3>
+                        <h3 class="stat-value" data-field="avg_daily">₹{{ avg_sales|floatformat:2 }}</h3>
+                    </div>
+                    <div class="card-loading-overlay d-none">
+                        <div class="spinner-border text-success" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
                     </div>
                 </div>
             </div>
             <div class="col-md-2-4">
-                <div class="card stat-card-warning h-100">
+                <div class="card stat-card-warning h-100 analytics-card">
                     <div class="card-body text-center">
-                        <h6 class="text-muted mb-2">Online ({{ online_sales_percentage|floatformat:1 }}%)</h6>
-                        <h3 class="stat-value">₹{{ total_online_sales|floatformat:2 }}</h3>
+                        <h6 class="text-muted mb-2">Online (<span data-field="online_percentage">{{online_sales_percentage|floatformat:1 }}%</span>)</h6>
+                        <h3 class="stat-value" data-field="online_amount">₹{{ total_online_sales|floatformat:2 }}</h3>
+                    </div>
+                    <div class="card-loading-overlay d-none">
+                        <div class="spinner-border text-warning" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
                     </div>
                 </div>
             </div>
             <div class="col-md-2-4">
-                <div class="card stat-card-danger h-100">
+                <div class="card stat-card-danger h-100 analytics-card">
                     <div class="card-body text-center">
                         <h6 class="text-muted mb-2">Labor</h6>
-                        <h3 class="stat-value">₹{{ total_labor|floatformat:2 }}</h3>
+                        <h3 class="stat-value" data-field="labor_total">₹{{ total_labor|floatformat:2 }}</h3>
+                    </div>
+                    <div class="card-loading-overlay d-none">
+                        <div class="spinner-border text-danger" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
                     </div>
                 </div>
             </div>
             <div class="col-md-2-4">
-                <div class="card stat-card-primary h-100">
+                <div class="card stat-card-primary h-100 analytics-card">
                     <div class="card-body text-center">
                         <h6 class="text-muted mb-2">Delivery</h6>
-                        <h3 class="stat-value">₹{{ total_delivery|floatformat:2 }}</h3>
+                        <h3 class="stat-value" data-field="delivery_total">₹{{ total_delivery|floatformat:2 }}</h3>
+                    </div>
+                    <div class="card-loading-overlay d-none">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
 
         <!-- Min/Max Insight Cards -->
-        <div class="row mb-4 g-3">
+        <div class="row mb-4 g-3" id="salesInsightCards">
             <div class="col-md-3">
-                <div class="card border-success h-100">
+                <div class="card border-success h-100 analytics-card">
                     <div class="card-body">
                         <h6 class="text-success mb-1">
                             <i class="fas fa-arrow-up me-1"></i>Best Sales Day
                         </h6>
-                        {% if max_sale_day %}
-                        <p class="mb-0 small text-muted">{{ max_sale_day.date|date:"d M, Y" }}</p>
-                        <h4 class="text-success mb-0">₹{{ max_sale_day.total_sales|floatformat:2 }}</h4>
-                        {% else %}
-                        <p class="text-muted">No data</p>
-                        {% endif %}
+                        <p class="mb-0 small text-muted" data-field="best_day_date">{% if max_sale_day %}{{max_sale_day.date|date:"d M, Y" }}{% else %}No data{% endif %}</p>
+                        <h4 class="text-success mb-0" data-field="best_day_amount">{% if max_sale_day %}₹{{max_sale_day.total_sales|floatformat:2 }}{% else %}₹0.00{% endif %}</h4>
+                    </div>
+                    <div class="card-loading-overlay d-none">
+                        <div class="spinner-border text-success spinner-border-sm" role="status"></div>
                     </div>
                 </div>
             </div>
             <div class="col-md-3">
-                <div class="card border-danger h-100">
+                <div class="card border-danger h-100 analytics-card">
                     <div class="card-body">
                         <h6 class="text-danger mb-1">
                             <i class="fas fa-arrow-down me-1"></i>Lowest Sales Day
                         </h6>
-                        {% if min_sale_day %}
-                        <p class="mb-0 small text-muted">{{ min_sale_day.date|date:"d M, Y" }}</p>
-                        <h4 class="text-danger mb-0">₹{{ min_sale_day.total_sales|floatformat:2 }}</h4>
-                        {% else %}
-                        <p class="text-muted">No data</p>
-                        {% endif %}
+                        <p class="mb-0 small text-muted" data-field="worst_day_date">{% if min_sale_day %}{{min_sale_day.date|date:"d M, Y" }}{% else %}No data{% endif %}</p>
+                        <h4 class="text-danger mb-0" data-field="worst_day_amount">{% if min_sale_day %}₹{{min_sale_day.total_sales|floatformat:2 }}{% else %}₹0.00{% endif %}</h4>
+                    </div>
+                    <div class="card-loading-overlay d-none">
+                        <div class="spinner-border text-danger spinner-border-sm" role="status"></div>
                     </div>
                 </div>
             </div>
             <div class="col-md-3">
-                <div class="card border-success h-100">
+                <div class="card border-success h-100 analytics-card">
                     <div class="card-body">
                         <h6 class="text-success mb-1">
                             <i class="fas fa-trophy me-1"></i>Best Month
                         </h6>
-                        <p class="mb-0 small text-muted">{{ max_sales_month }}</p>
-                        <h4 class="text-success mb-0">₹{{ max_sales_month_value|floatformat:2 }}</h4>
+                        <p class="mb-0 small text-muted" data-field="best_month_name">{{ max_sales_month }}</p>
+                        <h4 class="text-success mb-0" data-field="best_month_amount">₹{{max_sales_month_value|floatformat:2 }}</h4>
+                    </div>
+                    <div class="card-loading-overlay d-none">
+                        <div class="spinner-border text-success spinner-border-sm" role="status"></div>
                     </div>
                 </div>
             </div>
             <div class="col-md-3">
-                <div class="card border-warning h-100">
+                <div class="card border-warning h-100 analytics-card">
                     <div class="card-body">
                         <h6 class="text-warning mb-1">
                             <i class="fas fa-calendar-check me-1"></i>Averages
                         </h6>
-                        <p class="mb-0 small">Daily: ₹{{ daily_avg_sales|floatformat:2 }}</p>
-                        <p class="mb-0 small">Monthly: ₹{{ monthly_avg_sales|floatformat:2 }}</p>
+                        <p class="mb-0 small">Daily: <span data-field="avg_daily_insight">₹{{daily_avg_sales|floatformat:2 }}</span></p>
+                        <p class="mb-0 small">Monthly: <span data-field="avg_monthly_insight">₹{{monthly_avg_sales|floatformat:2 }}</span></p>
+                    </div>
+                    <div class="card-loading-overlay d-none">
+                        <div class="spinner-border text-warning spinner-border-sm" role="status"></div>
                     </div>
                 </div>
             </div>
@@ -196,12 +233,11 @@
                             </option>
                             <option value="last_year" {% if selected_monthly_range == 'last_year' %}selected{% endif %}>
                                 Last Year</option>
-                            <option value="last_2_years" {% if selected_monthly_range == 'last_2_years' %}selected{% endif  %}>Last 2 Years
+                            <option value="last_2_years" {% if selected_monthly_range == 'last_2_years' %}selected{% endif %}>Last 2 Years
                             </option>
                             <option value="last_3_years" {% if selected_monthly_range == 'last_3_years' %}selected{% endif %}>Last 3 Years
                             </option>
-                            <option value="all_time" {% if selected_monthly_range == 'all_time' %}selected{% endif %}>All
-                                Time</option>
+                            <option value="all_time" {% if selected_monthly_range == 'all_time' %}selected{% endif %}>All Time</option>
                         </select>
                     </div>
                     <div class="card-body" style="height: 350px;">
@@ -279,31 +315,107 @@
     </div>
 
     <!-- EXPENSES TAB -->
-    <div class="tab-pane fade" id="expenses">
+    <div class="tab-pane fade" id="expenses" role="tabpanel">
 
         <!-- KPI Cards -->
-        <div class="row mb-4 g-3">
+        <div class="row mb-4 g-3" id="expensesKpiCards">
             <div class="col-md-4">
-                <div class="card stat-card-danger h-100">
+                <div class="card stat-card-danger h-100 analytics-card">
                     <div class="card-body text-center">
                         <h6 class="text-muted mb-2">Total Expenses</h6>
-                        <h3 class="stat-value">₹{{ total_expense|floatformat:2 }}</h3>
+                        <h3 class="stat-value" data-field="total_expenses">₹{{ total_expense|floatformat:2 }}</h3>
+                    </div>
+                    <div class="card-loading-overlay d-none">
+                        <div class="spinner-border text-danger" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
                     </div>
                 </div>
             </div>
             <div class="col-md-4">
-                <div class="card stat-card-success h-100">
+                <div class="card stat-card-success h-100 analytics-card">
                     <div class="card-body text-center">
                         <h6 class="text-muted mb-2">Avg Daily</h6>
-                        <h3 class="stat-value">₹{{ avg_expense|floatformat:2 }}</h3>
+                        <h3 class="stat-value" data-field="exp_avg_daily">₹{{ avg_expense|floatformat:2 }}</h3>
+                    </div>
+                    <div class="card-loading-overlay d-none">
+                        <div class="spinner-border text-success" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
                     </div>
                 </div>
             </div>
             <div class="col-md-4">
-                <div class="card stat-card-warning h-100">
+                <div class="card stat-card-warning h-100 analytics-card">
                     <div class="card-body text-center">
-                        <h6 class="text-muted mb-2">Online ({{ online_expense_percentage|floatformat:1 }}%)</h6>
-                        <h3 class="stat-value">₹{{ total_online_exp|floatformat:2 }}</h3>
+                        <h6 class="text-muted mb-2">Online (<span data-field="exp_online_percentage">{{
+                                online_expense_percentage|floatformat:1 }}</span>%)</h6>
+                        <h3 class="stat-value" data-field="exp_online_amount">₹{{ total_online_exp|floatformat:2 }}</h3>
+                    </div>
+                    <div class="card-loading-overlay d-none">
+                        <div class="spinner-border text-warning" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Expense Insight Cards -->
+        <div class="row mb-4 g-3" id="expensesInsightCards">
+            <div class="col-md-3">
+                <div class="card border-danger h-100 analytics-card">
+                    <div class="card-body">
+                        <h6 class="text-danger mb-1">
+                            <i class="fas fa-arrow-up me-1"></i>Highest Expense Day
+                        </h6>
+                        <p class="mb-0 small text-muted" data-field="highest_exp_day_date">-</p>
+                        <h4 class="text-danger mb-0" data-field="highest_exp_day_amount">₹0.00</h4>
+                    </div>
+                    <div class="card-loading-overlay d-none">
+                        <div class="spinner-border text-danger spinner-border-sm" role="status"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card border-success h-100 analytics-card">
+                    <div class="card-body">
+                        <h6 class="text-success mb-1">
+                            <i class="fas fa-arrow-down me-1"></i>Lowest Expense Day
+                        </h6>
+                        <p class="mb-0 small text-muted" data-field="lowest_exp_day_date">-</p>
+                        <h4 class="text-success mb-0" data-field="lowest_exp_day_amount">₹0.00</h4>
+                    </div>
+                    <div class="card-loading-overlay d-none">
+                        <div class="spinner-border text-success spinner-border-sm" role="status"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card border-danger h-100 analytics-card">
+                    <div class="card-body">
+                        <h6 class="text-danger mb-1">
+                            <i class="fas fa-calendar-times me-1"></i>Highest Expense Month
+                        </h6>
+                        <p class="mb-0 small text-muted" data-field="highest_exp_month_name">-</p>
+                        <h4 class="text-danger mb-0" data-field="highest_exp_month_amount">₹0.00</h4>
+                    </div>
+                    <div class="card-loading-overlay d-none">
+                        <div class="spinner-border text-danger spinner-border-sm" role="status"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card border-warning h-100 analytics-card">
+                    <div class="card-body">
+                        <h6 class="text-warning mb-1">
+                            <i class="fas fa-calculator me-1"></i>Averages
+                        </h6>
+                        <p class="mb-0 small">Daily: <span data-field="exp_avg_daily_insight">₹0.00</span></p>
+                        <p class="mb-0 small">Monthly: <span data-field="exp_avg_monthly_insight">₹0.00</span></p>
+                    </div>
+                    <div class="card-loading-overlay d-none">
+                        <div class="spinner-border text-warning spinner-border-sm" role="status"></div>
                     </div>
                 </div>
             </div>
@@ -323,8 +435,7 @@
                                 Last Month</option>
                             <option value="last_3_months" {% if selected_expense_range == 'last_3_months' %}selected{% endif %}>Last 3 Months</option>
                             <option value="last_6_months" {% if selected_expense_range == 'last_6_months' %}selected{% endif %}>Last 6 Months</option>
-                            <option value="last_year" {% if selected_expense_range == 'last_year' %}selected{% endif %}>
-                                Last Year</option>
+                            <option value="last_year" {% if selected_expense_range == 'last_year' %}selected{% endif %}>Last Year</option>
                             <option value="last_2_years" {% if selected_expense_range == 'last_2_years' %}selected{% endif %}>Last 2 Years</option>
                             <option value="last_3_years" {% if selected_expense_range == 'last_3_years' %}selected{% endif %}>Last 3 Years</option>
                             <option value="all_time" {% if selected_expense_range == 'all_time' %}selected{% endif %}>All
@@ -341,14 +452,56 @@
     </div>
 
     <!-- COMBINED TAB -->
-    <div class="tab-pane fade" id="combined">
+    <div class="tab-pane fade" id="combined" role="tabpanel">
 
         <!-- Net Contribution -->
-        <div class="card stat-card-{{ contribution_color }} mb-4">
-            <div class="card-body">
+        <div class="card mb-4 analytics-card" id="netContributionCard">
+            <div class="card-body" id="netContributionBody">
                 <h5>Net Contribution</h5>
-                <h2 class="stat-value">₹{{ net_contribution|floatformat:2 }}</h2>
+                <h2 class="stat-value" data-field="net_contribution">₹{{ net_contribution|floatformat:2 }}</h2>
                 <p class="mb-0 small">Sales - (Labor + Delivery + Expenses)</p>
+            </div>
+            <div class="card-loading-overlay d-none">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Combined Summary Cards -->
+        <div class="row mb-4 g-3" id="combinedKpiCards">
+            <div class="col-md-3">
+                <div class="card stat-card-success h-100 analytics-card">
+                    <div class="card-body text-center">
+                        <h6 class="text-muted mb-2">Total Sales</h6>
+                        <h4 class="stat-value" data-field="combined_total_sales">₹{{ total_sales|floatformat:2 }}</h4>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card stat-card-danger h-100 analytics-card">
+                    <div class="card-body text-center">
+                        <h6 class="text-muted mb-2">Total Expenses</h6>
+                        <h4 class="stat-value" data-field="combined_total_expenses">₹{{ total_expense|floatformat:2 }}
+                        </h4>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card stat-card-warning h-100 analytics-card">
+                    <div class="card-body text-center">
+                        <h6 class="text-muted mb-2">Daily Avg Net</h6>
+                        <h4 class="stat-value" data-field="combined_daily_avg">₹0.00</h4>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card stat-card-primary h-100 analytics-card">
+                    <div class="card-body text-center">
+                        <h6 class="text-muted mb-2">Monthly Avg Net</h6>
+                        <h4 class="stat-value" data-field="combined_monthly_avg">₹0.00</h4>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -360,7 +513,7 @@
                     onchange="updateFilter('comparison_range', this.value)">
                     <option value="this_month" {% if selected_comparison_range == 'this_month' %}selected{% endif %}>This
                         Month
-                    </option>   
+                    </option>
                     <option value="last_month" {% if selected_comparison_range == 'last_month' %}selected{% endif %}>Last
                         Month
                     </option>
@@ -437,176 +590,79 @@
     .alert {
         border-left-width: 4px;
     }
-</style>
-{% endblock %}
 
-{% block extra_js %}
-<script>
-    // Helper function to safely parse JSON
-    function safeJSONParse(jsonString, fallback = []) {
-        try {
-            if (!jsonString || jsonString === '[]' || jsonString === '') {
-                return fallback;
-            }
-            return JSON.parse(jsonString);
-        } catch (e) {
-            console.warn('JSON parse error:', e);
-            return fallback;
+    /* Loading Overlay Styles */
+    .analytics-card {
+        position: relative;
+        overflow: hidden;
+    }
+
+    .card-loading-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(255, 255, 255, 0.85);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10;
+        transition: opacity 0.3s ease;
+    }
+
+    body.dark-mode .card-loading-overlay {
+        background: rgba(14, 11, 31, 0.85);
+    }
+
+    /* Smooth number transitions */
+    .stat-value {
+        transition: all 0.3s ease;
+    }
+
+    .stat-value.updating {
+        opacity: 0.5;
+        transform: scale(0.95);
+    }
+
+    /* Filter button states */
+    #applyFiltersBtn:disabled {
+        cursor: not-allowed;
+        opacity: 0.7;
+    }
+
+    #applyFiltersBtn .spinner-border {
+        width: 1rem;
+        height: 1rem;
+    }
+
+    /* Pulse animation for loading */
+    @keyframes pulse {
+
+        0%,
+        100% {
+            opacity: 1;
+        }
+
+        50% {
+            opacity: 0.5;
         }
     }
 
-    // Daily Sales Chart
-    const dailySalesChart = new Chart(document.getElementById('dailySalesChart'), {
-        type: 'bar',
-        data: {
-            labels: safeJSONParse('{{ sales_dates_json|escapejs }}'),
-            datasets: [{
-                label: 'Sales',
-                data: safeJSONParse('{{ sales_values_json|escapejs }}'),
-                backgroundColor: 'rgba(123, 92, 250, 0.7)'
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false
-        }
-    });
-
-    // Payment Pie Chart
-    const paymentPieChart = new Chart(document.getElementById('paymentPieChart'), {
-        type: 'pie',
-        data: {
-            labels: ['Online', 'Cash'],
-            datasets: [{
-                data: [{{ total_online_sales| floatformat:0 }}, {{ total_cash_sales| floatformat:0 }}], //never change this line of code in any case
-    backgroundColor: ['#10b981', '#ec4899']
-            }]
-        },
-    options: {
-        responsive: true,
-            maintainAspectRatio: false
+    .loading-pulse {
+        animation: pulse 1.5s ease-in-out infinite;
     }
-    });
 
-    // Monthly Sales Chart
-    const monthlySalesChart = new Chart(document.getElementById('monthlySalesChart'), {
-        type: 'line',
-        data: {
-            labels: safeJSONParse('{{ monthly_sales_labels_json|escapejs }}'),
-            datasets: [{
-                label: 'Monthly Sales',
-                data: safeJSONParse('{{ monthly_sales_values_json|escapejs }}'),
-                borderColor: '#4C5DD7',
-                tension: 0.4,
-                fill: false
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false
-        }
-    });
+    /* Tab hover effects */
+    .nav-tabs .nav-link {
+        transition: all 0.2s ease;
+    }
 
-    // Quarterly Chart
-    const quarterlyChart = new Chart(document.getElementById('quarterlyChart'), {
-        type: 'bar',
-        data: {
-            labels: safeJSONParse('{{ quarterly_labels_json|escapejs }}'),
-            datasets: [{
-                label: 'Quarterly Sales',
-                data: safeJSONParse('{{ quarterly_values_json|escapejs }}'),
-                backgroundColor: 'rgba(76, 93, 215, 0.7)'
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false
-        }
-    });
+    .nav-tabs .nav-link:hover:not(.active) {
+        background-color: rgba(123, 92, 250, 0.1);
+        border-color: transparent;
+    }
 
-    // Yearly Chart
-    const yearlyChart = new Chart(document.getElementById('yearlyChart'), {
-        type: 'line',
-        data: {
-            labels: safeJSONParse('{{ yearly_labels_json|escapejs }}'),
-            datasets: [{
-                label: 'Yearly Sales',
-                data: safeJSONParse('{{ yearly_values_json|escapejs }}'),
-                borderColor: '#7B5CFA',
-                tension: 0.4,
-                pointRadius: 5
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false
-        }
-    });
-
-    // Weekday Chart
-    const weekdayChart = new Chart(document.getElementById('weekdayChart'), {
-        type: 'bar',
-        data: {
-            labels: safeJSONParse('{{ weekday_labels_json|escapejs }}'),
-            datasets: [{
-                label: 'Average Sales',
-                data: safeJSONParse('{{ weekday_values_json|escapejs }}'),
-                backgroundColor: 'rgba(255, 99, 132, 0.7)'
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false
-        }
-    });
-
-    // Daily Expense Chart
-    const dailyExpenseChart = new Chart(document.getElementById('dailyExpenseChart'), {
-        type: 'line',
-        data: {
-            labels: safeJSONParse('{{ expense_dates_json|escapejs }}'),
-            datasets: [{
-                label: 'Expenses',
-                data: safeJSONParse('{{ expense_values_json|escapejs }}'),
-                borderColor: '#ec4899',
-                tension: 0.4
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false
-        }
-    });
-
-    // Sales vs Expense Chart
-    const salesVsExpenseChart = new Chart(document.getElementById('salesVsExpenseChart'), {
-        type: 'line',
-        data: {
-            labels: safeJSONParse('{{ comparison_labels_json|escapejs }}'),
-            datasets: [
-                {
-                    label: 'Sales',
-                    data: safeJSONParse('{{ comparison_sales_json|escapejs }}'),
-                    borderColor: '#10b981',
-                    backgroundColor: 'rgba(16, 185, 129, 0.1)',
-                    fill: true
-                },
-                {
-                    label: 'Expenses',
-                    data: safeJSONParse('{{ comparison_expenses_json|escapejs }}'),
-                    borderColor: '#ec4899',
-                    backgroundColor: 'rgba(236, 72, 153, 0.1)',
-                    fill: true
-                }
-            ]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false
-        }
-    });
-</script>
-<style>
     .analytics-filter {
         min-width: 150px;
         max-width: 200px;
@@ -636,8 +692,392 @@
     body.dark-mode .analytics-filter:hover {
         border-color: #4C5DD7;
     }
+
+    /* Net contribution card dynamic coloring */
+    #netContributionCard.positive {
+        background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(16, 185, 129, 0.05));
+        border-left: 4px solid #10b981;
+    }
+
+    #netContributionCard.negative {
+        background: linear-gradient(135deg, rgba(236, 72, 153, 0.15), rgba(236, 72, 153, 0.05));
+        border-left: 4px solid #ec4899;
+    }
+
+    #netContributionCard.positive .stat-value {
+        color: #10b981;
+    }
+
+    #netContributionCard.negative .stat-value {
+        color: #ec4899;
+    }
 </style>
+{% endblock %}
+
+{% block extra_js %}
 <script>
+    // ============================
+    // Configuration & State
+    // ============================
+    const AnalyticsConfig = {
+        apiUrl: '{% url "analytics_api" %}',
+        currentMode: 'sales',
+        isLoading: false,
+        charts: {},
+    };
+
+    // Helper function to safely parse JSON
+    function safeJSONParse(jsonString, fallback = []) {
+        try {
+            if (!jsonString || jsonString === '[]' || jsonString === '') {
+                return fallback;
+            }
+            return JSON.parse(jsonString);
+        } catch (e) {
+            console.warn('JSON parse error:', e);
+            return fallback;
+        }
+    }
+
+    // Format currency
+    function formatCurrency(value) {
+        return '₹' + parseFloat(value || 0).toLocaleString('en-IN', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        });
+    }
+
+    // ============================
+    // Loading State Management
+    // ============================
+    function showLoading() {
+        AnalyticsConfig.isLoading = true;
+
+        // Disable filter button
+        const btn = document.getElementById('applyFiltersBtn');
+        btn.disabled = true;
+        btn.querySelector('.btn-text').classList.add('d-none');
+        btn.querySelector('.spinner-border').classList.remove('d-none');
+
+        // Show card loading overlays for current tab
+        const activeTab = document.querySelector('.tab-pane.active');
+        activeTab.querySelectorAll('.card-loading-overlay').forEach(el => {
+            el.classList.remove('d-none');
+        });
+
+        // Add updating class to stat values
+        document.querySelectorAll('.stat-value').forEach(el => {
+            el.classList.add('updating');
+        });
+    }
+
+    function hideLoading() {
+        AnalyticsConfig.isLoading = false;
+
+        // Enable filter button
+        const btn = document.getElementById('applyFiltersBtn');
+        btn.disabled = false;
+        btn.querySelector('.btn-text').classList.remove('d-none');
+        btn.querySelector('.spinner-border').classList.add('d-none');
+
+        // Hide all loading overlays
+        document.querySelectorAll('.card-loading-overlay').forEach(el => {
+            el.classList.add('d-none');
+        });
+
+        // Remove updating class
+        document.querySelectorAll('.stat-value').forEach(el => {
+            el.classList.remove('updating');
+        });
+
+        // Update timestamp
+        document.getElementById('lastUpdatedTime').textContent = new Date().toLocaleTimeString();
+    }
+
+    // ============================
+    // API Fetch Function
+    // ============================
+    async function fetchAnalyticsData() {
+        const startDate = document.getElementById('startDate').value;
+        const endDate = document.getElementById('endDate').value;
+        const month = document.getElementById('monthFilter').value;
+
+        const params = new URLSearchParams({
+            mode: AnalyticsConfig.currentMode,
+            start_date: startDate,
+            end_date: endDate,
+            month: month
+        });
+
+        showLoading();
+
+        try {
+            const response = await fetch(`${AnalyticsConfig.apiUrl}?${params.toString()}`);
+
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+
+            const data = await response.json();
+
+            if (data.success) {
+                updateUI(data);
+            } else {
+                console.error('API Error:', data);
+                showToast('Error fetching analytics data', 'error');
+            }
+        } catch (error) {
+            console.error('Fetch Error:', error);
+            showToast('Failed to load analytics. Please try again.', 'error');
+        } finally {
+            hideLoading();
+        }
+    }
+
+    // ============================
+    // UI Update Functions
+    // ============================
+    function updateUI(data) {
+        const mode = data.mode;
+
+        if (mode === 'sales') {
+            updateSalesUI(data);
+        } else if (mode === 'expenses') {
+            updateExpensesUI(data);
+        } else if (mode === 'combined') {
+            updateCombinedUI(data);
+        }
+    }
+
+    function animateValue(element, newValue, prefix = '₹') {
+        const currentText = element.textContent;
+        element.textContent = prefix + parseFloat(newValue).toLocaleString('en-IN', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        });
+
+        // Add brief flash animation
+        element.style.transform = 'scale(1.05)';
+        element.style.opacity = '0.7';
+        setTimeout(() => {
+            element.style.transform = 'scale(1)';
+            element.style.opacity = '1';
+        }, 200);
+    }
+
+    function updateSalesUI(data) {
+        const summary = data.summary;
+        const insights = data.insights;
+
+        // Update KPI Cards
+        const totalSalesEl = document.querySelector('[data-field="total_sales"]');
+        if (totalSalesEl) animateValue(totalSalesEl, summary.total_sales);
+
+        const avgDailyEl = document.querySelector('[data-field="avg_daily"]');
+        if (avgDailyEl) animateValue(avgDailyEl, summary.avg_daily);
+
+        const onlineAmountEl = document.querySelector('[data-field="online_amount"]');
+        if (onlineAmountEl) animateValue(onlineAmountEl, summary.online_amount);
+
+        const onlinePctEl = document.querySelector('[data-field="online_percentage"]');
+        if (onlinePctEl) onlinePctEl.textContent = summary.online_percentage;
+
+        const laborEl = document.querySelector('[data-field="labor_total"]');
+        if (laborEl) animateValue(laborEl, summary.labor_total);
+
+        const deliveryEl = document.querySelector('[data-field="delivery_total"]');
+        if (deliveryEl) animateValue(deliveryEl, summary.delivery_total);
+
+        // Update Insight Cards
+        const bestDayDate = document.querySelector('[data-field="best_day_date"]');
+        if (bestDayDate) bestDayDate.textContent = insights.best_day.date;
+
+        const bestDayAmount = document.querySelector('[data-field="best_day_amount"]');
+        if (bestDayAmount) animateValue(bestDayAmount, insights.best_day.amount);
+
+        const worstDayDate = document.querySelector('[data-field="worst_day_date"]');
+        if (worstDayDate) worstDayDate.textContent = insights.worst_day.date;
+
+        const worstDayAmount = document.querySelector('[data-field="worst_day_amount"]');
+        if (worstDayAmount) animateValue(worstDayAmount, insights.worst_day.amount);
+
+        const bestMonthName = document.querySelector('[data-field="best_month_name"]');
+        if (bestMonthName) bestMonthName.textContent = insights.best_month.month;
+
+        const bestMonthAmount = document.querySelector('[data-field="best_month_amount"]');
+        if (bestMonthAmount) animateValue(bestMonthAmount, insights.best_month.amount);
+
+        const avgDailyInsight = document.querySelector('[data-field="avg_daily_insight"]');
+        if (avgDailyInsight) animateValue(avgDailyInsight, insights.averages.daily);
+
+        const avgMonthlyInsight = document.querySelector('[data-field="avg_monthly_insight"]');
+        if (avgMonthlyInsight) animateValue(avgMonthlyInsight, insights.averages.monthly);
+
+        // Update Daily Sales Chart
+        if (AnalyticsConfig.charts.dailySalesChart && data.chart) {
+            updateChartData(AnalyticsConfig.charts.dailySalesChart, data.chart.dates, [{
+                label: 'Sales',
+                data: data.chart.values,
+                backgroundColor: 'rgba(123, 92, 250, 0.7)'
+            }]);
+        }
+
+        // Update Payment Pie Chart
+        if (AnalyticsConfig.charts.paymentPieChart) {
+            updateChartData(AnalyticsConfig.charts.paymentPieChart, ['Online', 'Cash'], [{
+                data: [summary.online_amount, summary.cash_total],
+                backgroundColor: ['#10b981', '#ec4899']
+            }]);
+        }
+    }
+
+    function updateExpensesUI(data) {
+        const summary = data.summary;
+        const insights = data.insights;
+
+        // Update KPI Cards
+        const totalExpEl = document.querySelector('[data-field="total_expenses"]');
+        if (totalExpEl) animateValue(totalExpEl, summary.total_expenses);
+
+        const avgDailyEl = document.querySelector('[data-field="exp_avg_daily"]');
+        if (avgDailyEl) animateValue(avgDailyEl, summary.avg_daily);
+
+        const onlineAmountEl = document.querySelector('[data-field="exp_online_amount"]');
+        if (onlineAmountEl) animateValue(onlineAmountEl, summary.online_amount);
+
+        const onlinePctEl = document.querySelector('[data-field="exp_online_percentage"]');
+        if (onlinePctEl) onlinePctEl.textContent = summary.online_percentage;
+
+        // Update Insight Cards
+        const highestDayDate = document.querySelector('[data-field="highest_exp_day_date"]');
+        if (highestDayDate) highestDayDate.textContent = insights.highest_day.date;
+
+        const highestDayAmount = document.querySelector('[data-field="highest_exp_day_amount"]');
+        if (highestDayAmount) animateValue(highestDayAmount, insights.highest_day.amount);
+
+        const lowestDayDate = document.querySelector('[data-field="lowest_exp_day_date"]');
+        if (lowestDayDate) lowestDayDate.textContent = insights.lowest_day.date;
+
+        const lowestDayAmount = document.querySelector('[data-field="lowest_exp_day_amount"]');
+        if (lowestDayAmount) animateValue(lowestDayAmount, insights.lowest_day.amount);
+
+        const highestMonthName = document.querySelector('[data-field="highest_exp_month_name"]');
+        if (highestMonthName) highestMonthName.textContent = insights.highest_month.month;
+
+        const highestMonthAmount = document.querySelector('[data-field="highest_exp_month_amount"]');
+        if (highestMonthAmount) animateValue(highestMonthAmount, insights.highest_month.amount);
+
+        const avgDailyInsight = document.querySelector('[data-field="exp_avg_daily_insight"]');
+        if (avgDailyInsight) animateValue(avgDailyInsight, insights.averages.daily);
+
+        const avgMonthlyInsight = document.querySelector('[data-field="exp_avg_monthly_insight"]');
+        if (avgMonthlyInsight) animateValue(avgMonthlyInsight, insights.averages.monthly);
+
+        // Update Daily Expense Chart
+        if (AnalyticsConfig.charts.dailyExpenseChart && data.chart) {
+            updateChartData(AnalyticsConfig.charts.dailyExpenseChart, data.chart.dates, [{
+                label: 'Expenses',
+                data: data.chart.values,
+                borderColor: '#ec4899',
+                tension: 0.4
+            }]);
+        }
+    }
+
+    function updateCombinedUI(data) {
+        const summary = data.summary;
+        const insights = data.insights;
+
+        // Update Net Contribution Card
+        const netContributionCard = document.getElementById('netContributionCard');
+        const netContributionEl = document.querySelector('[data-field="net_contribution"]');
+
+        if (netContributionEl) {
+            animateValue(netContributionEl, summary.net_contribution);
+        }
+
+        if (netContributionCard) {
+            netContributionCard.classList.remove('positive', 'negative');
+            netContributionCard.classList.add(summary.contribution_color === 'success' ? 'positive' : 'negative');
+        }
+
+        // Update Summary Cards
+        const combinedSalesEl = document.querySelector('[data-field="combined_total_sales"]');
+        if (combinedSalesEl) animateValue(combinedSalesEl, summary.total_sales);
+
+        const combinedExpensesEl = document.querySelector('[data-field="combined_total_expenses"]');
+        if (combinedExpensesEl) animateValue(combinedExpensesEl, summary.total_expenses);
+
+        const combinedDailyAvg = document.querySelector('[data-field="combined_daily_avg"]');
+        if (combinedDailyAvg) animateValue(combinedDailyAvg, insights.averages.daily);
+
+        const combinedMonthlyAvg = document.querySelector('[data-field="combined_monthly_avg"]');
+        if (combinedMonthlyAvg) animateValue(combinedMonthlyAvg, insights.averages.monthly);
+
+        // Update Sales vs Expense Chart
+        if (AnalyticsConfig.charts.salesVsExpenseChart && data.chart) {
+            updateChartData(AnalyticsConfig.charts.salesVsExpenseChart, data.chart.labels, [
+                {
+                    label: 'Sales',
+                    data: data.chart.sales,
+                    borderColor: '#10b981',
+                    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                    fill: true
+                },
+                {
+                    label: 'Expenses',
+                    data: data.chart.expenses,
+                    borderColor: '#ec4899',
+                    backgroundColor: 'rgba(236, 72, 153, 0.1)',
+                    fill: true
+                }
+            ]);
+        }
+    }
+
+    function updateChartData(chart, labels, datasets) {
+        chart.data.labels = labels;
+        datasets.forEach((dataset, index) => {
+            if (chart.data.datasets[index]) {
+                Object.assign(chart.data.datasets[index], dataset);
+            }
+        });
+        chart.update('none'); // No animation for instant update
+    }
+
+    // ============================
+    // Toast Notification
+    // ============================
+    function showToast(message, type = 'info') {
+        // Simple toast implementation - can be replaced with Bootstrap toast
+        const toastContainer = document.getElementById('toastContainer') || createToastContainer();
+
+        const toast = document.createElement('div');
+        toast.className = `alert alert-${type === 'error' ? 'danger' : 'success'} alert-dismissible fade show`;
+        toast.style.marginBottom = '10px';
+        toast.innerHTML = `
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+
+        toastContainer.appendChild(toast);
+
+        setTimeout(() => {
+            toast.remove();
+        }, 5000);
+    }
+
+    function createToastContainer() {
+        const container = document.createElement('div');
+        container.id = 'toastContainer';
+        container.style.cssText = 'position: fixed; top: 20px; right: 20px; z-index: 9999; max-width: 350px;';
+        document.body.appendChild(container);
+        return container;
+    }
+
+    // ============================
+    // Filter Update Function (for dropdown filters)
+    // ============================
     function updateFilter(filterType, filterValue) {
         // Get current URL parameters
         const urlParams = new URLSearchParams(window.location.search);
@@ -645,7 +1085,7 @@
         // Update the specific filter
         urlParams.set(filterType, filterValue);
 
-        // Show loading indicator (optional)
+        // Show loading indicator
         showLoadingIndicator();
 
         // Reload page with new parameters
@@ -671,24 +1111,215 @@
         document.body.appendChild(overlay);
     }
 
-    // Optional: Add keyboard shortcut to reset all filters
-    document.addEventListener('keydown', function (e) {
-        // Ctrl/Cmd + R = Reset filters
-        if ((e.ctrlKey || e.metaKey) && e.key === 'r') {
+    // ============================
+    // Event Listeners
+    // ============================
+    document.addEventListener('DOMContentLoaded', function () {
+        // Form submission handler
+        const filterForm = document.getElementById('analyticsFilterForm');
+        filterForm.addEventListener('submit', function (e) {
             e.preventDefault();
-            window.location.href = window.location.pathname;
+            fetchAnalyticsData();
+        });
+
+        // Tab switch handler
+        document.querySelectorAll('#analyticsTabs button[data-bs-toggle="tab"]').forEach(tab => {
+            tab.addEventListener('shown.bs.tab', function (e) {
+                const mode = e.target.getAttribute('data-mode');
+                AnalyticsConfig.currentMode = mode;
+                fetchAnalyticsData();
+            });
+        });
+
+        // Month filter change - clear date range
+        document.getElementById('monthFilter').addEventListener('change', function () {
+            if (this.value) {
+                document.getElementById('startDate').value = '';
+                document.getElementById('endDate').value = '';
+            }
+        });
+
+        // Date range change - clear month
+        document.getElementById('startDate').addEventListener('change', function () {
+            document.getElementById('monthFilter').value = '';
+        });
+        document.getElementById('endDate').addEventListener('change', function () {
+            document.getElementById('monthFilter').value = '';
+        });
+
+        // Add visual feedback when hovering over filters
+        document.querySelectorAll('.analytics-filter').forEach(select => {
+            select.addEventListener('mouseenter', function () {
+                this.style.transform = 'translateY(-1px)';
+            });
+
+            select.addEventListener('mouseleave', function () {
+                this.style.transform = 'translateY(0)';
+            });
+        });
+
+        // Keyboard shortcut to reset filters (Ctrl/Cmd + R)
+        document.addEventListener('keydown', function (e) {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'r') {
+                e.preventDefault();
+                window.location.href = window.location.pathname;
+            }
+        });
+    });
+
+    // ============================
+    // Initialize Charts
+    // ============================
+
+    // Daily Sales Chart
+    AnalyticsConfig.charts.dailySalesChart = new Chart(document.getElementById('dailySalesChart'), {
+        type: 'bar',
+        data: {
+            labels: safeJSONParse('{{ sales_dates_json|escapejs }}'),
+            datasets: [{
+                label: 'Sales',
+                data: safeJSONParse('{{ sales_values_json|escapejs }}'),
+                backgroundColor: 'rgba(123, 92, 250, 0.7)'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false
         }
     });
 
-    // Add visual feedback when hovering over filters
-    document.querySelectorAll('.analytics-filter').forEach(select => {
-        select.addEventListener('mouseenter', function () {
-            this.style.transform = 'translateY(-1px)';
-        });
+    // Payment Pie Chart
+    AnalyticsConfig.charts.paymentPieChart = new Chart(document.getElementById('paymentPieChart'), {
+        type: 'pie',
+        data: {
+            labels: ['Online', 'Cash'],
+            datasets: [{
+                data: [{{ total_online_sales| floatformat:0 }}, {{ total_cash_sales| floatformat:0 }}],
+        backgroundColor: ['#10b981', '#ec4899']
+            }]
+        },
+        options: {
+        responsive: true,
+        maintainAspectRatio: false
+    }
+    });
 
-        select.addEventListener('mouseleave', function () {
-            this.style.transform = 'translateY(0)';
-        });
+    // Monthly Sales Chart
+    AnalyticsConfig.charts.monthlySalesChart = new Chart(document.getElementById('monthlySalesChart'), {
+        type: 'line',
+        data: {
+            labels: safeJSONParse('{{ monthly_sales_labels_json|escapejs }}'),
+            datasets: [{
+                label: 'Monthly Sales',
+                data: safeJSONParse('{{ monthly_sales_values_json|escapejs }}'),
+                borderColor: '#4C5DD7',
+                tension: 0.4,
+                fill: false
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false
+        }
+    });
+
+    // Quarterly Chart
+    AnalyticsConfig.charts.quarterlyChart = new Chart(document.getElementById('quarterlyChart'), {
+        type: 'bar',
+        data: {
+            labels: safeJSONParse('{{ quarterly_labels_json|escapejs }}'),
+            datasets: [{
+                label: 'Quarterly Sales',
+                data: safeJSONParse('{{ quarterly_values_json|escapejs }}'),
+                backgroundColor: 'rgba(76, 93, 215, 0.7)'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false
+        }
+    });
+
+    // Yearly Chart
+    AnalyticsConfig.charts.yearlyChart = new Chart(document.getElementById('yearlyChart'), {
+        type: 'line',
+        data: {
+            labels: safeJSONParse('{{ yearly_labels_json|escapejs }}'),
+            datasets: [{
+                label: 'Yearly Sales',
+                data: safeJSONParse('{{ yearly_values_json|escapejs }}'),
+                borderColor: '#7B5CFA',
+                tension: 0.4,
+                pointRadius: 5
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false
+        }
+    });
+
+    // Weekday Chart
+    AnalyticsConfig.charts.weekdayChart = new Chart(document.getElementById('weekdayChart'), {
+        type: 'bar',
+        data: {
+            labels: safeJSONParse('{{ weekday_labels_json|escapejs }}'),
+            datasets: [{
+                label: 'Average Sales',
+                data: safeJSONParse('{{ weekday_values_json|escapejs }}'),
+                backgroundColor: 'rgba(255, 99, 132, 0.7)'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false
+        }
+    });
+
+    // Daily Expense Chart
+    AnalyticsConfig.charts.dailyExpenseChart = new Chart(document.getElementById('dailyExpenseChart'), {
+        type: 'line',
+        data: {
+            labels: safeJSONParse('{{ expense_dates_json|escapejs }}'),
+            datasets: [{
+                label: 'Expenses',
+                data: safeJSONParse('{{ expense_values_json|escapejs }}'),
+                borderColor: '#ec4899',
+                tension: 0.4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false
+        }
+    });
+
+    // Sales vs Expense Chart
+    AnalyticsConfig.charts.salesVsExpenseChart = new Chart(document.getElementById('salesVsExpenseChart'), {
+        type: 'line',
+        data: {
+            labels: safeJSONParse('{{ comparison_labels_json|escapejs }}'),
+            datasets: [
+                {
+                    label: 'Sales',
+                    data: safeJSONParse('{{ comparison_sales_json|escapejs }}'),
+                    borderColor: '#10b981',
+                    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                    fill: true
+                },
+                {
+                    label: 'Expenses',
+                    data: safeJSONParse('{{ comparison_expenses_json|escapejs }}'),
+                    borderColor: '#ec4899',
+                    backgroundColor: 'rgba(236, 72, 153, 0.1)',
+                    fill: true
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false
+        }
     });
 </script>
 {% endblock %}
