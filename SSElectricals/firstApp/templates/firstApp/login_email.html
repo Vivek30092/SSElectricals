@@ -1,85 +1,509 @@
 {% extends 'firstApp/base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<style>
+    /* Custom wrapper for login page - don't override base container */
+    .login-page-wrapper {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+    }
+
+    .login-container {
+        display: flex;
+        min-height: 600px;
+        width: 100%;
+        margin: 0;
+    }
+
+    /* Left Side - Electrical Shop Branding */
+    .login-left {
+        flex: 1;
+        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+        min-height: 600px;
+    }
+
+    .login-left::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-image: url('{{ MEDIA_URL }}profile_pics/business_logo.png');
+        background-size: 400px;
+        background-repeat: no-repeat;
+        background-position: center;
+        opacity: 0.08;
+        z-index: 1;
+    }
+
+    /* Animated circuit pattern */
+    .login-left::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-image:
+            repeating-linear-gradient(90deg, transparent, transparent 50px, rgba(255, 193, 7, 0.03) 50px, rgba(255, 193, 7, 0.03) 51px),
+            repeating-linear-gradient(0deg, transparent, transparent 50px, rgba(255, 193, 7, 0.03) 50px, rgba(255, 193, 7, 0.03) 51px);
+        z-index: 1;
+    }
+
+    .branding-content {
+        position: relative;
+        z-index: 2;
+        text-align: center;
+        padding: 3rem;
+        color: white;
+    }
+
+    .branding-content h1 {
+        font-size: 3.5rem;
+        font-weight: 700;
+        margin-bottom: 1rem;
+        line-height: 1.2;
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+    }
+
+    .branding-content h1 .highlight {
+        color: #ffc107;
+        display: block;
+    }
+
+    .branding-content p {
+        font-size: 1.3rem;
+        opacity: 0.9;
+        margin-top: 1.5rem;
+    }
+
+    .electrical-icon {
+        font-size: 5rem;
+        color: #ffc107;
+        margin-bottom: 2rem;
+        animation: pulse 2s ease-in-out infinite;
+        filter: drop-shadow(0 0 10px rgba(255, 193, 7, 0.5));
+    }
+
+    @keyframes pulse {
+
+        0%,
+        100% {
+            transform: scale(1);
+            opacity: 1;
+        }
+
+        50% {
+            transform: scale(1.1);
+            opacity: 0.8;
+        }
+    }
+
+    .features-list {
+        display: flex;
+        justify-content: center;
+        gap: 2rem;
+        margin-top: 3rem;
+        flex-wrap: wrap;
+    }
+
+    .feature-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .feature-item i {
+        font-size: 2rem;
+        color: #ffc107;
+    }
+
+    .feature-item span {
+        font-size: 0.9rem;
+        opacity: 0.8;
+    }
+
+    /* Right Side - Login Form */
+    .login-right {
+        flex: 1;
+        background: #ffffff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 2rem;
+        position: relative;
+        min-height: 600px;
+    }
+
+    .login-right::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -50px;
+        width: 100px;
+        height: 100%;
+        background: #ffffff;
+        transform: skewX(-5deg);
+        box-shadow: -15px 0 30px rgba(0, 0, 0, 0.1);
+        z-index: 1;
+    }
+
+    .login-form-container {
+        max-width: 480px;
+        width: 100%;
+        position: relative;
+        z-index: 10;
+    }
+
+    .login-header {
+        text-align: center;
+        margin-bottom: 3rem;
+    }
+
+    .login-header h2 {
+        font-size: 2.2rem;
+        font-weight: 700;
+        color: #1a1a2e;
+        margin-bottom: 0.5rem;
+    }
+
+    .login-header p {
+        color: #666;
+        font-size: 1.1rem;
+    }
+
+    /* Google Button Styling */
+    .social-login-btn {
+        width: 100%;
+        padding: 1.1rem 2rem;
+        background: #ffffff;
+        border: 2px solid #e0e0e0;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 1rem;
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #444;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+        text-decoration: none;
+        margin-bottom: 2rem;
+    }
+
+    .social-login-btn:hover {
+        border-color: #4285F4;
+        box-shadow: 0 5px 20px rgba(66, 133, 244, 0.2);
+        transform: translateY(-2px);
+        color: #444;
+    }
+
+    .google-icon {
+        width: 24px;
+        height: 24px;
+    }
+
+    .divider {
+        display: flex;
+        align-items: center;
+        margin: 2.5rem 0;
+        color: #999;
+    }
+
+    .divider::before,
+    .divider::after {
+        content: '';
+        flex: 1;
+        height: 1px;
+        background: linear-gradient(to right, transparent, #ddd, transparent);
+    }
+
+    .divider span {
+        padding: 0 1.5rem;
+        font-size: 0.95rem;
+        font-weight: 600;
+        color: #999;
+    }
+
+    /* Login Tabs */
+    .login-tabs {
+        display: flex;
+        gap: 1rem;
+        margin-bottom: 2rem;
+        border-bottom: 2px solid #e0e0e0;
+    }
+
+    .login-tab {
+        flex: 1;
+        padding: 1rem;
+        background: transparent;
+        border: none;
+        border-bottom: 3px solid transparent;
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #666;
+        cursor: pointer;
+        transition: all 0.3s;
+    }
+
+    .login-tab:hover {
+        color: #1a1a2e;
+        background: #f8f9fa;
+    }
+
+    .login-tab.active {
+        color: #ffc107;
+        border-bottom-color: #ffc107;
+    }
+
+    .login-tab i {
+        margin-right: 0.5rem;
+    }
+
+    .tab-content {
+        display: none;
+    }
+
+    .tab-content.active {
+        display: block;
+    }
+
+    .form-control {
+        border-radius: 8px;
+        padding: 1rem;
+        border: 2px solid #e0e0e0;
+        font-size: 1rem;
+        transition: all 0.3s;
+    }
+
+    .form-control:focus {
+        border-color: #ffc107;
+        box-shadow: 0 0 0 0.2rem rgba(255, 193, 7, 0.15);
+    }
+
+    .btn-login {
+        background: linear-gradient(135deg, #ffc107 0%, #ffca2c 100%);
+        border: none;
+        border-radius: 8px;
+        padding: 1rem;
+        font-weight: 700;
+        font-size: 1.1rem;
+        color: #1a1a2e;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 15px rgba(255, 193, 7, 0.3);
+        width: 100%;
+    }
+
+    .btn-login:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(255, 193, 7, 0.4);
+        background: linear-gradient(135deg, #ffca2c 0%, #ffc107 100%);
+        color: #1a1a2e;
+    }
+
+    .security-note {
+        margin-top: 2.5rem;
+        padding: 1.2rem;
+        background: #f8f9fa;
+        border-left: 4px solid #28a745;
+        border-radius: 6px;
+        font-size: 0.9rem;
+        color: #666;
+    }
+
+    .security-note i {
+        color: #28a745;
+        margin-right: 0.5rem;
+        font-size: 1.1rem;
+    }
+
+    /* Responsive Design */
+    @media (max-width: 968px) {
+        .login-container {
+            flex-direction: column;
+        }
+
+        .login-left {
+            min-height: 50vh;
+        }
+
+        .login-right {
+            min-height: auto;
+            padding: 3rem 1.5rem;
+        }
+
+        .login-right::before {
+            display: none;
+        }
+
+        .branding-content h1 {
+            font-size: 2.5rem;
+        }
+
+        .electrical-icon {
+            font-size: 3.5rem;
+        }
+
+        .features-list {
+            gap: 1rem;
+        }
+    }
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="row justify-content-center my-5">
-    <div class="col-md-6 col-lg-5">
-        <div class="card shadow-lg border-0 rounded-lg">
-            <div class="card-header bg-dark text-white text-center py-4">
-                <h3 class="mb-0"><i class="fas fa-sign-in-alt me-2"></i>Login</h3>
-            </div>
-            <div class="card-body p-4 p-md-5">
-                <ul class="nav nav-pills nav-fill mb-4" id="loginTab" role="tablist">
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link active fw-bold" id="password-tab" data-bs-toggle="tab"
-                            data-bs-target="#password-login" type="button" role="tab">
-                            <i class="fas fa-key me-2"></i>Password
-                        </button>
-                    </li>
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link fw-bold" id="otp-tab" data-bs-toggle="tab" data-bs-target="#otp-login"
-                            type="button" role="tab">
-                            <i class="fas fa-mobile-alt me-2"></i>OTP
-                        </button>
-                    </li>
-                </ul>
+<!-- Use custom wrapper instead of overriding container -->
+<div class="login-page-wrapper">
+    <div class="login-container">
+        <!-- Left Side - Electrical Shop Branding -->
+        <div class="login-left">
+            <div class="branding-content">
+                <div class="electrical-icon">
+                    <i class="fas fa-bolt"></i>
+                </div>
+                <h1>
+                    Power Your
+                    <span class="highlight">Electrical World</span>
+                </h1>
+                <p><strong>Shiv Shakti Electrical</strong></p>
+                <p style="font-size: 1.1rem; opacity: 0.85;">Your Trusted Partner in Indore</p>
 
-                <div class="tab-content" id="loginTabContent">
-                    <!-- Password Login -->
-                    <div class="tab-pane fade show active" id="password-login" role="tabpanel">
-                        <form method="post">
-                            {% csrf_token %}
-                            <input type="hidden" name="login_type" value="password">
-                            <div class="form-floating mb-3">
-                                <input type="text" name="identifier" class="form-control" id="id_identifier_pass"
-                                    placeholder="Email or Phone" required>
-                                <label for="id_identifier_pass">Email or Phone Number</label>
-                            </div>
-                            <div class="form-floating mb-3">
-                                <input type="password" name="password" class="form-control" id="id_password"
-                                    placeholder="Password" required>
-                                <label for="id_password">Password</label>
-                            </div>
-                            <div class="d-flex justify-content-end mb-3">
-                                <a href="{% url 'forgot_password' %}" class="text-decoration-none small text-secondary">
-                                    Forgot Password?
-                                </a>
-                            </div>
-                            <div class="d-grid gap-2">
-                                <button type="submit" class="btn btn-warning btn-lg fw-bold shadow-sm">
-                                    Login with Password
-                                </button>
-                            </div>
-                        </form>
+                <div class="features-list">
+                    <div class="feature-item">
+                        <i class="fas fa-tools"></i>
+                        <span>Quality Products</span>
                     </div>
-
-                    <!-- OTP Login -->
-                    <div class="tab-pane fade" id="otp-login" role="tabpanel">
-                        <form method="post">
-                            {% csrf_token %}
-                            <input type="hidden" name="login_type" value="otp">
-
-                            <div class="alert alert-info py-2 small mb-3">
-                                <i class="fas fa-info-circle me-1"></i>
-                                OTP will be sent to your registered email address.
-                            </div>
-
-                            <div class="form-floating mb-3">
-                                <input type="text" name="identifier" class="form-control" id="id_identifier_otp"
-                                    placeholder="Email or Phone" required>
-                                <label for="id_identifier_otp">Email or Phone Number</label>
-                            </div>
-                            <div class="d-grid gap-2">
-                                <button type="submit" class="btn btn-warning btn-lg fw-bold shadow-sm">
-                                    Get OTP
-                                </button>
-                            </div>
-                        </form>
+                    <div class="feature-item">
+                        <i class="fas fa-shipping-fast"></i>
+                        <span>Fast Delivery</span>
+                    </div>
+                    <div class="feature-item">
+                        <i class="fas fa-headset"></i>
+                        <span>Expert Support</span>
                     </div>
                 </div>
             </div>
-            <div class="card-footer text-center py-3 bg-light">
-                <div class="small">
-                    Don't have an account? <a href="{% url 'email_signup' %}"
-                        class="fw-bold text-dark text-decoration-none">Create Account</a>
+        </div>
+
+        <!-- Right Side - Login Form -->
+        <div class="login-right">
+            <div class="login-form-container">
+                <div class="login-header">
+                    <h2>Welcome Back!</h2>
+                    <p>Sign in to continue shopping</p>
+                </div>
+
+                <!-- Google Login Button - COMMENTED OUT UNTIL CREDENTIALS ARE CONFIGURED -->
+
+                <a href="{% url 'google_login' %}" class="social-login-btn">
+                    <svg class="google-icon" viewBox="0 0 24 24">
+                        <path fill="#4285F4"
+                            d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                        <path fill="#34A853"
+                            d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                        <path fill="#FBBC05"
+                            d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
+                        <path fill="#EA4335"
+                            d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
+                    </svg>
+                    Continue with Google
+                </a>
+
+                <div class="divider">
+                    <span>OR</span>
+                </div>
+
+
+                <!-- Login Tabs -->
+                <div class="login-tabs">
+                    <button class="login-tab active" onclick="switchTab('password')">
+                        <i class="fas fa-key"></i>Password
+                    </button>
+                    <button class="login-tab" onclick="switchTab('otp')">
+                        <i class="fas fa-envelope"></i>OTP via Email
+                    </button>
+                </div>
+
+                <!-- Password Login Tab -->
+                <div id="password-tab" class="tab-content active">
+                    <form method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="login_type" value="password">
+
+                        <div class="mb-3">
+                            <input type="text" name="identifier" class="form-control" placeholder="Email or Phone"
+                                required>
+                        </div>
+
+                        <div class="mb-3 position-relative">
+                            <input type="password" name="password" class="form-control" placeholder="Password"
+                                id="password-input" required>
+                            <button type="button" class="btn btn-link position-absolute end-0 top-50 translate-middle-y"
+                                id="toggle-password"
+                                style="text-decoration: none; color: #666; z-index: 10; margin-right: 10px;"
+                                onclick="togglePasswordVisibility()">
+                                <i class="fas fa-eye" id="eye-icon"></i>
+                            </button>
+                        </div>
+
+                        <div class="text-end mb-3">
+                            <a href="{% url 'forgot_password' %}" class="text-muted small">
+                                Forgot Password?
+                            </a>
+                        </div>
+
+                        <button type="submit" class="btn btn-login">
+                            <i class="fas fa-sign-in-alt me-2"></i>Login with Password
+                        </button>
+                    </form>
+                </div>
+
+                <!-- OTP Login Tab -->
+                <div id="otp-tab" class="tab-content">
+                    <form method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="login_type" value="otp">
+
+                        <div class="alert alert-info mb-3" style="font-size: 0.9rem;">
+                            <i class="fas fa-info-circle me-1"></i>
+                            We'll send a one-time password to your registered email
+                        </div>
+
+                        <div class="mb-3">
+                            <input type="text" name="identifier" class="form-control" placeholder="Email or Phone"
+                                required>
+                        </div>
+
+                        <button type="submit" class="btn btn-login">
+                            <i class="fas fa-paper-plane me-2"></i>Send OTP
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Register Link - Now visible within login box -->
+                <div class="text-center mt-4 pt-3" style="border-top: 1px solid #e0e0e0;">
+                    <p class="text-muted mb-2" style="font-size: 0.95rem;">Don't have an account?</p>
+                    <a href="{% url 'email_signup' %}"
+                        style="color: #1a1a2e; font-weight: 700; text-decoration: none; font-size: 1.05rem;">
+                        <i class="fas fa-user-plus me-1"></i>Create New Account
+                    </a>
+                </div>
+
+                <!-- Security Note -->
+                <div class="security-note">
+                    <i class="fas fa-shield-alt"></i>
+                    <strong>Secure Login:</strong> Your data is protected with industry-standard encryption
                 </div>
             </div>
         </div>
@@ -87,32 +511,42 @@
 </div>
 
 <script>
-    document.addEventListener('DOMContentLoaded', function () {
-        // Password toggle script
-        const passwordInputs = document.querySelectorAll('input[type="password"]');
-        passwordInputs.forEach(input => {
-            const wrapper = document.createElement('div');
-            wrapper.className = 'input-group';
-            input.parentNode.insertBefore(wrapper, input);
-            wrapper.appendChild(input);
-
-            const toggleBtn = document.createElement('button');
-            toggleBtn.className = 'btn btn-outline-secondary';
-            toggleBtn.type = 'button';
-            toggleBtn.innerHTML = '<i class="fas fa-eye"></i>';
-            toggleBtn.style.zIndex = '0';
-
-            toggleBtn.onclick = function () {
-                if (input.type === 'password') {
-                    input.type = 'text';
-                    toggleBtn.innerHTML = '<i class="fas fa-eye-slash"></i>';
-                } else {
-                    input.type = 'password';
-                    toggleBtn.innerHTML = '<i class="fas fa-eye"></i>';
-                }
-            };
-            wrapper.appendChild(toggleBtn);
+    function switchTab(tabName) {
+        // Hide all tabs
+        document.querySelectorAll('.tab-content').forEach(tab => {
+            tab.classList.remove('active');
         });
-    });
+
+        // Deactivate all tab buttons
+        document.querySelectorAll('.login-tab').forEach(btn => {
+            btn.classList.remove('active');
+        });
+
+        // Show selected tab
+        if (tabName === 'password') {
+            document.getElementById('password-tab').classList.add('active');
+            document.querySelectorAll('.login-tab')[0].classList.add('active');
+        } else {
+            document.getElementById('otp-tab').classList.add('active');
+            document.querySelectorAll('.login-tab')[1].classList.add('active');
+        }
+    }
+
+    function togglePasswordVisibility() {
+        const passwordInput = document.getElementById('password-input');
+        const eyeIcon = document.getElementById('eye-icon');
+
+        if (passwordInput.type === 'password') {
+            // Show password
+            passwordInput.type = 'text';
+            eyeIcon.classList.remove('fa-eye');
+            eyeIcon.classList.add('fa-eye-slash');
+        } else {
+            // Hide password
+            passwordInput.type = 'password';
+            eyeIcon.classList.remove('fa-eye-slash');
+            eyeIcon.classList.add('fa-eye');
+        }
+    }
 </script>
 {% endblock %}

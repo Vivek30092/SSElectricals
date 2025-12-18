@@ -59,6 +59,10 @@
             class="{% if 'review' in request.resolver_match.url_name %}active{% endif %}">
             <i class="fas fa-star me-2"></i> Reviews
         </a>
+        <a href="{% url 'receipt_list' %}"
+            class="{% if 'receipt' in request.resolver_match.url_name %}active{% endif %}">
+            <i class="fas fa-receipt me-2"></i> Offline Receipts
+        </a>
         <a href="{% url 'admin_activity_log' %}"
             class="{% if 'log' in request.resolver_match.url_name %}active{% endif %}">
             <i class="fas fa-history me-2"></i> Logs

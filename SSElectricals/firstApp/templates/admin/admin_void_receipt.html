@@ -1,0 +1,87 @@
+{% extends 'admin/base_admin.html' %}
+{% load static %}
+
+{% block title %}Void Receipt {{ receipt.receipt_number }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card border-danger">
+                <div class="card-header bg-danger text-white">
+                    <h4 class="mb-0"><i class="fas fa-exclamation-triangle"></i> Void Receipt</h4>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-warning">
+                        <strong>⚠️ Warning:</strong> You are about to void receipt <strong>{{ receipt.receipt_number
+                            }}</strong>. This action cannot be undone!
+                    </div>
+
+                    <!-- Receipt Summary -->
+                    <div class="card mb-4">
+                        <div class="card-body">
+                            <h6>Receipt Details:</h6>
+                            <p class="mb-1"><strong>Receipt #:</strong> {{ receipt.receipt_number }}</p>
+                            <p class="mb-1"><strong>Customer:</strong> {{ receipt.buyer_name }}</p>
+                            <p class="mb-1"><strong>Amount:</strong> ₹{{ receipt.grand_total }}</p>
+                            <p class="mb-1"><strong>Date:</strong> {{ receipt.created_at|date:"d-M-Y" }}</p>
+                        </div>
+                    </div>
+
+                    <form method="post">
+                        {% csrf_token %}
+
+                        <div class="mb-3">
+                            {{ form.reason_type.label_tag }}
+                            {{ form.reason_type }}
+                            {% if form.reason_type.errors %}
+                            <div class="text-danger">{{ form.reason_type.errors }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            {{ form.reason_details.label_tag }}
+                            {{ form.reason_details }}
+                            <small class="text-muted">{{ form.reason_details.help_text }}</small>
+                            {% if form.reason_details.errors %}
+                            <div class="text-danger">{{ form.reason_details.errors }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-4">
+                            <div class="form-check">
+                                {{ form.confirm }}
+                                {{ form.confirm.label_tag }}
+                            </div>
+                            <small class="text-muted">{{ form.confirm.help_text }}</small>
+                            {% if form.confirm.errors %}
+                            <div class="text-danger">{{ form.confirm.errors }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="alert alert-danger">
+                            <strong>After voiding:</strong>
+                            <ul class="mb-0">
+                                <li>Receipt will be marked as VOID</li>
+                                <li>Receipt will remain in the system for audit</li>
+                                <li>Print will show "VOID" watermark</li>
+                                <li>Cannot be edited or deleted</li>
+                                <li>Will NOT affect sales or accounting</li>
+                            </ul>
+                        </div>
+
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'receipt_detail' receipt.id %}" class="btn btn-secondary">
+                                <i class="fas fa-times"></i> Cancel
+                            </a>
+                            <button type="submit" class="btn btn-danger">
+                                <i class="fas fa-ban"></i> Void This Receipt
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

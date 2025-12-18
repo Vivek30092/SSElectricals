@@ -1,0 +1,33 @@
+{% extends 'firstApp/base.html' %}
+{% block content %}
+<div class="row justify-content-center my-5">
+    <div class="col-md-6">
+        <div class="card shadow-lg border-0">
+            <div class="card-body text-center p-5">
+                <div class="mb-4">
+                    <i class="fas fa-envelope-open fa-4x text-warning"></i>
+                </div>
+                <h3 class="mb-3">Check Your Email</h3>
+                <p class="text-muted">We've sent a secure login link to:</p>
+                <p class="fw-bold">{{ email }}</p>
+                <hr class="my-4">
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <strong>Next Step:</strong>
+                    <p class="mb-0 mt-2">Click the login button in the email to securely access your account.</p>
+                </div>
+                <ul class="text-start mt-4 text-muted small">
+                    <li>The link is valid for 10 minutes</li>
+                    <li>It can only be used once</li>
+                    <li>Didn't receive it? Check your spam folder</li>
+                </ul>
+                <div class="mt-4">
+                    <a href="{% url 'email_login' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-2"></i>Back to Login
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

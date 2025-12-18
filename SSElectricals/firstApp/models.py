@@ -26,6 +26,13 @@ class CustomUser(AbstractUser):
     # Order Tracking
     total_orders_count = models.PositiveIntegerField(default=0)
     free_delivery_used_count = models.PositiveIntegerField(default=0)
+    
+    # Theme Preference
+    THEME_CHOICES = [
+        ('light', 'Light Mode'),
+        ('dark', 'Dark Mode'),
+    ]
+    theme_preference = models.CharField(max_length=10, choices=THEME_CHOICES, default='light')
 
     USERNAME_FIELD = 'phone_number'
     REQUIRED_FIELDS = ['username', 'email']
@@ -181,6 +188,14 @@ class Order(models.Model):
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Pending')
     payment_method = models.CharField(max_length=20, choices=PAYMENT_CHOICES, default='COD')
     created_at = models.DateTimeField(auto_now_add=True)
+    
+    # Receipt Fields (FY-based numbering for online orders)
+    receipt_number = models.CharField(max_length=50, unique=True, blank=True, null=True, db_index=True)
+    financial_year = models.CharField(max_length=10, blank=True, null=True, help_text="e.g., 2024-25")
+    receipt_sequence = models.IntegerField(blank=True, null=True, help_text="Sequential number within FY")
+    receipt_qr_code = models.ImageField(upload_to='order_qrcodes/', blank=True, null=True)
+    receipt_qr_data = models.TextField(blank=True, null=True)
+    receipt_generated_at = models.DateTimeField(blank=True, null=True)
 
     @property
     def grand_total(self):
@@ -194,6 +209,67 @@ class Order(models.Model):
 
     def __str__(self):
         return f"Order #{self.id} by {self.user.username}"
+    
+    @staticmethod
+    def get_current_financial_year():
+        """Get current calendar year (last 2 digits) - Jan to Dec"""
+        from datetime import date
+        return str(date.today().year)[2:]  # Returns '25' for 2025, '26' for 2026
+    
+    def generate_receipt_number(self):
+        """Generate FY-based receipt number for order"""
+        if not self.receipt_number and self.status in ['Confirmed', 'Out for Delivery', 'Delivered']:
+            # Get current FY
+            self.financial_year = self.get_current_financial_year()
+            
+            # Get last order receipt in this FY
+            last_order = Order.objects.filter(
+                financial_year=self.financial_year
+            ).exclude(receipt_number__isnull=True).order_by('-receipt_sequence').first()
+            
+            seq = (last_order.receipt_sequence + 1) if last_order else 1
+            
+            self.receipt_sequence = seq
+            self.receipt_number = f"ORD/{self.financial_year}/{seq:04d}"  # ORD prefix for orders
+            self.receipt_generated_at = timezone.now()
+            
+            # Generate QR code data
+            self.receipt_qr_data = (
+                f"Order Receipt: {self.receipt_number}\n"
+                f"Amount: ₹{self.grand_total}\n"
+                f"Date: {self.created_at.strftime('%d-%m-%Y')}\n"
+                f"Customer: {self.user.get_full_name() or self.user.username}"
+            )
+            
+            self.save()
+    
+    def generate_receipt_qr_code(self):
+        """Generate QR code image for order receipt"""
+        if not self.receipt_qr_data:
+            return
+        
+        try:
+            import qrcode
+            from io import BytesIO
+            from django.core.files import File
+            
+            # Create QR code
+            qr = qrcode.QRCode(version=1, box_size=10, border=5)
+            qr.add_data(self.receipt_qr_data)
+            qr.make(fit=True)
+            
+            img = qr.make_image(fill_color="black", back_color="white")
+            
+            # Save to file
+            buffer = BytesIO()
+            img.save(buffer, format='PNG')
+            filename = f'order_receipt_{self.receipt_number.replace("/", "_")}.png'
+            self.receipt_qr_code.save(filename, File(buffer), save=False)
+            buffer.close()
+            
+            self.save()
+        except ImportError:
+            pass  # qrcode library not installed
 
 class OrderItem(models.Model):
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='items')
@@ -662,3 +738,324 @@ class FinancialValidationLog(models.Model):
     
     def __str__(self):
         return f"{self.violation_type} - {self.detected_at.strftime('%Y-%m-%d %H:%M')}"
+
+# 14. One-Tap Email Login Tokens
+class EmailLoginToken(models.Model):
+    """
+    Secure tokens for one-tap email login.
+    Regular users only - NOT for admin/staff.
+    """
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, 
+        on_delete=models.CASCADE, 
+        related_name='email_login_tokens'
+    )
+    token = models.CharField(max_length=100, unique=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+    is_used = models.BooleanField(default=False)
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    user_agent = models.TextField(blank=True, null=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['token', 'is_used']),
+            models.Index(fields=['user', 'created_at']),
+        ]
+    
+    def __str__(self):
+        return f"Login token for {self.user.email} - {'Used' if self.is_used else 'Active'}"
+    
+    @staticmethod
+    def generate_token():
+        """Generate a cryptographically secure random token"""
+        import secrets
+        return secrets.token_urlsafe(32)
+    
+    def is_valid(self):
+        """Check if token is still valid"""
+        if self.is_used:
+            return False
+        if timezone.now() > self.expires_at:
+            return False
+        return True
+    
+    def mark_used(self):
+        """Mark token as used to prevent replay attacks"""
+        self.is_used = True
+        self.save()
+
+
+# 15. Offline Receipt / Manual Billing System
+class OfflineReceipt(models.Model):
+    """
+    Offline receipts for walk-in customers - ISOLATED from online sales.
+    Does NOT affect daily sales, expenses, or analytics.
+    Enhanced with FY numbering, PDF export, and void/correction workflow.
+    """
+    
+    # Receipt Status Choices
+    class ReceiptStatus(models.TextChoices):
+        ACTIVE = 'ACTIVE', 'Active'
+        VOID = 'VOID', 'Void'
+        CORRECTED = 'CORRECTED', 'Corrected'
+    
+    # Unique Receipt Identifier (FY-based)
+    receipt_number = models.CharField(max_length=50, unique=True, editable=False, db_index=True)
+    financial_year = models.CharField(max_length=10, help_text="e.g., 2024-25", editable=False)
+    sequence_number = models.IntegerField(help_text="Sequential number within FY", editable=False)
+    
+    # Receipt Status
+    status = models.CharField(
+        max_length=20,
+        choices=ReceiptStatus.choices,
+        default=ReceiptStatus.ACTIVE
+    )
+    
+    # Void Information
+    void_reason = models.TextField(blank=True, null=True, help_text="Reason for voiding receipt")
+    voided_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='voided_receipts',
+        help_text="Admin who voided this receipt"
+    )
+    voided_at = models.DateTimeField(null=True, blank=True)
+    
+    # Correction Reference
+    original_receipt = models.ForeignKey(
+        'self',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='corrections',
+        help_text="Original receipt if this is a correction"
+    )
+    corrected_by_receipt = models.ForeignKey(
+        'self',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='corrected_from',
+        help_text="Corrected receipt reference"
+    )
+    
+    # Buyer Information
+    buyer_name = models.CharField(max_length=200)
+    buyer_email = models.EmailField(blank=True, null=True, help_text="Optional - links receipt to user account")
+    buyer_phone = models.CharField(max_length=15, blank=True, null=True)
+    buyer_address = models.TextField(blank=True, null=True, help_text="No house number required")
+    
+    # Shop Information (for receipt header)
+    shop_name = models.CharField(max_length=200, default="Shiv Shakti Electrical")
+    shop_address = models.TextField(default="Indore, Madhya Pradesh")
+    shop_phone = models.CharField(max_length=15, default="+91 9993149226")
+    shop_gst = models.CharField(max_length=50, blank=True, null=True)
+    
+    # Financial Details (Manual Entry)
+    subtotal = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    tax_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0, help_text="GST/Tax")
+    discount_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    grand_total = models.DecimalField(max_digits=10, decimal_places=2)
+    
+    # QR Code Data
+    qr_code_data = models.TextField(blank=True, null=True, help_text="Data encoded in receipt QR code")
+    qr_code_image = models.ImageField(upload_to='receipt_qrcodes/', blank=True, null=True)
+    
+    # PDF Storage
+    pdf_file = models.FileField(upload_to='receipt_pdfs/', blank=True, null=True)
+    pdf_generated_at = models.DateTimeField(null=True, blank=True)
+    
+    # Metadata
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='created_receipts',
+        help_text="Admin who created this receipt"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    # Notes
+    notes = models.TextField(blank=True, null=True, help_text="Internal notes for admin")
+    
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = "Offline Receipt"
+        verbose_name_plural = "Offline Receipts"
+        indexes = [
+            models.Index(fields=['receipt_number']),
+            models.Index(fields=['financial_year', 'sequence_number']),
+            models.Index(fields=['buyer_email']),
+            models.Index(fields=['-created_at']),
+            models.Index(fields=['status']),
+        ]
+        unique_together = [['financial_year', 'sequence_number']]
+    
+    def __str__(self):
+        return f"Receipt #{self.receipt_number} - {self.buyer_name} ({self.get_status_display()})"
+    
+    @staticmethod
+    def get_current_financial_year():
+        """Get current calendar year (last 2 digits) - Jan to Dec"""
+        from datetime import date
+        return str(date.today().year)[2:]  # Returns '25' for 2025, '26' for 2026
+    
+    @staticmethod
+    def get_next_sequence_number(financial_year):
+        """Get next sequence number for given FY"""
+        last_receipt = OfflineReceipt.objects.filter(
+            financial_year=financial_year
+        ).order_by('-sequence_number').first()
+        
+        if last_receipt:
+            return last_receipt.sequence_number + 1
+        return 1
+    
+    def save(self, *args, **kwargs):
+        """Auto-generate FY-based receipt number on creation"""
+        if not self.receipt_number:
+            # Get current FY
+            self.financial_year = self.get_current_financial_year()
+            
+            # Get next sequence number
+            self.sequence_number = self.get_next_sequence_number(self.financial_year)
+            
+            # Generate receipt number: SS/25/0001 (year/sequence)
+            prefix = "SS"  # Shop initials (configurable)
+            self.receipt_number = f"{prefix}/{self.financial_year}/{self.sequence_number:04d}"
+        
+        # Auto-generate QR code data
+        if not self.qr_code_data:
+            self.qr_code_data = (
+                f"Receipt: {self.receipt_number}\n"
+                f"Amount: ₹{self.grand_total}\n"
+                f"Date: {timezone.now().strftime('%d-%m-%Y')}\n"
+                f"Shop: {self.shop_name}"
+            )
+        
+        super().save(*args, **kwargs)
+    
+    def void_receipt(self, admin_user, reason):
+        """Mark receipt as void"""
+        if self.status == self.ReceiptStatus.VOID:
+            raise ValueError("Receipt is already void")
+        
+        self.status = self.ReceiptStatus.VOID
+        self.void_reason = reason
+        self.voided_by = admin_user
+        self.voided_at = timezone.now()
+        self.save()
+    
+    def create_correction(self, admin_user):
+        """Create a corrected copy of this receipt"""
+        # Create new receipt as correction
+        corrected = OfflineReceipt()
+        corrected.buyer_name = self.buyer_name
+        corrected.buyer_email = self.buyer_email
+        corrected.buyer_phone = self.buyer_phone
+        corrected.buyer_address = self.buyer_address
+        corrected.shop_name = self.shop_name
+        corrected.shop_address = self.shop_address
+        corrected.shop_phone = self.shop_phone
+        corrected.shop_gst = self.shop_gst
+        corrected.subtotal = self.subtotal
+        corrected.tax_amount = self.tax_amount
+        corrected.discount_amount = self.discount_amount
+        corrected.grand_total = self.grand_total
+        corrected.original_receipt = self
+        corrected.created_by = admin_user
+        corrected.status = self.ReceiptStatus.CORRECTED
+        corrected.save()
+        
+        # Copy items
+        for item in self.items.all():
+            ReceiptItem.objects.create(
+                receipt=corrected,
+                item_name=item.item_name,
+                quantity=item.quantity,
+                unit_price=item.unit_price,
+                description=item.description
+            )
+        
+        # Mark this receipt as having a correction
+        self.corrected_by_receipt = corrected
+        self.save()
+        
+        return corrected
+    
+    def get_linked_user(self):
+        """Get user account linked via email"""
+        if self.buyer_email:
+            try:
+                from django.contrib.auth import get_user_model
+                User = get_user_model()
+                return User.objects.get(email=self.buyer_email)
+            except User.DoesNotExist:
+                return None
+        return None
+    
+    def is_editable(self):
+        """Check if receipt can be edited"""
+        return self.status == self.ReceiptStatus.ACTIVE and not self.corrected_by_receipt
+    
+    def generate_qr_code(self):
+        """Generate QR code image for receipt"""
+        try:
+            import qrcode
+            from io import BytesIO
+            from django.core.files import File
+            
+            # Create QR code
+            qr = qrcode.QRCode(version=1, box_size=10, border=5)
+            qr.add_data(self.qr_code_data)
+            qr.make(fit=True)
+            
+            img = qr.make_image(fill_color="black", back_color="white")
+            
+            # Save to file
+            buffer = BytesIO()
+            img.save(buffer, format='PNG')
+            filename = f'receipt_{self.receipt_number.replace("/", "_")}.png'
+            self.qr_code_image.save(filename, File(buffer), save=False)
+            buffer.close()
+            
+            self.save()
+        except ImportError:
+            pass  # qrcode library not installed
+
+
+
+class ReceiptItem(models.Model):
+    """
+    Line items for offline receipts
+    """
+    receipt = models.ForeignKey(
+        OfflineReceipt,
+        on_delete=models.CASCADE,
+        related_name='items'
+    )
+    item_name = models.CharField(max_length=200)
+    quantity = models.DecimalField(max_digits=10, decimal_places=2, default=1)
+    unit_price = models.DecimalField(max_digits=10, decimal_places=2)
+    line_total = models.DecimalField(max_digits=10, decimal_places=2)
+    
+    # Item description/notes
+    description = models.TextField(blank=True, null=True)
+    
+    class Meta:
+        ordering = ['id']
+        verbose_name = "Receipt Item"
+        verbose_name_plural = "Receipt Items"
+    
+    def __str__(self):
+        return f"{self.item_name} x {self.quantity}"
+    
+    def save(self, *args, **kwargs):
+        """Auto-calculate line total"""
+        self.line_total = self.quantity * self.unit_price
+        super().save(*args, **kwargs)

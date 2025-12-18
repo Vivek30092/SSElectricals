@@ -1,0 +1,189 @@
+{% extends 'admin/base_admin.html' %}
+{% load static %}
+
+{% block title %}Receipt {{ receipt.receipt_number }} - Details{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2><i class="fas fa-file-invoice"></i> Receipt Details</h2>
+                <div>
+                    <a href="{% url 'receipt_list' %}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left"></i> Back to List
+                    </a>
+                    <a href="{% url 'receipt_print' receipt.id %}" class="btn btn-primary" target="_blank">
+                        <i class="fas fa-print"></i> Print
+                    </a>
+                </div>
+            </div>
+
+            <!-- Receipt Information -->
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Receipt #{{ receipt.receipt_number }}</h5>
+                    <span>
+                        {% if receipt.status == 'ACTIVE' %}
+                        <span class="badge bg-success">Active</span>
+                        {% elif receipt.status == 'VOID' %}
+                        <span class="badge bg-danger">Void</span>
+                        {% elif receipt.status == 'CORRECTED' %}
+                        <span class="badge bg-info">Corrected</span>
+                        {% endif %}
+                    </span>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>Financial Year:</strong> {{ receipt.financial_year }}</p>
+                            <p><strong>Created:</strong> {{ receipt.created_at|date:"d-M-Y h:i A" }}</p>
+                            <p><strong>Created By:</strong> {{ receipt.created_by.username }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <h3 class="text-end">₹{{ receipt.grand_total }}</h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Correction/Void Notice -->
+            {% if receipt.original_receipt %}
+            <div class="alert alert-info">
+                <strong>⚠️ Corrected Receipt</strong><br>
+                This is a correction of receipt <a href="{% url 'receipt_detail' receipt.original_receipt.id %}">{{
+                    receipt.original_receipt.receipt_number }}</a>
+            </div>
+            {% endif %}
+
+            {% if receipt.status == 'VOID' %}
+            <div class="alert alert-danger">
+                <strong>⚠️ Voided Receipt</strong><br>
+                <strong>Reason:</strong> {{ receipt.void_reason }}<br>
+                <strong>Voided by:</strong> {{ receipt.voided_by.username }} on {{ receipt.voided_at|date:"d-M-Y h:i A"
+                }}
+            </div>
+            {% endif %}
+
+            <!-- Customer Info -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-user"></i> Customer Information</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>Name:</strong> {{ receipt.buyer_name }}</p>
+                            {% if receipt.buyer_email %}
+                            <p><strong>Email:</strong> {{ receipt.buyer_email }}</p>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            {% if receipt.buyer_phone %}
+                            <p><strong>Phone:</strong> {{ receipt.buyer_phone }}</p>
+                            {% endif %}
+                            {% if receipt.buyer_address %}
+                            <p><strong>Address:</strong> {{ receipt.buyer_address }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Items -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-shopping-cart"></i> Items</h5>
+                </div>
+                <div class="card-body">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Item</th>
+                                <th>Qty</th>
+                                <th>Unit Price</th>
+                                <th>Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in items %}
+                            <tr>
+                                <td>{{ forloop.counter }}</td>
+                                <td>
+                                    <strong>{{ item.item_name }}</strong>
+                                    {% if item.description %}
+                                    <br><small class="text-muted">{{ item.description }}</small>
+                                    {% endif %}
+                                </td>
+                                <td>{{ item.quantity }}</td>
+                                <td>₹{{ item.unit_price }}</td>
+                                <td><strong>₹{{ item.line_total }}</strong></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <td colspan="4" class="text-end"><strong>Subtotal:</strong></td>
+                                <td><strong>₹{{ receipt.subtotal }}</strong></td>
+                            </tr>
+                            {% if receipt.tax_amount > 0 %}
+                            <tr>
+                                <td colspan="4" class="text-end">Tax/GST:</td>
+                                <td>₹{{ receipt.tax_amount }}</td>
+                            </tr>
+                            {% endif %}
+                            {% if receipt.discount_amount > 0 %}
+                            <tr>
+                                <td colspan="4" class="text-end">Discount:</td>
+                                <td>-₹{{ receipt.discount_amount }}</td>
+                            </tr>
+                            {% endif %}
+                            <tr class="table-primary">
+                                <td colspan="4" class="text-end"><strong>GRAND TOTAL:</strong></td>
+                                <td><strong>₹{{ receipt.grand_total }}</strong></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-cogs"></i> Actions</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex gap-2">
+                        <a href="{% url 'receipt_print' receipt.id %}" class="btn btn-primary" target="_blank">
+                            <i class="fas fa-print"></i> Print Receipt
+                        </a>
+                        <a href="{% url 'receipt_pdf' receipt.id %}" class="btn btn-secondary">
+                            <i class="fas fa-file-pdf"></i> Download PDF
+                        </a>
+                        {% if receipt.status == 'ACTIVE' and not receipt.corrected_by_receipt %}
+                        <a href="{% url 'void_receipt' receipt.id %}" class="btn btn-danger">
+                            <i class="fas fa-ban"></i> Void Receipt
+                        </a>
+                        <a href="{% url 'create_correction' receipt.id %}" class="btn btn-warning">
+                            <i class="fas fa-edit"></i> Create Correction
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            {% if receipt.notes %}
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-sticky-note"></i> Internal Notes</h5>
+                </div>
+                <div class="card-body">
+                    {{ receipt.notes }}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

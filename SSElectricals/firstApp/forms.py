@@ -63,7 +63,7 @@ class CustomUserCreationForm(UserCreationForm):
 class CustomUserUpdateForm(forms.ModelForm):
     class Meta:
         model = CustomUser
-        fields = ('first_name', 'last_name', 'email', 'phone_number', 'house_number', 'address_line1', 'city', 'landmark', 'pincode', 'profile_picture')
+        fields = ('first_name', 'last_name', 'email', 'phone_number', 'house_number', 'address_line1', 'city', 'landmark', 'pincode', 'profile_picture', 'theme_preference')
         widgets = {
             'first_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'First Name'}),
             'last_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Last Name'}),
@@ -79,7 +79,8 @@ class CustomUserUpdateForm(forms.ModelForm):
             'city': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'City', 'autocomplete': 'off'}),
             'landmark': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Near Landmark (Optional)', 'autocomplete': 'off'}),
             'pincode': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Pincode', 'autocomplete': 'off'}),
-            'profile_picture': forms.FileInput(attrs={'class': 'form-control'})
+            'profile_picture': forms.FileInput(attrs={'class': 'form-control'}),
+            'theme_preference': forms.Select(attrs={'class': 'form-select'})
         }
 
 class CheckoutForm(forms.Form):

@@ -1,0 +1,127 @@
+{% extends 'admin/base_admin.html' %}
+{% load static %}
+
+{% block title %}Receipt History - Admin{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2><i class="fas fa-receipt"></i> Receipt History</h2>
+                <a href="{% url 'create_receipt' %}" class="btn btn-primary">
+                    <i class="fas fa-plus"></i> Create New Receipt
+                </a>
+            </div>
+
+            <!-- Filters -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-filter"></i> Filters</h5>
+                </div>
+                <div class="card-body">
+                    <form method="get">
+                        <div class="row">
+                            <div class="col-md-2 mb-3">
+                                {{ filter_form.status.label_tag }}
+                                {{ filter_form.status }}
+                            </div>
+                            <div class="col-md-2 mb-3">
+                                {{ filter_form.financial_year.label_tag }}
+                                {{ filter_form.financial_year }}
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                {{ filter_form.buyer_name.label_tag }}
+                                {{ filter_form.buyer_name }}
+                            </div>
+                            <div class="col-md-2 mb-3">
+                                {{ filter_form.date_from.label_tag }}
+                                {{ filter_form.date_from }}
+                            </div>
+                            <div class="col-md-2 mb-3">
+                                {{ filter_form.date_to.label_tag }}
+                                {{ filter_form.date_to }}
+                            </div>
+                            <div class="col-md-1 mb-3 d-flex align-items-end">
+                                <button type="submit" class="btn btn-primary w-100">
+                                    <i class="fas fa-search"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Receipts Table -->
+            <div class="card">
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>Receipt #</th>
+                                    <th>Customer</th>
+                                    <th>Date</th>
+                                    <th>FY</th>
+                                    <th>Amount</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for receipt in receipts %}
+                                <tr>
+                                    <td><strong>{{ receipt.receipt_number }}</strong></td>
+                                    <td>
+                                        {{ receipt.buyer_name }}
+                                        {% if receipt.buyer_email %}
+                                        <br><small class="text-muted">{{ receipt.buyer_email }}</small>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ receipt.created_at|date:"d-M-Y" }}<br><small class="text-muted">{{
+                                            receipt.created_at|date:"h:i A" }}</small></td>
+                                    <td><span class="badge bg-secondary">{{ receipt.financial_year }}</span></td>
+                                    <td><strong>₹{{ receipt.grand_total }}</strong></td>
+                                    <td>
+                                        {% if receipt.status == 'ACTIVE' %}
+                                        <span class="badge bg-success">Active</span>
+                                        {% elif receipt.status == 'VOID' %}
+                                        <span class="badge bg-danger">Void</span>
+                                        {% elif receipt.status == 'CORRECTED' %}
+                                        <span class="badge bg-info">Corrected</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <a href="{% url 'receipt_detail' receipt.id %}" class="btn btn-sm btn-primary"
+                                            title="View">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        <a href="{% url 'receipt_print' receipt.id %}" class="btn btn-sm btn-secondary"
+                                            title="Print" target="_blank">
+                                            <i class="fas fa-print"></i>
+                                        </a>
+                                        {% if receipt.status == 'ACTIVE' and not receipt.corrected_by_receipt %}
+                                        <a href="{% url 'void_receipt' receipt.id %}" class="btn btn-sm btn-danger"
+                                            title="Void">
+                                            <i class="fas fa-ban"></i>
+                                        </a>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="7" class="text-center py-4">
+                                        <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                                        <p class="text-muted">No receipts found</p>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

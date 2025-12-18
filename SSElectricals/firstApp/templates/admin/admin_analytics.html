@@ -32,35 +32,6 @@
 </div>
 
 <!-- Time View & Export Bar -->
-<div class="card shadow-sm border-0 mb-4" style="position: sticky; top: 0; z-index: 100;">
-    <div class="card-body py-2">
-        <div class="row align-items-center g-2">
-            <div class="col-md-6">
-                <label class="small text-muted me-2">View:</label>
-                <div class="btn-group btn-group-sm" role="group">
-                    <a href="?time_view=daily&{{ request.GET.urlencode }}"
-                        class="btn btn-outline-primary {% if time_view == 'daily' %}active{% endif %}">Daily</a>
-                    <a href="?time_view=monthly&{{ request.GET.urlencode }}"
-                        class="btn btn-outline-primary {% if time_view == 'monthly' or not time_view %}active{% endif %}">Monthly</a>
-                    <a href="?time_view=quarterly&{{ request.GET.urlencode }}"
-                        class="btn btn-outline-primary {% if time_view == 'quarterly' %}active{% endif %}">Quarterly</a>
-                    <a href="?time_view=yearly&{{ request.GET.urlencode }}"
-                        class="btn btn-outline-primary {% if time_view == 'yearly' %}active{% endif %}">Yearly</a>
-                </div>
-            </div>
-            <div class="col-md-6 text-end">
-                <div class="btn-group btn-group-sm">
-                    <a href="?export=csv&{{ request.GET.urlencode }}" class="btn btn-success">
-                        <i class="fas fa-file-csv me-1"></i> CSV
-                    </a>
-                    <a href="?export=excel&{{ request.GET.urlencode }}" class="btn btn-primary">
-                        <i class="fas fa-file-excel me-1"></i> Excel
-                    </a>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
 
 <!-- Tab Navigation -->
 <ul class="nav nav-tabs mb-4">
@@ -108,7 +79,7 @@
             <div class="col-md-2-4">
                 <div class="card stat-card-warning h-100">
                     <div class="card-body text-center">
-                        <h6 class="text-muted mb-2">Online ({{ online_pct|floatformat:1 }}%)</h6>
+                        <h6 class="text-muted mb-2">Online ({{ online_sales_percentage|floatformat:1 }}%)</h6>
                         <h3 class="stat-value">₹{{ total_online_sales|floatformat:2 }}</h3>
                     </div>
                 </div>
@@ -211,7 +182,28 @@
         <div class="row mb-4">
             <div class="col-lg-6">
                 <div class="card">
-                    <div class="card-header">Monthly Sales & Growth</div>
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <span>Monthly Sales & Growth</span>
+                        <select class="form-select form-select-sm analytics-filter" style="width: auto;"
+                            onchange="updateFilter('monthly_range', this.value)">
+                            <option value="this_month" {% if selected_monthly_range == 'this_month' %}selected{% endif %}>
+                                This Month</option>
+                            <option value="last_month" {% if selected_monthly_range == 'last_month' %}selected{% endif %}>
+                                Last Month</option>
+                            <option value="last_3_months" {% if selected_monthly_range == 'last_3_months' %}selected{% endif %}>Last 3 Months
+                            </option>
+                            <option value="last_6_months" {% if selected_monthly_range == 'last_6_months' %}selected{% endif %}>Last 6 Months
+                            </option>
+                            <option value="last_year" {% if selected_monthly_range == 'last_year' %}selected{% endif %}>
+                                Last Year</option>
+                            <option value="last_2_years" {% if selected_monthly_range == 'last_2_years' %}selected{% endif  %}>Last 2 Years
+                            </option>
+                            <option value="last_3_years" {% if selected_monthly_range == 'last_3_years' %}selected{% endif %}>Last 3 Years
+                            </option>
+                            <option value="all_time" {% if selected_monthly_range == 'all_time' %}selected{% endif %}>All
+                                Time</option>
+                        </select>
+                    </div>
                     <div class="card-body" style="height: 350px;">
                         <canvas id="monthlySalesChart"></canvas>
                     </div>
@@ -219,7 +211,18 @@
             </div>
             <div class="col-lg-6">
                 <div class="card">
-                    <div class="card-header">Quarterly Performance</div>
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <span>Quarterly Performance</span>
+                        <select class="form-select form-select-sm analytics-filter" style="width: auto;"
+                            onchange="updateFilter('quarterly_year', this.value)">
+                            {% for year in available_years %}
+                            <option value="{{ year }}" {% if year == selected_quarterly_year %}selected{% endif %}>
+                                <!--never change this line of code in any case-->
+                                {{ year }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
                     <div class="card-body" style="height: 350px;">
                         <canvas id="quarterlyChart"></canvas>
                     </div>
@@ -299,7 +302,7 @@
             <div class="col-md-4">
                 <div class="card stat-card-warning h-100">
                     <div class="card-body text-center">
-                        <h6 class="text-muted mb-2">Online ({{ online_exp_pct|floatformat:1 }}%)</h6>
+                        <h6 class="text-muted mb-2">Online ({{ online_expense_percentage|floatformat:1 }}%)</h6>
                         <h3 class="stat-value">₹{{ total_online_exp|floatformat:2 }}</h3>
                     </div>
                 </div>
@@ -310,7 +313,24 @@
         <div class="row">
             <div class="col-12">
                 <div class="card">
-                    <div class="card-header">Daily Expense Trend</div>
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <span>Daily Expense Trend</span>
+                        <select class="form-select form-select-sm analytics-filter" style="width: auto;"
+                            onchange="updateFilter('expense_range', this.value)">
+                            <option value="this_month" {% if selected_expense_range == 'this_month' %}selected{% endif %}>
+                                This Month</option>
+                            <option value="last_month" {% if selected_expense_range == 'last_month' %}selected{% endif %}>
+                                Last Month</option>
+                            <option value="last_3_months" {% if selected_expense_range == 'last_3_months' %}selected{% endif %}>Last 3 Months</option>
+                            <option value="last_6_months" {% if selected_expense_range == 'last_6_months' %}selected{% endif %}>Last 6 Months</option>
+                            <option value="last_year" {% if selected_expense_range == 'last_year' %}selected{% endif %}>
+                                Last Year</option>
+                            <option value="last_2_years" {% if selected_expense_range == 'last_2_years' %}selected{% endif %}>Last 2 Years</option>
+                            <option value="last_3_years" {% if selected_expense_range == 'last_3_years' %}selected{% endif %}>Last 3 Years</option>
+                            <option value="all_time" {% if selected_expense_range == 'all_time' %}selected{% endif %}>All
+                                Time</option>
+                        </select>
+                    </div>
                     <div class="card-body" style="height: 400px;">
                         <canvas id="dailyExpenseChart"></canvas>
                     </div>
@@ -334,7 +354,32 @@
 
         <!-- Comparison Chart -->
         <div class="card">
-            <div class="card-header">Sales vs Expenses</div>
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span>Sales vs Expenses Comparison</span>
+                <select class="form-select form-select-sm analytics-filter" style="width: auto;"
+                    onchange="updateFilter('comparison_range', this.value)">
+                    <option value="this_month" {% if selected_comparison_range == 'this_month' %}selected{% endif %}>This
+                        Month
+                    </option>   
+                    <option value="last_month" {% if selected_comparison_range == 'last_month' %}selected{% endif %}>Last
+                        Month
+                    </option>
+                    <option value="last_3_months" {% if selected_comparison_range == 'last_3_months' %}selected{% endif %}>Last 3
+                        Months</option>
+                    <option value="last_6_months" {% if selected_comparison_range == 'last_6_months' %}selected{% endif %}>Last 6
+                        Months</option>
+                    <option value="last_year" {% if selected_comparison_range == 'last_year' %}selected{% endif %}>Last
+                        Year</option>
+                    <option value="last_2_years" {% if selected_comparison_range == 'last_2_years' %}selected{% endif %}>
+                        Last 2 Years
+                    </option>
+                    <option value="last_3_years" {% if selected_comparison_range == 'last_3_years' %}selected{% endif %}>
+                        Last 3 Years
+                    </option>
+                    <option value="all_time" {% if selected_comparison_range == 'all_time' %}selected{% endif %}>All Time
+                    </option>
+                </select>
+            </div>
             <div class="card-body" style="height: 450px;">
                 <canvas id="salesVsExpenseChart"></canvas>
             </div>
@@ -433,7 +478,7 @@
         data: {
             labels: ['Online', 'Cash'],
             datasets: [{
-                data: [{{ total_online_sales|floatformat:0 }}, {{ total_cash_sales|floatformat:0 }}],
+                data: [{{ total_online_sales| floatformat:0 }}, {{ total_cash_sales| floatformat:0 }}], //never change this line of code in any case
     backgroundColor: ['#10b981', '#ec4899']
             }]
         },
@@ -537,18 +582,18 @@
     const salesVsExpenseChart = new Chart(document.getElementById('salesVsExpenseChart'), {
         type: 'line',
         data: {
-            labels: safeJSONParse('{{ sales_dates_json|escapejs }}'),
+            labels: safeJSONParse('{{ comparison_labels_json|escapejs }}'),
             datasets: [
                 {
                     label: 'Sales',
-                    data: safeJSONParse('{{ sales_values_json|escapejs }}'),
+                    data: safeJSONParse('{{ comparison_sales_json|escapejs }}'),
                     borderColor: '#10b981',
                     backgroundColor: 'rgba(16, 185, 129, 0.1)',
                     fill: true
                 },
                 {
                     label: 'Expenses',
-                    data: safeJSONParse('{{ expense_values_json|escapejs }}'),
+                    data: safeJSONParse('{{ comparison_expenses_json|escapejs }}'),
                     borderColor: '#ec4899',
                     backgroundColor: 'rgba(236, 72, 153, 0.1)',
                     fill: true
@@ -559,6 +604,91 @@
             responsive: true,
             maintainAspectRatio: false
         }
+    });
+</script>
+<style>
+    .analytics-filter {
+        min-width: 150px;
+        max-width: 200px;
+        font-size: 0.875rem;
+        padding: 0.25rem 0.5rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .analytics-filter:hover {
+        border-color: #4C5DD7;
+        box-shadow: 0 0 0 0.2rem rgba(76, 93, 215, 0.15);
+    }
+
+    .analytics-filter:focus {
+        border-color: #4C5DD7;
+        box-shadow: 0 0 0 0.2rem rgba(76, 93, 215, 0.25);
+    }
+
+    /* Dark mode support */
+    body.dark-mode .analytics-filter {
+        background-color: #260B68;
+        border-color: rgba(76, 93, 215, 0.3);
+        color: #e8e8e8;
+    }
+
+    body.dark-mode .analytics-filter:hover {
+        border-color: #4C5DD7;
+    }
+</style>
+<script>
+    function updateFilter(filterType, filterValue) {
+        // Get current URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+
+        // Update the specific filter
+        urlParams.set(filterType, filterValue);
+
+        // Show loading indicator (optional)
+        showLoadingIndicator();
+
+        // Reload page with new parameters
+        window.location.href = `?${urlParams.toString()}`;
+    }
+
+    function showLoadingIndicator() {
+        // Create a simple loading overlay
+        const overlay = document.createElement('div');
+        overlay.id = 'analytics-loading';
+        overlay.innerHTML = `
+        <div style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+                    background: rgba(0,0,0,0.3); display: flex; align-items: center; 
+                    justify-content: center; z-index: 9999;">
+            <div style="background: white; padding: 2rem; border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.3);">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="mt-2 mb-0">Updating analytics...</p>
+            </div>
+        </div>
+    `;
+        document.body.appendChild(overlay);
+    }
+
+    // Optional: Add keyboard shortcut to reset all filters
+    document.addEventListener('keydown', function (e) {
+        // Ctrl/Cmd + R = Reset filters
+        if ((e.ctrlKey || e.metaKey) && e.key === 'r') {
+            e.preventDefault();
+            window.location.href = window.location.pathname;
+        }
+    });
+
+    // Add visual feedback when hovering over filters
+    document.querySelectorAll('.analytics-filter').forEach(select => {
+        select.addEventListener('mouseenter', function () {
+            this.style.transform = 'translateY(-1px)';
+        });
+
+        select.addEventListener('mouseleave', function () {
+            this.style.transform = 'translateY(0)';
+        });
     });
 </script>
 {% endblock %}

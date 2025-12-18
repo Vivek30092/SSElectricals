@@ -54,7 +54,16 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "django.contrib.sites",  # Required for allauth
+    
+    # Django Allauth
+    "allauth",
+    "allauth.account",
+    "allauth.socialaccount",
+    "allauth.socialaccount.providers.google",
 ]
+
+SITE_ID = 1
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
@@ -66,6 +75,7 @@ MIDDLEWARE = [
     "firstApp.middleware.AdminActivityLogMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "allauth.account.middleware.AccountMiddleware",  # Required for allauth
 ]
 
 ROOT_URLCONF = "SSElectricals.urls"
@@ -160,4 +170,36 @@ LOGIN_URL = 'email_login'  # Redirect to OTP login page when login required
 LOGIN_REDIRECT_URL = 'home'  # Redirect to home after successful login
 LOGOUT_REDIRECT_URL = 'home'  # Redirect to home after logout
 
+# Authentication Backends
+AUTHENTICATION_BACKENDS = [
+    # Django backend
+    'django.contrib.auth.backends.ModelBackend',
+    # Allauth backend
+    'allauth.account.auth_backends.AuthenticationBackend',
+]
+
+# Django Allauth Configuration (Updated to latest format)
+ACCOUNT_LOGIN_METHODS = {'email'}  # Login using email only
+ACCOUNT_UNIQUE_EMAIL = True
+ACCOUNT_EMAIL_VERIFICATION = 'optional'
+ACCOUNT_SIGNUP_FIELDS = ['email*', 'password1*', 'password2*']  # Required signup fields
+SOCIALACCOUNT_AUTO_SIGNUP = True
+SOCIALACCOUNT_EMAIL_VERIFICATION = 'none'
+SOCIALACCOUNT_LOGIN_ON_GET = True  # Skip confirmation page, login directly from Google
+
+
+# Google OAuth Provider Configuration
+# Note: Credentials are configured in Django Admin (Social Applications)
+# Not in settings.py to avoid conflicts
+SOCIALACCOUNT_PROVIDERS = {
+    'google': {
+        'SCOPE': [
+            'profile',
+            'email',
+        ],
+        'AUTH_PARAMS': {
+            'access_type': 'online',
+        },
+    }
+}
 

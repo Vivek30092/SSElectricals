@@ -1,10 +1,14 @@
 from django.shortcuts import render, redirect, get_object_or_404
+from django.urls import reverse
 from django.core.mail import send_mail
 from django.utils import timezone
 from django.contrib.auth import login, logout, authenticate
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.db.models import Q
+from datetime import timedelta
+from .models import EmailLoginToken
+from .utils import send_onetap_login_email, mask_email, get_client_ip
 from django.http import JsonResponse
 from .models import (
     Product, Category, Cart, CartItem, Order, OrderItem, Appointment, EmailOTP, CustomUser, Review, Wishlist
@@ -15,6 +19,290 @@ import requests
 from django.conf import settings
 
 from decimal import Decimal
+from django.contrib.admin.views.decorators import staff_member_required
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib import messages
+from django.http import HttpResponse
+from .models import OfflineReceipt, ReceiptItem
+from .forms_receipt import ReceiptForm, ReceiptItemFormSet, VoidReceiptForm, ReceiptFilterForm
+
+@staff_member_required
+def create_receipt(request):
+    """Create new offline receipt"""
+    if request.method == 'POST':
+        receipt_form = ReceiptForm(request.POST)
+        formset = ReceiptItemFormSet(request.POST)
+        
+        if receipt_form.is_valid() and formset.is_valid():
+            receipt = receipt_form.save(commit=False)
+            receipt.created_by = request.user
+            receipt.save()
+            
+            # Save items
+            formset.instance = receipt
+            formset.save()
+            
+            # Generate QR code
+            receipt.generate_qr_code()
+            
+            messages.success(request, f'Receipt {receipt.receipt_number} created successfully!')
+            return redirect('receipt_print', receipt_id=receipt.id)
+    else:
+        receipt_form = ReceiptForm()
+        formset = ReceiptItemFormSet()
+    
+    products = Product.objects.all()
+    products_data = [
+        {
+            'name': p.name,
+            'price': float(p.price),
+            'discount_price': float(p.discount_price) if p.discount_price else None,
+            'description': p.brand or p.category.name if p.category else ""
+        }
+        for p in products
+    ]
+    
+    return render(request, 'admin/admin_create_receipt.html', {
+        'receipt_form': receipt_form,
+        'formset': formset,
+        'current_fy': OfflineReceipt.get_current_financial_year(),
+        'products': products,
+        'products_data': products_data
+    })
+
+
+@staff_member_required
+def receipt_list(request):
+    """List all receipts with filters"""
+    receipts = OfflineReceipt.objects.all().select_related('created_by', 'voided_by')
+    
+    filter_form = ReceiptFilterForm(request.GET)
+    if filter_form.is_valid():
+        if filter_form.cleaned_data.get('status'):
+            receipts = receipts.filter(status=filter_form.cleaned_data['status'])
+        if filter_form.cleaned_data.get('financial_year'):
+            receipts = receipts.filter(financial_year=filter_form.cleaned_data['financial_year'])
+        if filter_form.cleaned_data.get('buyer_name'):
+            receipts = receipts.filter(buyer_name__icontains=filter_form.cleaned_data['buyer_name'])
+        if filter_form.cleaned_data.get('date_from'):
+            receipts = receipts.filter(created_at__gte=filter_form.cleaned_data['date_from'])
+        if filter_form.cleaned_data.get('date_to'):
+            receipts = receipts.filter(created_at__lte=filter_form.cleaned_data['date_to'])
+    
+    return render(request, 'admin/admin_receipt_list.html', {
+        'receipts': receipts,
+        'filter_form': filter_form
+    })
+
+
+@staff_member_required
+def receipt_detail(request, receipt_id):
+    """View single receipt details"""
+    receipt = get_object_or_404(OfflineReceipt, id=receipt_id)
+    items = receipt.items.all()
+    
+    return render(request, 'admin/admin_receipt_detail.html', {
+        'receipt': receipt,
+        'items': items
+    })
+
+
+def receipt_print(request, receipt_id):
+    """Print-friendly A4 receipt view"""
+    receipt = get_object_or_404(OfflineReceipt, id=receipt_id)
+    items = receipt.items.all()
+    
+    return render(request, 'admin/admin_receipt_print.html', {
+        'receipt': receipt,
+        'items': items
+    })
+
+
+@staff_member_required
+def void_receipt(request, receipt_id):
+    """Void a receipt"""
+    receipt = get_object_or_404(OfflineReceipt, id=receipt_id)
+    
+    if receipt.status == OfflineReceipt.ReceiptStatus.VOID:
+        messages.error(request, 'Receipt is already void!')
+        return redirect('receipt_detail', receipt_id=receipt.id)
+    
+    if request.method == 'POST':
+        form = VoidReceiptForm(request.POST)
+        if form.is_valid():
+            reason = f"{form.cleaned_data['reason_type']}: {form.cleaned_data['reason_details']}"
+            receipt.void_receipt(request.user, reason)
+            messages.success(request, f'Receipt {receipt.receipt_number} has been voided.')
+            return redirect('receipt_detail', receipt_id=receipt.id)
+    else:
+        form = VoidReceiptForm()
+    
+    return render(request, 'admin/admin_void_receipt.html', {
+        'receipt': receipt,
+        'form': form
+    })
+
+
+@staff_member_required
+def create_correction(request, receipt_id):
+    """Create corrected version of receipt"""
+    original = get_object_or_404(OfflineReceipt, id=receipt_id)
+    
+    if original.corrected_by_receipt:
+        messages.error(request, 'A correction already exists for this receipt!')
+        return redirect('receipt_detail', receipt_id=original.corrected_by_receipt.id)
+    
+    corrected = original.create_correction(request.user)
+    messages.success(request, f'Correction created: {corrected.receipt_number}')
+    return redirect('receipt_detail', receipt_id=corrected.id)
+
+
+@staff_member_required  
+def receipt_pdf(request, receipt_id):
+    """Generate PDF for receipt"""
+    # TODO: Implement PDF generation using reportlab or weasyprint
+    receipt = get_object_or_404(OfflineReceipt, id=receipt_id)
+    # For now, redirect to print view
+    return redirect('receipt_print', receipt_id=receipt.id)
+
+
+def order_receipt_print(request, order_id):
+    """Print-friendly A4 order receipt view"""
+    order = get_object_or_404(Order, id=order_id)
+    
+    return render(request, 'admin/order_receipt_print.html', {
+        'order': order
+    })
+
+def onetap_login_request(request):
+    """
+    Handle one-tap login request - send magic link to user's email.
+   Only for regular users (NOT admin/staff).
+    """
+    if request.method == 'POST':
+        email = request.POST.get('email', '').strip()
+        
+        if not email:
+            messages.error(request, "Please enter your email address.")
+            return redirect('email_login')
+        
+        try:
+            user = CustomUser.objects.get(email=email)
+            
+            # Security: Prevent admin/staff from using one-tap login
+            if user.is_staff or user.is_superuser or user.role in ['ADMIN', 'STAFF']:
+                messages.error(request, "One-tap login is not available for your account type. Please use password login.")
+                return redirect('email_login')
+            
+            # Delete old unused tokens for this user
+            EmailLoginToken.objects.filter(user=user, is_used=False).delete()
+            
+            # Generate new token
+            token = EmailLoginToken.generate_token()
+            expires_at = timezone.now() + timedelta(minutes=10)
+            
+            # Get client info
+            ip_address = get_client_ip(request)
+            user_agent = request.META.get('HTTP_USER_AGENT', '')[:500]
+            
+            # Create token
+            login_token = EmailLoginToken.objects.create(
+                user=user,
+                token=token,
+                expires_at=expires_at,
+                ip_address=ip_address,
+                user_agent=user_agent
+            )
+            
+            # Build magic link URL
+            login_url = request.build_absolute_uri(
+                reverse('onetap_login_verify', kwargs={'token': token})
+            )
+            
+            # Send email
+            if send_onetap_login_email(email, login_url):
+                masked = mask_email(email)
+                messages.success(request, f"Login link sent to {masked}. Check your email!")
+                request.session['onetap_email'] = masked
+                return redirect('onetap_login_sent')
+            else:
+                messages.error(request, "Failed to send email. Please try again.")
+                
+        except CustomUser.DoesNotExist:
+            # Don't reveal if email exists or not (security)
+            masked = mask_email(email)
+            messages.info(request, f"If an account exists for {masked}, a login link has been sent.")
+            return redirect('email_login')
+    
+    return redirect('email_login')
+
+
+def onetap_login_verify(request, token):
+    """
+    Verify token and log user in.
+    """
+    try:
+        login_token = EmailLoginToken.objects.get(token=token)
+        
+        # Validate token
+        if not login_token.is_valid():
+            if login_token.is_used:
+                messages.error(request, "This login link has already been used.")
+            else:
+                messages.error(request, "This login link has expired. Please request a new one.")
+            return redirect('email_login')
+        
+        user = login_token.user
+        
+        # Security: Double-check user role
+        if user.is_staff or user.is_superuser or user.role in ['ADMIN', 'STAFF']:
+            messages.error(request, "Invalid login token.")
+            return redirect('email_login')
+        
+        # Optional: IP validation
+        current_ip = get_client_ip(request)
+        if login_token.ip_address and current_ip != login_token.ip_address:
+            print(f"Warning: IP mismatch for token. Original: {login_token.ip_address}, Current: {current_ip}")
+            # You can choose to block or just log this
+            # For now, we'll allow it but log the warning
+        
+        # Mark token as used
+        login_token.mark_used()
+        
+        # Log user in
+        login(request, user, backend='django.contrib.auth.backends.ModelBackend')
+        
+        messages.success(request, f"Welcome back, {user.first_name or user.username}!")
+        return redirect('home')
+        
+    except EmailLoginToken.DoesNotExist:
+        messages.error(request, "Invalid login link.")
+        return redirect('email_login')
+
+
+def onetap_login_sent(request):
+    """
+    Confirmation page after magic link is sent.
+    """
+    email = request.session.get('onetap_email', 'your email')
+    return render(request, 'firstApp/onetap_login_sent.html', {'email': email})
+
+def google_login_redirect(request):
+    """
+    Redirect to Google OAuth login.
+    After successful login, allauth will handle the callback.
+    """
+    # Check if user is already logged in and is admin/staff
+    if request.user.is_authenticated:
+        if request.user.is_staff or request.user.is_superuser:
+            messages.warning(request, "You're already logged in as admin.")
+            return redirect('admin_dashboard')
+        else:
+            messages.info(request, "You're already logged in.")
+            return redirect('home')
+    
+    # Redirect to allauth Google login
+    return redirect('/accounts/google/login/?process=login')
 
 @login_required
 def checkout(request):

@@ -16,11 +16,20 @@ def mask_email(email):
         if len(local_part) <= 2:
             masked_local = local_part # Too short to mask
         else:
-            masked_local = local_part[0] + '*' * 5 + local_part[-1]
+            masked_local = local_part[0:3] + '*' * 5 + local_part[-3:]
             
         return f"{masked_local}@{domain}"
     except:
         return email
+
+def get_client_ip(request):
+    """Get client IP address from request"""
+    x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+    if x_forwarded_for:
+        ip = x_forwarded_for.split(',')[0]
+    else:
+        ip = request.META.get('REMOTE_ADDR')
+    return ip
 
 def send_otp_email(email, otp):
     """Send OTP to the user's email with HTML and plain text alternatives."""
@@ -133,6 +142,139 @@ Shiv Shakti Electrical, Indore (M.P.)
         return True
     except Exception as e:
         print(f"Error sending email: {e}")
+        return False
+
+def send_onetap_login_email(email, login_url):
+    """Send one-tap login magic link to the user's email."""
+    subject = 'Shiv Shakti Electrical – One-Tap Login Link'
+    email_from = settings.DEFAULT_FROM_EMAIL
+    recipient_list = [email]
+    
+    masked_email = mask_email(email)
+
+    # Plain text content
+    text_content = f"""
+Hello,
+
+You requested a one-tap login link for your account.
+
+Click the link below to log in securely:
+{login_url}
+
+This login link was requested for: {masked_email}
+
+This link is valid for 10 minutes.
+If you did not request this link, please ignore this email.
+
+For security reasons, this link can only be used once.
+
+Regards,
+Shiv Shakti Electrical, Indore (M.P.)
+"""
+
+    # HTML content
+    html_content = f"""
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body {{
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+        }}
+        .container {{
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+        }}
+        .header {{
+            text-align: center;
+            margin-bottom: 20px;
+            color: #ffc107;
+        }}
+        .login-button {{
+            display: inline-block;
+            background-color: #ffc107;
+            color: #000;
+            padding: 15px 30px;
+            text-decoration: none;
+            border-radius: 5px;
+            font-weight: bold;
+            font-size: 16px;
+            margin: 20px 0;
+            text-align: center;
+        }}
+        .login-button:hover {{
+            background-color: #ffca2c;
+        }}
+        .button-container {{
+            text-align: center;
+            margin: 30px 0;
+        }}
+        .info-box {{
+            background-color: #ffffff;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin: 20px 0;
+        }}
+        .footer {{
+            margin-top: 20px;
+            font-size: 12px;
+            color: #777;
+            text-align: center;
+            border-top: 1px solid #ddd;
+            padding-top: 10px;
+        }}
+        .warning {{
+            color: #d9534f;
+            font-size: 13px;
+        }}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h2>Shiv Shakti Electrical</h2>
+        </div>
+        <p>Hello,</p>
+        <p>You requested a one-tap login link for your account. Click the button below to securely log in:</p>
+        
+        <div class="button-container">
+            <a href="{login_url}" class="login-button">🔐 Log In Securely</a>
+        </div>
+        
+        <div class="info-box">
+            <p><strong>Account:</strong> {masked_email}</p>
+            <p><strong>Valid for:</strong> 10 minutes</p>
+            <p><strong>One-time use:</strong> This link can only be used once</p>
+        </div>
+        
+        <p class="warning">Security Warning: If you did not request this login link, please ignore this email. Never share this link with anyone, including our support team.</p>
+        
+        <br>
+        <p>Regards,<br>
+        <strong>Shiv Shakti Electrical</strong><br>
+        Indore (M.P.)</p>
+        
+        <div class="footer">
+            &copy; Shiv Shakti Electricals. All rights reserved.
+        </div>
+    </div>
+</body>
+</html>
+"""
+
+    try:
+        msg = EmailMultiAlternatives(subject, text_content, email_from, recipient_list)
+        msg.attach_alternative(html_content, "text/html")
+        msg.send()
+        return True
+    except Exception as e:
+        print(f"Error sending one-tap login email: {e}")
         return False
 
 def send_order_status_email(order):

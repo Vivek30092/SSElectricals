@@ -1,0 +1,338 @@
+{% extends 'admin/base_admin.html' %}
+{% load static %}
+
+{% block title %}Create Receipt - Admin{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2><i class="fas fa-receipt"></i> Create New Receipt</h2>
+                <div>
+                    <span class="badge bg-info">FY: {{ current_fy }}</span>
+                    <a href="{% url 'receipt_list' %}" class="btn btn-secondary">
+                        <i class="fas fa-list"></i> View All Receipts
+                    </a>
+                </div>
+            </div>
+
+            <form method="post" id="receipt-form" novalidate>
+                {% if receipt_form.errors or formset.errors %}
+                <div class="alert alert-danger">
+                    <strong>Please correct the following errors:</strong>
+                    {{ receipt_form.non_field_errors }}
+                    {{ formset.non_form_errors }}
+                </div>
+                {% endif %}
+                {% csrf_token %}
+
+                <!-- Buyer Information -->
+                <div class="card mb-4">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0"><i class="fas fa-user"></i> Customer Information</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Customer Name <span class="text-danger">*</span></label>
+                                {{ receipt_form.buyer_name }}
+                                {% if receipt_form.buyer_name.errors %}
+                                <div class="text-danger small">{{ receipt_form.buyer_name.errors }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Email (Optional - links to account)</label>
+                                {{ receipt_form.buyer_email }}
+                                <small class="text-muted">Customers can view receipt if logged in with this
+                                    email</small>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Phone</label>
+                                {{ receipt_form.buyer_phone }}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Address</label>
+                                {{ receipt_form.buyer_address }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Shop Information -->
+                <div class="card mb-4">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0"><i class="fas fa-store"></i> Shop Information</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Shop Name</label>
+                                {{ receipt_form.shop_name }}
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Phone</label>
+                                {{ receipt_form.shop_phone }}
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">GST Number</label>
+                                {{ receipt_form.shop_gst }}
+                            </div>
+                            <div class="col-12 mb-3">
+                                <label class="form-label">Shop Address</label>
+                                {{ receipt_form.shop_address }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Items Table -->
+                <div class="card mb-4">
+                    <div class="card-header bg-warning">
+                        <h5 class="mb-0"><i class="fas fa-shopping-cart"></i> Items / Products</h5>
+                    </div>
+                    <div class="card-body">
+                        {{ formset.management_form }}
+
+                        <div class="table-responsive">
+                            <table class="table table-bordered" id="items-table">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th style="width: 40%;">Item Name</th>
+                                        <th style="width: 15%;">Quantity</th>
+                                        <th style="width: 15%;">Unit Price (₹)</th>
+                                        <th style="width: 20%;">Description</th>
+                                        <th style="width: 10%;">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="items-tbody">
+                                    {% for form in formset %}
+                                    <tr class="item-row">
+                                        <td>
+                                            {{ form.id }}
+                                            {{ form.item_name }}
+                                        </td>
+                                        <td>
+                                            {{ form.quantity }}
+                                        </td>
+                                        <td>
+                                            {{ form.unit_price }}
+                                        </td>
+                                        <td>
+                                            {{ form.description }}
+                                            {% if form.errors %}
+                                            <div class="text-danger x-small">
+                                                {% for field, errors in form.errors.items %}
+                                                {{ field }}: {{ errors }}
+                                                {% endfor %}
+                                            </div>
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-center">
+                                            {{ form.DELETE }}
+                                            <button type="button" class="btn btn-sm btn-danger remove-row"
+                                                onclick="removeRow(this)">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <button type="button" class="btn btn-success" onclick="addRow()">
+                            <i class="fas fa-plus"></i> Add Item
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Totals -->
+                <div class="card mb-4">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="mb-0"><i class="fas fa-calculator"></i> Billing Summary</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label">Subtotal (₹)</label>
+                                {{ receipt_form.subtotal }}
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label">Tax/GST (₹)</label>
+                                {{ receipt_form.tax_amount }}
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label">Discount (₹)</label>
+                                {{ receipt_form.discount_amount }}
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label"><strong>Grand Total (₹)</strong></label>
+                                {{ receipt_form.grand_total }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Notes -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-sticky-note"></i> Internal Notes</h5>
+                    </div>
+                    <div class="card-body">
+                        {{ receipt_form.notes }}
+                    </div>
+                </div>
+
+                <!-- Submit Buttons -->
+                <div class="d-flex justify-content-between mb-4">
+                    <a href="{% url 'receipt_list' %}" class="btn btn-secondary">
+                        <i class="fas fa-times"></i> Cancel
+                    </a>
+                    <button type="submit" class="btn btn-primary btn-lg">
+                        <i class="fas fa-save"></i> Create & Print Receipt
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Product Datalist -->
+<datalist id="product-list">
+    {% for product in products %}
+    <option value="{{ product.name }}">
+        {% endfor %}
+</datalist>
+
+<!-- Product Data for JS -->
+{{ products_data|json_script:"products-data" }}
+
+<script>
+    // Auto-calculate totals
+    function calculateTotals() {
+        let subtotal = 0;
+
+        // Calculate from all item rows
+        document.querySelectorAll('.item-row').forEach(row => {
+            if (row.querySelector('input[type="checkbox"][name$="DELETE"]').checked) {
+                return; // Skip deleted rows
+            }
+
+            const qtyInput = row.querySelector('input[name$="quantity"]');
+            const priceInput = row.querySelector('input[name$="unit_price"]');
+
+            const qty = parseFloat(qtyInput.value) || 0;
+            const price = parseFloat(priceInput.value) || 0;
+            const lineTotal = qty * price;
+
+            subtotal += lineTotal;
+        });
+
+        // Update subtotal
+        document.getElementById('id_subtotal').value = subtotal.toFixed(2);
+
+        // Get tax and discount
+        const tax = parseFloat(document.getElementById('id_tax').value) || 0;
+        const discount = parseFloat(document.getElementById('id_discount').value) || 0;
+
+        // Calculate grand total
+        const grandTotal = subtotal + tax - discount;
+        document.getElementById('id_grand_total').value = Math.max(0, grandTotal).toFixed(2);
+    }
+
+    // Add new row
+    function addRow() {
+        const tbody = document.getElementById('items-tbody');
+        const totalForms = document.querySelector('input[name$="TOTAL_FORMS"]');
+        const formIdx = parseInt(totalForms.value);
+
+        // Clone the last row
+        const lastRow = tbody.querySelector('.item-row:last-child');
+        const newRow = lastRow.cloneNode(true);
+
+        // Update form indexes
+        newRow.innerHTML = newRow.innerHTML.replace(new RegExp(`-${formIdx - 1}-`, 'g'), `-${formIdx}-`);
+
+        // Clear values
+        newRow.querySelectorAll('input[type="text"], input[type="number"]').forEach(input => {
+            input.value = '';
+        });
+        newRow.querySelector('input[type="checkbox"][name$="DELETE"]').checked = false;
+
+        tbody.appendChild(newRow);
+        totalForms.value = formIdx + 1;
+
+        attachEventListeners(newRow);
+    }
+
+    // Remove row
+    function removeRow(button) {
+        const rows = document.querySelectorAll('.item-row');
+        if (rows.length > 1) {
+            const row = button.closest('.item-row');
+            row.querySelector('input[type="checkbox"][name$="DELETE"]').checked = true;
+            row.style.display = 'none';
+            calculateTotals();
+        } else {
+            alert('At least one item is required!');
+        }
+    }
+
+    // Product Auto-Population Logic
+    const productsData = JSON.parse(document.getElementById('products-data').textContent);
+
+    function handleProductSelection(event) {
+        const input = event.target;
+        const row = input.closest('.item-row');
+        const priceInput = row.querySelector('input[name$="unit_price"]');
+        const descInput = row.querySelector('input[name$="description"]');
+
+        const selectedProduct = productsData.find(p => p.name === input.value);
+
+        if (selectedProduct) {
+            priceInput.value = selectedProduct.discount_price || selectedProduct.price;
+            descInput.value = selectedProduct.description || "";
+            calculateTotals();
+
+            // Highlight the auto-filled fields briefly
+            priceInput.style.backgroundColor = '#d1e7dd';
+            descInput.style.backgroundColor = '#d1e7dd';
+            setTimeout(() => {
+                priceInput.style.backgroundColor = '';
+                descInput.style.backgroundColor = '';
+            }, 1000);
+        }
+    }
+
+    // Attach event listeners
+    function attachEventListeners(row) {
+        row.querySelector('input[name$="quantity"]').addEventListener('input', calculateTotals);
+        row.querySelector('input[name$="unit_price"]').addEventListener('input', calculateTotals);
+
+        // Auto-population listener
+        const nameInput = row.querySelector('input[name$="item_name"]');
+        nameInput.addEventListener('input', handleProductSelection);
+        nameInput.addEventListener('change', handleProductSelection);
+    }
+
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', () => {
+        document.querySelectorAll('.item-row').forEach(attachEventListeners);
+
+        const taxInput = document.getElementById('id_tax');
+        const discountInput = document.getElementById('id_discount');
+
+        if (taxInput) taxInput.addEventListener('input', calculateTotals);
+        if (discountInput) discountInput.addEventListener('input', calculateTotals);
+
+        calculateTotals();
+    });
+</script>
+
+<style>
+    .item-row input[type="checkbox"] {
+        display: none;
+    }
+</style>
+{% endblock %}

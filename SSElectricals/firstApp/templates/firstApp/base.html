@@ -112,37 +112,7 @@
             border-color: #333;
         }
 
-        /* Floating Theme Toggle Button */
-        .theme-toggle-btn {
-            position: fixed;
-            bottom: 20px;
-            left: 20px;
-            z-index: 1000;
-            width: 50px;
-            height: 50px;
-            border-radius: 50%;
-            background-color: #ffc107;
-            color: #000;
-            border: none;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.5rem;
-            cursor: pointer;
-            transition: transform 0.3s, background-color 0.3s;
-        }
-
-        .theme-toggle-btn:hover {
-            transform: scale(1.1);
-            background-color: #ffca2c;
-        }
-
-        body.dark-mode .theme-toggle-btn {
-            background-color: #333;
-            color: #ffc107;
-            border: 2px solid #ffc107;
-        }
+        /* Theme styles managed via user profile preference */
 
         .navbar-brand {
             font-weight: bold;
@@ -370,10 +340,7 @@
         {% block content %}{% endblock %}
     </div>
 
-    <!-- Theme Toggle Button -->
-    <button class="theme-toggle-btn" id="themeToggle" title="Toggle Dark Mode">
-        <i class="fas fa-moon"></i>
-    </button>
+    <!-- Theme is now managed via user profile settings -->
 
     <footer>
         <div class="footer-top">
@@ -444,36 +411,21 @@
     <script src="{% static 'js/search_suggestions.js' %}"></script>
 
     <script>
-        // Dark Mode Logic
+        // Theme Logic - Load from User Profile Preference
         document.addEventListener('DOMContentLoaded', function () {
-            const themeToggleBtn = document.getElementById('themeToggle');
-            const icon = themeToggleBtn.querySelector('i');
             const body = document.body;
 
-            // Check for saved theme preference
-            const savedTheme = localStorage.getItem('theme');
-            if (savedTheme === 'dark') {
+            {% if user.is_authenticated %}
+            // Use user's saved theme preference from database
+            const userTheme = '{{ user.theme_preference }}';
+            if (userTheme === 'dark') {
                 body.classList.add('dark-mode');
-                icon.classList.remove('fa-moon');
-                icon.classList.add('fa-sun');
-            } else if (!savedTheme) {
-                // Explicitly set default to light if not set
-                localStorage.setItem('theme', 'light');
             }
-
-            themeToggleBtn.addEventListener('click', function () {
-                body.classList.toggle('dark-mode');
-
-                if (body.classList.contains('dark-mode')) {
-                    icon.classList.remove('fa-moon');
-                    icon.classList.add('fa-sun');
-                    localStorage.setItem('theme', 'dark');
-                } else {
-                    icon.classList.remove('fa-sun');
-                    icon.classList.add('fa-moon');
-                    localStorage.setItem('theme', 'light');
-                }
-            });
+            // Light is default, no class needed
+            {% else %}
+            // Default to light theme for non-authenticated users
+            // Light theme is default (no class needed)
+            {% endif %}
         });
     </script>
 

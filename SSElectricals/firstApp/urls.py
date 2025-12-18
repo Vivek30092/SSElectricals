@@ -54,6 +54,18 @@ urlpatterns = [
     path('shop-admin/analytics/', admin_views.admin_analytics_new, name='admin_analytics'),
     path('shop-admin/analytics/delete/', admin_views.admin_delete_analytics_file, name='admin_delete_analytics_file'),
     
+     # Receipt Management
+    path('shop-admin/receipt/create/', views.create_receipt, name='create_receipt'),
+    path('shop-admin/receipt/', views.receipt_list, name='receipt_list'),
+    path('shop-admin/receipt/<int:receipt_id>/', views.receipt_detail, name='receipt_detail'),
+    path('shop-admin/receipt/<int:receipt_id>/print/', views.receipt_print, name='receipt_print'),
+    path('shop-admin/receipt/<int:receipt_id>/void/', views.void_receipt, name='void_receipt'),
+    path('shop-admin/receipt/<int:receipt_id>/correct/', views.create_correction, name='create_correction'),
+    path('shop-admin/receipt/<int:receipt_id>/pdf/', views.receipt_pdf, name='receipt_pdf'),
+    
+    # Order Receipt
+    path('shop-admin/orders/<int:order_id>/receipt-print/', views.order_receipt_print, name='order_receipt_print'),
+    
     # Admin Product Management
     path('shop-admin/products/', admin_views.admin_product_list, name='admin_product_list'),
     path('shop-admin/products/add/', admin_views.admin_product_add, name='admin_product_add'),
@@ -118,4 +130,10 @@ urlpatterns = [
     path('api/search/', views.ajax_search, name='ajax_search'),
     
     path('reviews/', views.google_reviews, name='google_reviews'),
+    path('onetap-login/request/', views.onetap_login_request, name='onetap_login_request'),
+    path('onetap-login/verify/<str:token>/', views.onetap_login_verify, name='onetap_login_verify'),
+    path('onetap-login/sent/', views.onetap_login_sent, name='onetap_login_sent'),
+    
+    # Google OAuth Login
+    path('google-login/', views.google_login_redirect, name='google_login'),
 ]

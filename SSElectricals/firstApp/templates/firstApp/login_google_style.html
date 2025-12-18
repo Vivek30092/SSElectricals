@@ -1,0 +1,353 @@
+{% extends 'firstApp/base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<style>
+    /* Remove default padding for full-screen layout */
+    body {
+        margin: 0;
+        padding: 0;
+        height: 100vh;
+        overflow: hidden;
+    }
+
+    .login-container {
+        display: flex;
+        height: 100vh;
+        width: 100%;
+    }
+
+    /* Left Side - Electrical Shop Branding */
+    .login-left {
+        flex: 1;
+        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+    }
+
+    .login-left::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-image: url('{{ MEDIA_URL }}profile_pics/business_logo.png');
+        background-size: contain;
+        background-repeat: no-repeat;
+        background-position: center;
+        opacity: 0.1;
+        z-index: 1;
+    }
+
+    .branding-content {
+        position: relative;
+        z-index: 2;
+        text-align: center;
+        padding: 3rem;
+        color: white;
+    }
+
+    .branding-content h1 {
+        font-size: 3.5rem;
+        font-weight: 700;
+        margin-bottom: 1rem;
+        line-height: 1.2;
+    }
+
+    .branding-content h1 .highlight {
+        color: #ffc107;
+        display: block;
+    }
+
+    .branding-content p {
+        font-size: 1.3rem;
+        opacity: 0.9;
+        margin-top: 1.5rem;
+    }
+
+    .electrical-icon {
+        font-size: 5rem;
+        color: #ffc107;
+        margin-bottom: 2rem;
+        animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+
+        0%,
+        100% {
+            transform: scale(1);
+        }
+
+        50% {
+            transform: scale(1.05);
+        }
+    }
+
+    /* Right Side - Login Form */
+    .login-right {
+        flex: 1;
+        background: #ffffff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 2rem;
+        position: relative;
+    }
+
+    .login-right::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -50px;
+        width: 100px;
+        height: 100%;
+        background: #ffffff;
+        transform: skewX(-10deg);
+        box-shadow: -10px 0 30px rgba(0, 0, 0, 0.1);
+    }
+
+    .login-form-container {
+        max-width: 450px;
+        width: 100%;
+        position: relative;
+        z-index: 10;
+    }
+
+    .login-header {
+        text-align: center;
+        margin-bottom: 3rem;
+    }
+
+    .login-header h2 {
+        font-size: 2rem;
+        font-weight: 600;
+        color: #1a1a2e;
+        margin-bottom: 0.5rem;
+    }
+
+    .login-header p {
+        color: #666;
+        font-size: 1rem;
+    }
+
+    /* Google Button Styling */
+    .google-login-btn {
+        width: 100%;
+        padding: 1rem 2rem;
+        background: #ffffff;
+        border: 2px solid #e0e0e0;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 1rem;
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #444;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+
+    .google-login-btn:hover {
+        border-color: #ffc107;
+        box-shadow: 0 5px 20px rgba(255, 193, 7, 0.3);
+        transform: translateY(-2px);
+    }
+
+    .google-icon {
+        width: 24px;
+        height: 24px;
+    }
+
+    .divider {
+        display: flex;
+        align-items: center;
+        margin: 2.5rem 0;
+        color: #999;
+    }
+
+    .divider::before,
+    .divider::after {
+        content: '';
+        flex: 1;
+        height: 1px;
+        background: #ddd;
+    }
+
+    .divider span {
+        padding: 0 1rem;
+        font-size: 0.9rem;
+    }
+
+    .alternative-login {
+        text-align: center;
+        margin-top: 2rem;
+    }
+
+    .alternative-login a {
+        color: #0f3460;
+        text-decoration: none;
+        font-weight: 500;
+        transition: color 0.3s;
+    }
+
+    .alternative-login a:hover {
+        color: #ffc107;
+    }
+
+    .security-note {
+        margin-top: 2.5rem;
+        padding: 1rem;
+        background: #f8f9fa;
+        border-left: 4px solid #ffc107;
+        border-radius: 4px;
+        font-size: 0.9rem;
+        color: #666;
+    }
+
+    .security-note i {
+        color: #ffc107;
+        margin-right: 0.5rem;
+    }
+
+    /* Responsive Design */
+    @media (max-width: 968px) {
+        .login-container {
+            flex-direction: column;
+        }
+
+        .login-left {
+            min-height: 40vh;
+        }
+
+        .login-right {
+            min-height: 60vh;
+        }
+
+        .login-right::before {
+            display: none;
+        }
+
+        .branding-content h1 {
+            font-size: 2.5rem;
+        }
+
+        .electrical-icon {
+            font-size: 3rem;
+        }
+    }
+
+    /* Hide base.html container padding */
+    .container {
+        display: none;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="login-container">
+    <!-- Left Side - Electrical Shop Branding -->
+    <div class="login-left">
+        <div class="branding-content">
+            <div class="electrical-icon">
+                <i class="fas fa-bolt"></i>
+            </div>
+            <h1>
+                Power Your
+                <span class="highlight">Electrical Needs</span>
+            </h1>
+            <p>Welcome to Shiv Shakti Electrical</p>
+            <p class="mt-3">
+                <i class="fas fa-tools me-2"></i>Quality Products
+                <i class="fas fa-shipping-fast ms-3 me-2"></i>Fast Delivery
+                <i class="fas fa-headset ms-3 me-2"></i>Expert Support
+            </p>
+        </div>
+    </div>
+
+    <!-- Right Side - Login Form -->
+    <div class="login-right">
+        <div class="login-form-container">
+            <div class="login-header">
+                <h2>Welcome Back</h2>
+                <p>Sign in to continue shopping</p>
+            </div>
+
+            <!-- Google Login Button -->
+            <form method="post" action="{% url 'onetap_login_request' %}">
+                {% csrf_token %}
+                <button type="button" class="google-login-btn"
+                    onclick="alert('Google OAuth integration pending. Please use email login for now.')">
+                    <svg class="google-icon" viewBox="0 0 24 24">
+                        <path fill="#4285F4"
+                            d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                        <path fill="#34A853"
+                            d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                        <path fill="#FBBC05"
+                            d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
+                        <path fill="#EA4335"
+                            d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
+                    </svg>
+                    Continue with Google
+                </button>
+            </form>
+
+            <!-- OR Divider -->
+            <div class="divider">
+                <span>OR</span>
+            </div>
+
+            <!-- Email Login Option -->
+            <form method="post" action="{% url 'onetap_login_request' %}">
+                {% csrf_token %}
+                <div class="mb-3">
+                    <input type="email" name="email" class="form-control form-control-lg"
+                        placeholder="Enter your email address" style="border-radius: 8px; padding: 1rem;" required>
+                </div>
+                <button type="submit" class="btn btn-warning btn-lg w-100 fw-bold"
+                    style="border-radius: 8px; padding: 1rem;">
+                    <i class="fas fa-envelope me-2"></i>Continue with Email
+                </button>
+                <small class="d-block text-center text-muted mt-2">
+                    We'll send you a secure login link
+                </small>
+            </form>
+
+            <!-- Alternative Login Link -->
+            <div class="alternative-login">
+                <a href="#" onclick="showPasswordLogin()">
+                    <i class="fas fa-key me-1"></i>Use password instead
+                </a>
+            </div>
+
+            <!-- Security Note -->
+            <div class="security-note">
+                <i class="fas fa-shield-alt"></i>
+                <strong>Secure Login:</strong> Your data is protected with industry-standard encryption
+            </div>
+
+            <!-- Register Link -->
+            <div class="text-center mt-4">
+                <p class="text-muted">Don't have an account?
+                    <a href="{% url 'email_signup' %}" class="fw-bold text-dark">Create Account</a>
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function showPasswordLogin() {
+        if (confirm('Redirect to traditional login page with password option?')) {
+            // For now, just show an alert. You can link to a different login page if needed
+            window.location.href = "{% url 'email_login' %}";
+        }
+    }
+</script>
+{% endblock %}
