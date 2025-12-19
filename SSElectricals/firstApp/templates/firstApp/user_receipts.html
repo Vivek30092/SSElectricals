@@ -1,0 +1,102 @@
+{% extends 'firstApp/base.html' %}
+{% load static %}
+
+{% block title %}My Receipts{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2><i class="fas fa-receipt"></i> My Receipts</h2>
+                <a href="{% url 'profile' %}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i> Back to Profile
+                </a>
+            </div>
+
+            {% if receipts %}
+            <div class="card">
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>Receipt #</th>
+                                    <th>Date</th>
+                                    <th>Shop</th>
+                                    <th>Items</th>
+                                    <th>Total Amount</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for receipt in receipts %}
+                                <tr>
+                                    <td><strong>{{ receipt.receipt_number }}</strong></td>
+                                    <td>
+                                        {{ receipt.created_at|date:"d-M-Y" }}<br>
+                                        <small class="text-muted">{{ receipt.created_at|date:"h:i A" }}</small>
+                                    </td>
+                                    <td>
+                                        <strong>{{ receipt.shop_name }}</strong><br>
+                                        <small class="text-muted">{{ receipt.shop_phone }}</small>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-primary">{{ receipt.items.count }} item{{ receipt.items.count|pluralize }}</span>
+                                    </td>
+                                    <td>
+                                        <strong style="font-size: 1.1em; color: #28a745;">₹{{ receipt.grand_total }}</strong>
+                                    </td>
+                                    <td>
+                                        <a href="{% url 'user_receipt_view' receipt.id %}"
+                                            class="btn btn-sm btn-primary" title="View Receipt" target="_blank">
+                                            <i class="fas fa-eye"></i> View
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <div class="card">
+                <div class="card-body text-center py-5">
+                    <i class="fas fa-receipt fa-4x text-muted mb-3"></i>
+                    <h4 class="text-muted">No Receipts Found</h4>
+                    <p class="text-muted">
+                        You don't have any receipts yet.<br>
+                        Receipts from offline purchases will appear here when your email is added by the shop.
+                    </p>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<style>
+    .table-hover tbody tr:hover {
+        background-color: #f8f9fa;
+        cursor: pointer;
+    }
+
+    .card {
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+
+    .table thead th {
+        font-weight: 600;
+        text-transform: uppercase;
+        font-size: 0.85rem;
+        letter-spacing: 0.5px;
+    }
+
+    .btn-sm {
+        padding: 0.375rem 0.75rem;
+        font-size: 0.875rem;
+    }
+</style>
+{% endblock %}

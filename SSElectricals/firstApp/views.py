@@ -78,8 +78,6 @@ def receipt_list(request):
     
     filter_form = ReceiptFilterForm(request.GET)
     if filter_form.is_valid():
-        if filter_form.cleaned_data.get('status'):
-            receipts = receipts.filter(status=filter_form.cleaned_data['status'])
         if filter_form.cleaned_data.get('financial_year'):
             receipts = receipts.filter(financial_year=filter_form.cleaned_data['financial_year'])
         if filter_form.cleaned_data.get('buyer_name'):
@@ -116,6 +114,30 @@ def receipt_print(request, receipt_id):
         'receipt': receipt,
         'items': items
     })
+
+
+@staff_member_required
+def search_products_api(request):
+    """API endpoint to search products for autocomplete"""
+    query = request.GET.get('q', '')
+    
+    if len(query) < 2:
+        return JsonResponse({'products': []})
+    
+    products = Product.objects.filter(
+        Q(name__icontains=query) | Q(brand__icontains=query)
+    )[:10]  # Limit to 10 results
+    
+    products_data = [{
+        'id': product.id,
+        'name': product.name,
+        'brand': product.brand if product.brand else 'Generic',
+        'price': str(product.discount_price if product.discount_price else product.price),
+        'mrp': str(product.price),  # Use regular price as MRP
+        'display_text': f"{product.name} - {product.brand if product.brand else 'Generic'}"
+    } for product in products]
+    
+    return JsonResponse({'products': products_data})
 
 
 @staff_member_required
@@ -522,6 +544,33 @@ def product_detail(request, pk):
         # Check if not already reviewed
         already_reviewed = Review.objects.filter(user=request.user, product=product).exists()
         can_review = not already_reviewed
+    
+    # TASK 1: Get suggested/related products
+    suggested_products = Product.objects.filter(
+        category=product.category,
+        stock_quantity__gt=0
+    ).exclude(id=product.id).order_by('-is_trending', '?')[:6]
+    
+    # If not enough products from same category, add from similar price range
+    if suggested_products.count() < 4:
+        from decimal import Decimal
+        price_min = product.final_price * Decimal('0.7')  # 70% of current price
+        price_max = product.final_price * Decimal('1.3')  # 130% of current price
+        
+        additional_products = Product.objects.filter(
+            stock_quantity__gt=0
+        ).exclude(
+            id=product.id
+        ).exclude(
+            id__in=[p.id for p in suggested_products]
+        ).filter(
+            price__gte=price_min,
+            price__lte=price_max
+        ).order_by('-is_trending', '?')[:4]
+        
+        # Combine both querysets
+        from itertools import chain
+        suggested_products = list(chain(suggested_products, additional_products))[:6]
             
     form = ReviewForm()
     
@@ -529,8 +578,10 @@ def product_detail(request, pk):
         'product': product, 
         'reviews': reviews,
         'can_review': can_review,
-        'form': form
+        'form': form,
+        'suggested_products': suggested_products,
     })
+
 
 @login_required
 def add_review(request, pk):
@@ -641,7 +692,10 @@ def profile(request):
             form.fields['email'].help_text = "Email is verified and cannot be changed."
         delete_form = AccountDeletionForm()
         
-    return render(request, 'firstApp/profile.html', {'form': form, 'delete_form': delete_form})
+    return render(request, 'firstApp/profile.html', {
+        'form': form,
+        'delete_form': delete_form,
+    })
 
 @login_required
 def add_to_cart(request, product_id):
@@ -1135,6 +1189,10 @@ def email_login(request):
 
             if user:
                 login(request, user)
+                
+                # Set flag to show login popups on next page load
+                request.session['show_login_popups'] = True
+                
                 messages.success(request, f"Welcome, {user.get_full_name()}!")
                 
                 # Redirection Logic
@@ -1210,6 +1268,10 @@ def email_login_verify(request):
                             return redirect('email_login')
 
                         login(request, user, backend='django.contrib.auth.backends.ModelBackend')
+                        
+                        # Set flag to show login popups on next page load
+                        request.session['show_login_popups'] = True
+                        
                         del request.session['otp_email']
                         del request.session['otp_purpose']
                         messages.success(request, "Login successful!")
@@ -1483,3 +1545,61 @@ def change_profile_password(request):
         form = ResetPasswordForm()
         
     return render(request, 'firstApp/profile_password_change_form.html', {'form': form})
+
+
+@login_required
+def user_receipts(request):
+    """Show receipts for logged-in user based on their email"""
+    user_email = request.user.email
+    receipts = OfflineReceipt.objects.filter(buyer_email=user_email).order_by('-created_at')
+    
+    return render(request, 'firstApp/user_receipts.html', {
+        'receipts': receipts
+    })
+
+
+# Test view to preview 404.html (development only)
+def test_404(request):
+    """Test view to preview custom 404 page during development"""
+    return render(request, '404.html', status=404)
+
+
+# ------------------------------------------------------------------
+# TASK 2: User-Side Notification Views
+# ------------------------------------------------------------------
+
+@login_required
+def user_notifications(request):
+    """Display user's notifications"""
+    from .models import UserNotification
+    
+    notifications = UserNotification.objects.filter(
+        user=request.user
+    ).select_related('notification').order_by('-created_at')
+    
+    return render(request, 'firstApp/user_notifications.html', {
+        'notifications': notifications,
+    })
+
+
+@login_required
+def mark_notification_read(request, pk):
+    """Mark a notification as read"""
+    from .models import UserNotification
+    
+    notification = get_object_or_404(UserNotification, pk=pk, user=request.user)
+    notification.mark_as_read()
+    
+    return redirect('user_notifications')
+
+
+@login_required
+def delete_notification(request, pk):
+    """Delete a user notification"""
+    from .models import UserNotification
+    
+    notification = get_object_or_404(UserNotification, pk=pk, user=request.user)
+    notification.delete()
+    
+    messages.success(request, "Notification deleted successfully.")
+    return redirect('user_notifications')

@@ -344,16 +344,30 @@ class CancelAppointmentForm(forms.Form):
 class ProductForm(forms.ModelForm):
     class Meta:
         model = Product
-        fields = ['name', 'category', 'description', 'price', 'discount_price', 'stock_quantity', 'brand', 'image']
+        fields = ['name', 'category', 'short_description', 'description', 'price', 'discount_price', 'stock_quantity', 'brand', 'image']
         widgets = {
             'name': forms.TextInput(attrs={'class': 'form-control'}),
             'category': forms.Select(attrs={'class': 'form-select'}),
-            'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 4}),
+            'short_description': forms.TextInput(attrs={
+                'class': 'form-control', 
+                'maxlength': '200',
+                'placeholder': 'Brief summary for product cards (max 200 characters)'
+            }),
+            'description': forms.Textarea(attrs={
+                'class': 'form-control', 
+                'rows': 6,
+                'placeholder': 'Detailed description (HTML supported)'
+            }),
             'price': forms.NumberInput(attrs={'class': 'form-control'}),
             'discount_price': forms.NumberInput(attrs={'class': 'form-control'}),
-            'stock_quantity': forms.NumberInput(attrs={'class': 'form-control'}),
+            'stock_quantity': forms.NumberInput(attrs={'class': 'form-control', 'min': '0'}),
             'brand': forms.TextInput(attrs={'class': 'form-control'}),
             'image': forms.FileInput(attrs={'class': 'form-control'}),
+        }
+        labels = {
+            'short_description': 'Short Description (Plain Text)',
+            'description': 'Long Description (HTML Enabled)',
+            'stock_quantity': 'Stock Quantity (For Admin Only)',
         }
 class CancelOrderForm(forms.ModelForm):
     reason_choices = [

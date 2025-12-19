@@ -87,7 +87,7 @@ class ReceiptItemForm(forms.ModelForm):
     
     class Meta:
         model = ReceiptItem
-        fields = ['item_name', 'quantity', 'unit_price', 'description']
+        fields = ['item_name', 'quantity', 'mrp', 'unit_price', 'description']
         widgets = {
             'item_name': forms.TextInput(attrs={
                 'class': 'form-control product-datalist-input',
@@ -100,6 +100,12 @@ class ReceiptItemForm(forms.ModelForm):
                 'step': '0.01',
                 'min': '0.01',
                 'value': '1'
+            }),
+            'mrp': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'step': '0.01',
+                'min': '0',
+                'placeholder': '0.00'
             }),
             'unit_price': forms.NumberInput(attrs={
                 'class': 'form-control',
@@ -114,14 +120,15 @@ class ReceiptItemForm(forms.ModelForm):
         }
 
 
+
 # Formset for dynamic item rows
 ReceiptItemFormSet = inlineformset_factory(
     OfflineReceipt,
     ReceiptItem,
     form=ReceiptItemForm,
-    extra=3,  # Start with 3 empty rows
+    extra=2,  # Start with 2 optional empty rows
     can_delete=True,
-    min_num=1,  # At least 1 item required
+    min_num=1,  # Only 1 item required
     validate_min=True
 )
 
@@ -169,19 +176,6 @@ class VoidReceiptForm(forms.Form):
 
 class ReceiptFilterForm(forms.Form):
     """Form for filtering receipt history"""
-    
-    STATUS_CHOICES = [
-        ('', 'All Status'),
-        ('ACTIVE', 'Active'),
-        ('VOID', 'Void'),
-        ('CORRECTED', 'Corrected')
-    ]
-    
-    status = forms.ChoiceField(
-        choices=STATUS_CHOICES,
-        required=False,
-        widget=forms.Select(attrs={'class': 'form-select'})
-    )
     
     financial_year = forms.CharField(
         required=False,

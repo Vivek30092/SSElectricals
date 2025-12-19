@@ -1,0 +1,81 @@
+{% extends 'firstApp/base.html' %}
+
+{% block title %}My Notifications{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2><i class="fas fa-bell me-2"></i>My Notifications</h2>
+            </div>
+
+            {% if messages %}
+            {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+            {% endfor %}
+            {% endif %}
+
+            {% if notifications %}
+            <div class="row">
+                {% for user_notif in notifications %}
+                <div class="col-12 mb-3">
+                    <div class="card shadow-sm">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div class="flex-grow-1">
+                                    <h5 class="mb-2">
+                                        <i class="fas fa-info-circle text-primary me-2"></i>
+                                        {{ user_notif.notification.title }}
+                                    </h5>
+
+                                    <p class="card-text mb-3">{{ user_notif.notification.message }}</p>
+
+                                    {% if user_notif.notification.image %}
+                                    <div class="mb-3">
+                                        <img src="{{ user_notif.notification.image.url }}"
+                                            alt="{{ user_notif.notification.title }}" class="img-fluid rounded"
+                                            style="max-width: 400px; cursor: pointer;"
+                                            onclick="window.open('{{ user_notif.notification.image.url }}', '_blank')">
+                                    </div>
+                                    {% endif %}
+
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <small class="text-muted">
+                                            <i class="fas fa-clock me-1"></i>
+                                            {{ user_notif.created_at|date:"M d, Y - h:i A" }}
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="card shadow-sm">
+                <div class="card-body text-center py-5">
+                    <i class="fas fa-bell-slash fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted">No Notifications Yet</h5>
+                    <p class="text-muted">You'll see notifications here when we have updates for you.</p>
+                    <a href="{% url 'home' %}" class="btn btn-primary mt-3">
+                        <i class="fas fa-home me-2"></i>Go to Home
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<style>
+    .card:hover {
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+        transition: box-shadow 0.3s ease-in-out;
+    }
+</style>
+{% endblock %}

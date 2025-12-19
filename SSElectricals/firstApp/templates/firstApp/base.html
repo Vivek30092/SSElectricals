@@ -307,6 +307,10 @@
                             <li><a class="dropdown-item" href="{% url 'wishlist_list' %}">Wishlist</a></li>
                             <li><a class="dropdown-item" href="{% url 'order_history' %}">Orders</a></li>
                             <li><a class="dropdown-item" href="{% url 'my_appointments' %}">My Appointments</a></li>
+                            <li><a class="dropdown-item" href="{% url 'user_receipts' %}"><i
+                                        class="fas fa-receipt me-1"></i> My Receipts</a></li>
+                            <li><a class="dropdown-item" href="{% url 'user_notifications' %}"><i
+                                        class="fas fa-bell me-1"></i> Notifications</a></li>
                             <li>
                                 <hr class="dropdown-divider">
                             </li>
@@ -428,6 +432,7 @@
             {% endif %}
         });
     </script>
+
 
     {% block extra_js %}{% endblock %}
 </body>

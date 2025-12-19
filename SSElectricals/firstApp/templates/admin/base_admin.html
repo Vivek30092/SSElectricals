@@ -64,6 +64,14 @@
             class="{% if 'receipt' in request.resolver_match.url_name %}active{% endif %}">
             <i class="fas fa-receipt me-2"></i> Offline Receipts
         </a>
+        <a href="{% url 'admin_notifications_list' %}"
+            class="{% if 'notification' in request.resolver_match.url_name %}active{% endif %}">
+            <i class="fas fa-bell me-2"></i> Notifications
+        </a>
+        <a href="{% url 'admin_popups_list' %}"
+            class="{% if 'popup' in request.resolver_match.url_name %}active{% endif %}">
+            <i class="fas fa-window-restore me-2"></i> Login Popups
+        </a>
         <a href="{% url 'admin_activity_log' %}"
             class="{% if 'log' in request.resolver_match.url_name %}active{% endif %}">
             <i class="fas fa-history me-2"></i> Logs
@@ -131,6 +139,17 @@
                 icon.classList.replace('fa-sun', 'fa-moon');
                 toggleBtn.classList.replace('btn-light', 'btn-dark');
             }
+        });
+
+        // Auto-dismiss success/info alerts after 5 seconds
+        document.addEventListener('DOMContentLoaded', function () {
+            const alerts = document.querySelectorAll('.alert-success, .alert-info');
+            alerts.forEach(function (alert) {
+                setTimeout(function () {
+                    const bsAlert = new bootstrap.Alert(alert);
+                    bsAlert.close();
+                }, 5000); // 5 seconds
+            });
         });
     </script>
     {% block extra_js %}{% endblock %}

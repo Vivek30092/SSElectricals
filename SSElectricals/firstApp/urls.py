@@ -44,8 +44,14 @@ urlpatterns = [
     path('orders/', views.order_history, name='order_history'),
     path('orders/cancel/<int:order_id>/', views.cancel_order, name='cancel_order'),
     
+    path('my-receipts/', views.user_receipts, name='user_receipts'),
+    path('receipt/<int:receipt_id>/view/', views.receipt_print, name='user_receipt_view'),
+    
     path('about/', views.about, name='about'),
     path('contact/', views.contact, name='contact'),
+    
+    # Test Pages (Development Only)
+    path('test-404/', views.test_404, name='test_404'),
     
     # Admin Dashboard URLs (Renamed to shop-admin to avoid conflict)
     path('shop-admin/dashboard/', admin_views.admin_dashboard, name='admin_dashboard'),
@@ -62,6 +68,7 @@ urlpatterns = [
     path('shop-admin/receipt/<int:receipt_id>/void/', views.void_receipt, name='void_receipt'),
     path('shop-admin/receipt/<int:receipt_id>/correct/', views.create_correction, name='create_correction'),
     path('shop-admin/receipt/<int:receipt_id>/pdf/', views.receipt_pdf, name='receipt_pdf'),
+    path('api/products/search/', views.search_products_api, name='search_products_api'),
     
     # Order Receipt
     path('shop-admin/orders/<int:order_id>/receipt-print/', views.order_receipt_print, name='order_receipt_print'),
@@ -137,4 +144,16 @@ urlpatterns = [
     
     # Google OAuth Login
     path('google-login/', views.google_login_redirect, name='google_login'),
+    
+    # TASK 2: Admin Notification Management
+    path('shop-admin/notifications/', admin_views.admin_notifications_list, name='admin_notifications_list'),
+    path('shop-admin/notifications/create/', admin_views.admin_notification_create, name='admin_notification_create'),
+    path('shop-admin/notifications/\u003cint:pk\u003e/', admin_views.admin_notification_detail, name='admin_notification_detail'),
+    path('shop-admin/notifications/\u003cint:pk\u003e/edit/', admin_views.admin_notification_edit, name='admin_notification_edit'),
+    path('shop-admin/notifications/\u003cint:pk\u003e/delete/', admin_views.admin_notification_delete, name='admin_notification_delete'),
+    
+    # TASK 2: User Notifications (User side)
+    path('notifications/', views.user_notifications, name='user_notifications'),
+    path('notifications/\u003cint:pk\u003e/read/', views.mark_notification_read, name='mark_notification_read'),
+    path('notifications/<int:pk>/delete/', views.delete_notification, name='delete_notification'),
 ]

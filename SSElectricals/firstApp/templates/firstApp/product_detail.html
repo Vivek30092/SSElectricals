@@ -40,25 +40,35 @@
                 <h1 class="card-title mb-3">{{ product.name }}</h1>
                 <div class="mb-3">
                     <span class="text-warning fs-5">
-                        <i class="fas fa-star"></i> {{ product.average_rating|floatformat:1 }}
+                        <i class="fas fa-star"></i> {{ product.average_rating|floatformat:1 }}/5.0
                     </span>
-                    <span class="text-muted ms-2">({{ product.review_count }} reviews)</span>
+                    <span class="text-muted ms-2">({{ product.review_count }})</span>
                 </div>
-                <p class="card-text">{{ product.description }}</p>
+                <!-- TASK 2: Long Description (HTML-enabled) -->
+                <div class="product-description mb-3">
+                    {{ product.description|safe }}
+                </div>
+
+
 
                 <div class="mb-4">
                     <!-- Price Removed -->
                 </div>
 
-                <p class="card-text">
-                    {% if product.stock_quantity > 0 %}
-                    <span class="badge bg-success">In Stock ({{ product.stock_quantity }})</span>
+                <!-- TASK 1: Stock Status (User View - No Quantity) -->
+                <div class="stock-status mb-3">
+                    {% if product.is_in_stock %}
+                    <span class="badge bg-success fs-6">
+                        <i class="fas fa-check-circle me-1"></i>{{ product.stock_status }}
+                    </span>
                     {% else %}
-                    <span class="badge bg-danger">Out of Stock</span>
+                    <span class="badge bg-danger fs-6">
+                        <i class="fas fa-times-circle me-1"></i>{{ product.stock_status }}
+                    </span>
                     {% endif %}
-                </p>
+                </div>
 
-                {% if product.stock_quantity > 0 %}
+                {% if product.is_in_stock %}
                 <div class="d-flex gap-2 mb-2">
                     <a href="{% url 'add_to_cart' product.id %}" class="btn btn-primary btn-lg flex-grow-1">
                         <i class="fas fa-shopping-cart me-2"></i>Add to Cart
@@ -84,8 +94,8 @@
                 </div>
 
                 <div class="d-grid gap-2 mt-3">
-                    <a href="tel:+919827012345" class="btn btn-outline-success">
-                        <i class="fas fa-phone-alt me-2"></i>Call: +91 98270 12345
+                    <a href="tel:+919993149226" class="btn btn-outline-success">
+                        <i class="fas fa-phone-alt me-2"></i>Call: +91 99931 49226
                     </a>
                     <a href="{% url 'contact' %}?subject=Enquiry for {{ product.name }}" class="btn btn-outline-danger">
                         <i class="fas fa-envelope me-2"></i>Email Enquiry
@@ -103,6 +113,38 @@
         </div>
     </div>
 </div>
+
+<!-- TASK 1: Suggested Products Section -->
+{% if suggested_products %}
+<div class="container my-5">
+    <h3 class="mb-4">You May Also Like</h3>
+    <div class="row">
+        {% for suggested in suggested_products %}
+        <div class="col-md-4 col-lg-2 mb-3">
+            <div class="card h-100 shadow-sm">
+                <img src="{{ suggested.image.url }}" class="card-img-top" alt="{{ suggested.name }}"
+                    style="height: 200px; object-fit: cover;">
+                <div class="card-body p-3">
+                    <h6 class="card-title text-truncate" title="{{ suggested.name }}">{{ suggested.name }}</h6>
+                    <p class="card-text small text-muted mb-2">{{ suggested.category.name }}</p>
+                    {% if suggested.review_count > 0 %}
+                    <div class="mb-2">
+                        <span class="text-warning small">
+                            <i class="fas fa-star"></i> {{ suggested.average_rating|floatformat:1 }}
+                        </span>
+                        <span class="text-muted small">({{ suggested.review_count }})</span>
+                    </div>
+                    {% endif %}
+                    <a href="{% url 'product_detail' suggested.id %}" class="btn btn-sm btn-outline-primary w-100">View
+                        Details</a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
 <div class="row mt-4">
     <div class="col-12">
         <div class="card shadow-sm">
@@ -196,7 +238,7 @@
                     {% if review.image %}
                     <div class="mt-3">
                         <img src="{{ review.image.url }}" alt="Review Image" class="img-fluid rounded"
-                            style="max-width: 400px; max-height: 300px; object-fit: cover; cursor: pointer;"
+                            style="max-width: 100px; max-height: 100; object-fit: cover; cursor: pointer;"
                             onclick="window.open('{{ review.image.url }}', '_blank')">
                     </div>
                     {% endif %}

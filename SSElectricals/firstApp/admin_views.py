@@ -3,7 +3,7 @@ from django.core.files.storage import FileSystemStorage
 from django.contrib.admin.views.decorators import staff_member_required # Keep for reference or fallback
 from .decorators import admin_required, staff_required
 from django.contrib import messages
-from .models import Appointment, AdminActivityLog, AdminSession, Order, Product, Category, ProductImage, OrderItem, Review, DailySales, DailyExpenditure, PurchaseEntry, CustomUser
+from .models import Appointment, AdminActivityLog, AdminSession, Order, Product, Category, ProductImage, OrderItem, Review, DailySales, DailyExpenditure, PurchaseEntry, CustomUser, Notification, UserNotification
 import os
 from django.conf import settings
 import pandas as pd
@@ -1928,3 +1928,145 @@ def admin_user_detail(request, user_id):
     }
     
     return render(request, 'admin/admin_user_detail.html', context)
+
+
+# ------------------------------------------------------------------
+# TASK 2: Notification Management
+# ------------------------------------------------------------------
+
+@staff_member_required
+def admin_notifications_list(request):
+    """List all notifications"""
+    notifications_list = Notification.objects.all().order_by('-created_at')
+    
+    paginator = Paginator(notifications_list, 20)
+    page_number = request.GET.get('page')
+    notifications = paginator.get_page(page_number)
+    
+    return render(request, 'admin/admin_notifications_list.html', {'notifications': notifications})
+
+
+@staff_member_required
+def admin_notification_create(request):
+    """Create a new notification"""
+    from .models import Notification, UserNotification, CustomUser
+    from .forms_notification import NotificationForm
+    
+    if request.method == 'POST':
+        form = NotificationForm(request.POST, request.FILES)
+        if form.is_valid():
+            notification = form.save(commit=False)
+            notification.created_by = request.user
+            notification.save()
+            form.save_m2m()  # Save many-to-many relationship
+            
+            # Create UserNotification records for targeted users
+            target_users = notification.get_target_users_queryset()
+            created_count = 0
+            
+            for user in target_users:
+                UserNotification.objects.get_or_create(
+                    user=user,
+                    notification=notification
+                )
+                created_count += 1
+            
+            messages.success(request, f"Notification created and sent to {created_count} user(s)!")
+            
+            # Log Activity
+            AdminActivityLog.objects.create(
+                admin=request.user,
+                action='CREATE',
+                module='NOTIFICATION',
+                description=f"Created notification: {notification.title}",
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
+            
+            return redirect('admin_notifications_list')
+    else:
+        form = NotificationForm()
+    
+    return render(request, 'admin/admin_notification_form.html', {'form': form, 'title': 'Create Notification'})
+
+
+@staff_member_required
+def admin_notification_edit(request, pk):
+    """Edit an existing notification"""
+    from .models import Notification
+    from .forms_notification import NotificationForm
+    
+    notification = get_object_or_404(Notification, pk=pk)
+    
+    if request.method == 'POST':
+        form = NotificationForm(request.POST, request.FILES, instance=notification)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Notification updated successfully!")
+            
+            AdminActivityLog.objects.create(
+                admin=request.user,
+                action='UPDATE',
+                module='NOTIFICATION',
+                description=f"Updated notification: {notification.title}",
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
+            
+            return redirect('admin_notifications_list')
+    else:
+        form = NotificationForm(instance=notification)
+    
+    return render(request, 'admin/admin_notification_form.html', {
+        'form': form,
+        'notification': notification,
+        'title': 'Edit Notification'
+    })
+
+
+@staff_member_required
+def admin_notification_delete(request, pk):
+    """Delete a notification"""
+    from .models import Notification
+    
+    notification = get_object_or_404(Notification, pk=pk)
+    title = notification.title
+    notification.delete()
+    
+    messages.success(request, f"Notification '{title}' deleted successfully.")
+    
+    AdminActivityLog.objects.create(
+        admin=request.user,
+        action='DELETE',
+        module='NOTIFICATION',
+        description=f"Deleted notification: {title}",
+        ip_address=request.META.get('REMOTE_ADDR')
+    )
+    
+    return redirect('admin_notifications_list')
+
+
+@staff_member_required
+def admin_notification_detail(request, pk):
+    """View notification details and target audience"""
+    from .models import Notification
+    
+    notification = get_object_or_404(Notification, pk=pk)
+    user_notifications = notification.user_notifications.select_related('user').all()[:50]
+    total_recipients = notification.user_notifications.count()
+    read_count = notification.user_notifications.filter(is_read=True).count()
+    
+    # Calculate read percentage
+    read_percentage = 0
+    if total_recipients > 0:
+        read_percentage = round((read_count / total_recipients) * 100, 1)
+    
+    context = {
+        'notification': notification,
+        'user_notifications': user_notifications,
+        'total_recipients': total_recipients,
+        'read_count': read_count,
+        'unread_count': total_recipients - read_count,
+        'read_percentage': read_percentage,
+    }
+    
+
+    return render(request, 'admin/admin_notification_detail.html', context)

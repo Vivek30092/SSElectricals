@@ -5,301 +5,480 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Invoice #{{ order.id }} - Shiv Shakti Electrical</title>
-
-    <!-- Bootstrap 5 CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-
-    <!-- Font Awesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-</head>
-
-<body class="bg-light">
     {% load static %}
 
-    <div class="container my-5 d-flex justify-content-center">
-        <!-- A4 Paper Wrapper for Screen -->
-        <div class="receipt-sheet shadow-lg" id="printable-area">
-            <!-- Holographic Watermark -->
-            <div class="watermark">
-                <img src="{{ MEDIA_URL }}profile_pics/business_logo.png" alt="Watermark" class="watermark-img">
-            </div>
-
-            <!-- Border Container -->
-            <div class="receipt-border">
-                <!-- Header -->
-                <div class="row mb-4">
-                    <div class="col-7">
-                        <h2 class="text-uppercase fw-bold text-primary mb-2" style="letter-spacing: 1px;">Shiv Shakti
-                            Electrical</h2>
-                        <div class="text-muted">
-                            <p class="mb-1">B-115, Abhinandan Nagar, Indore (M.P.)</p>
-                            <p class="mb-1">Phone: +91-9993149226</p>
-                            <p class="mb-0">GSTIN: </p>
-                        </div>
-                    </div>
-                    <div class="col-5 text-end">
-                        <h4 class="mb-3 fw-bold text-dark">INVOICE</h4>
-                        <ul class="list-unstyled">
-                            <li class="mb-1"><span class="fw-bold me-2">Invoice #:</span> #{{ order.id }}</li>
-                            <li class="mb-1"><span class="fw-bold me-2">Date:</span> {{ order.created_at|date:"d M Y" }}
-                            </li>
-                            <li class="mb-0"><span class="fw-bold me-2">Time:</span> {{ order.created_at|time:"H:i A" }}
-                            </li>
-                        </ul>
-                    </div>
-                </div>
-
-                <hr class="my-4 border-2 border-primary opacity-75">
-
-                <!-- Bill To -->
-                <div class="row mb-5">
-                    <div class="col-12">
-                        <h6 class="text-uppercase text-secondary fw-bold mb-3 small">Bill To:</h6>
-                        <h5 class="fw-bold mb-1">{{ order.user.first_name }} {{ order.user.last_name }}</h5>
-                        <p class="mb-1">{{ order.user.phone_number }}</p>
-                        <p class="mb-0" style="max-width: 60%;">{{ order.address }}</p>
-                    </div>
-                </div>
-
-                <!-- Items Table -->
-                <div class="table-responsive mb-4">
-                    <table class="table table-striped table-bordered align-middle text-center">
-                        <thead class="bg-primary text-white">
-                            <tr>
-                                <th scope="col" style="width: 40%;" class="text-start">Item Description</th>
-                                <th scope="col" style="width: 10%;">Qty</th>
-                                <th scope="col" style="width: 15%;">MRP</th>
-                                <th scope="col" style="width: 10%;">Disc.%</th>
-                                <th scope="col" style="width: 10%;">Rate</th>
-                                <th scope="col" style="width: 15%;">Amount</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for item in order_items %}
-                            <tr>
-                                <td class="text-start">
-                                    <span class="fw-bold">{{ item.product.name }}</span>
-                                    <br>
-                                    <small class="text-muted">{{ item.product.brand|default:"" }}</small>
-                                </td>
-                                <td>{{ item.quantity }}</td>
-                                <td class="text-muted text-decoration-line-through">₹{{ item.calculated_mrp }}</td>
-                                <td class="text-danger small">{{ item.calculated_discount_pct }}%</td>
-                                <td class="fw-bold">₹{{ item.price }}</td>
-                                <td class="text-end fw-bold">₹{{ item.total_price }}</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-
-                <!-- Totals -->
-                <div class="row justify-content-end mb-5">
-                    <div class="col-6">
-                        <table class="table table-sm table-borderless">
-                            <tr>
-                                <td class="text-end text-muted">Subtotal:</td>
-                                <td class="text-end fw-bold">₹{{ order.total_price }}</td>
-                            </tr>
-                            <tr>
-                                <td class="text-end text-muted">Delivery ({{ order.distance_km }} KM):</td>
-                                <td class="text-end fw-bold">₹{{ order.delivery_charge }}</td>
-                            </tr>
-                            <tr class="border-top border-secondary mt-2">
-                                <td class="text-end fs-5 fw-bold text-dark pt-3">Grand Total:</td>
-                                <td class="text-end fs-4 fw-bold text-primary pt-3">
-                                    ₹{{ grand_total }}
-                                </td>
-                            </tr>
-                        </table>
-                    </div>
-                </div>
-
-                <!-- Footer / Terms -->
-                <div class="mt-auto">
-                    <div class="row">
-                        <div class="col-12">
-                            <div class="p-3 bg-light rounded border">
-                                <h6 class="fw-bold small mb-2">Terms & Conditions:</h6>
-                                <ul class="mb-0 small text-muted ps-3">
-                                    <li>Goods once sold will not be taken back.</li>
-                                    <li>Subject to Indore Jurisdiction.</li>
-                                    <li>This is a computer-generated receipt.</li>
-                                </ul>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="row mt-5">
-                        <div class="col-12 text-end">
-                            <div class="d-inline-block text-center">
-                                <div class="border-bottom border-dark mb-2" style="width: 200px;"></div>
-                                <span class="fw-bold small">Authorized Signature</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Print/Back Buttons (Hidden on Print) -->
-    <div class="text-center mb-5 no-print">
-        <button onclick="window.print()" class="btn btn-primary btn-lg shadow-sm me-3">
-            <i class="fas fa-print me-2"></i> Print Receipt
-        </button>
-        <a href="{% url 'admin_order_list' %}" class="btn btn-outline-secondary btn-lg shadow-sm">
-            <i class="fas fa-arrow-left me-2"></i> Back to Orders
-        </a>
-    </div>
     <style>
-        /* Force Light Mode Only - No Dark Theme */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         body {
-            background-color: #f8f9fa !important;
-            color: #000 !important;
+            font-family: 'Arial', sans-serif;
+            background: #f5f5f5 !important;
+            color: #333 !important;
+            padding: 10px;
+            color-scheme: light;
         }
 
-        /* Screen Styles simulating A4 */
-        .receipt-sheet {
-            width: 210mm;
+        .receipt-container {
+            max-width: 210mm;
             min-height: 297mm;
-            padding: 0.5in;
-            background: white !important;
+            margin: 0 auto;
+            background: white;
+            padding: 15mm;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
             position: relative;
-        }
-
-        .watermark {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            opacity: 0.25;
-            /* Increased from 0.1 to make it more visible */
-            pointer-events: none;
-            z-index: 0;
-            width: 50%;
-            /* Increased from 40% for better visibility */
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-
-        .watermark-img {
-            width: 100%;
-            height: auto;
-            filter: grayscale(100%);
-            border-radius: 50%;
-        }
-
-        .receipt-border {
-            position: relative;
-            z-index: 1;
-            height: 100%;
-            border: 2px solid #333;
-            padding: 20px;
             display: flex;
             flex-direction: column;
         }
 
-        /* Make table transparent to show watermark */
-        .table {
-            background-color: transparent !important;
+        /* Logo Watermark */
+        .logo-watermark {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            opacity: 0.04;
+            width: 400px;
+            height: 400px;
+            background-image: url('{% static "images/logo.png" %}');
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+            pointer-events: none;
+            z-index: 1;
         }
 
-        .table tbody tr {
-            background-color: rgba(255, 255, 255, 0.7) !important;
-            /* 70% white, 30% transparent */
+        .content-wrapper {
+            position: relative;
+            z-index: 2;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
         }
 
-        .table tbody tr:nth-of-type(odd) {
-            background-color: rgba(248, 249, 250, 0.7) !important;
-            /* Striped rows with transparency */
+        .main-content {
+            flex: 1;
         }
 
-        .table thead {
-            background-color: rgba(13, 110, 253, 0.85) !important;
-            /* Semi-transparent blue header */
+        /* Header - Compact */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            border-bottom: 2px solid #ffc107;
+            padding-bottom: 8px;
+            margin-bottom: 12px;
         }
 
-        /* Make individual cells transparent */
-        .table td,
-        .table th {
-            background-color: transparent !important;
+        .header-left h1 {
+            color: #1a1a2e;
+            font-size: 22px;
+            margin-bottom: 2px;
         }
 
-        /* Make table-striped transparent */
-        .table-striped>tbody>tr:nth-of-type(odd)>* {
-            background-color: rgba(0, 0, 0, 0.02) !important;
+        .header-left p {
+            color: #666;
+            font-size: 11px;
+            line-height: 1.3;
+            margin: 1px 0;
         }
 
-        /* Make table-bordered visible but transparent */
-        .table-bordered> :not(caption)>*>* {
-            border-color: rgba(0, 0, 0, 0.2) !important;
+        .header-right {
+            text-align: right;
         }
 
-        /* Ensure bg-primary on thead is semi-transparent */
-        .table thead.bg-primary,
-        .bg-primary {
-            background-color: rgba(13, 110, 253, 0.75) !important;
+        .qr-top-right {
+            width: 60px;
+            height: 60px;
+            border: 1px solid #ddd;
+            padding: 2px;
+        }
+
+        /* Receipt Info - Compact */
+        .receipt-info {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            padding: 8px;
+            background: #f8f9fa;
+            font-size: 11px;
+        }
+
+        .receipt-info h2 {
+            font-size: 16px;
+            margin-bottom: 4px;
+            color: #1a1a2e;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-weight: bold;
+            font-size: 10px;
+            text-transform: uppercase;
+        }
+
+        .status-confirmed {
+            background: #28a745;
+            color: white;
+        }
+
+        .status-pending {
+            background: #ffc107;
+            color: #333;
+        }
+
+        .status-delivered {
+            background: #17a2b8;
+            color: white;
+        }
+
+        .status-cancelled {
+            background: #dc3545;
+            color: white;
+        }
+
+        /* Customer Info - Compact */
+        .customer-section {
+            margin-bottom: 10px;
+            padding: 6px 8px;
+            background: #fff3cd;
+            border-left: 3px solid #ffc107;
+            font-size: 11px;
+        }
+
+        .customer-section h3 {
+            font-size: 12px;
+            margin-bottom: 4px;
+            color: #1a1a2e;
+        }
+
+        .customer-section p {
+            margin: 2px 0;
+        }
+
+        /* Items Table - Compact */
+        .items-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 12px;
+            font-size: 11px;
+        }
+
+        .items-table thead {
+            background: #1a1a2e;
+            color: white;
+        }
+
+        .items-table th,
+        .items-table td {
+            padding: 6px 8px;
+            text-align: left;
+            border: 1px solid #ddd;
+        }
+
+        .items-table th {
+            font-weight: bold;
+        }
+
+        .items-table tbody tr:nth-child(even) {
+            background: #f8f9fa;
+        }
+
+        .items-table .text-end {
+            text-align: right;
+        }
+
+        /* Totals - Compact */
+        .totals-section {
+            display: flex;
+            justify-content: flex-end;
+            margin-bottom: 15px;
+        }
+
+        .totals-table {
+            width: 45%;
+            border-collapse: collapse;
+            font-size: 11px;
+        }
+
+        .totals-table tr {
+            border-bottom: 1px solid #ddd;
+        }
+
+        .totals-table td {
+            padding: 5px 8px;
+        }
+
+        .totals-table .total-row {
+            background: #1a1a2e;
+            color: white;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        /* Footer with Google QR - Compact */
+        .footer {
+            margin-top: 20px;
+            padding-top: 10px;
+            border-top: 1px solid #ddd;
+            text-align: center;
+            font-size: 10px;
+        }
+
+        .footer-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .google-qr-box {
+            text-align: center;
+        }
+
+        .google-qr-box h4 {
+            font-size: 11px;
+            margin-bottom: 4px;
+            color: #1a1a2e;
+        }
+
+        .google-qr {
+            width: 70px;
+            height: 70px;
+            border: 1px solid #ddd;
+            padding: 2px;
+        }
+
+        .thank-you {
+            font-size: 14px;
+            font-weight: bold;
+            color: #1a1a2e;
+            margin: 8px 0;
+        }
+
+        .signature-section {
+            text-align: right;
+            margin: 15px 0 10px 0;
+        }
+
+        .signature-line {
+            display: inline-block;
+            width: 180px;
+            border-bottom: 1px solid #333;
+            margin-top: 25px;
         }
 
         /* Print Styles */
         @media print {
             @page {
                 size: A4;
-                margin: 0;
+                margin: 12mm;
             }
 
             body {
-                background-color: white !important;
-                margin: 0;
+                background: white;
                 padding: 0;
-                -webkit-print-color-adjust: exact !important;
-                print-color-adjust: exact !important;
             }
 
-            body>*:not(.container) {
-                display: none;
-            }
-
-            .container,
-            .row,
-            .col-lg-8 {
-                width: 100% !important;
-                max-width: none !important;
-                margin: 0 !important;
-                padding: 0 !important;
-            }
-
-            .receipt-sheet {
-                width: 100%;
-                height: auto;
-                min-height: 100vh;
-                margin: 0 !important;
-                padding: 0.5in;
-                box-shadow: none !important;
-                border: none;
-                background: white !important;
-            }
-
-            .receipt-border {
-                border: 2px solid black !important;
+            .receipt-container {
+                box-shadow: none;
+                padding: 0;
             }
 
             .no-print {
                 display: none !important;
             }
+        }
 
-            .bg-primary {
-                background-color: #0d6efd !important;
-                color: white !important;
+        /* Screen Only */
+        @media screen {
+            .print-buttons {
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                z-index: 1000;
             }
 
-            .bg-light {
-                background-color: #f8f9fa !important;
+            .print-buttons button {
+                padding: 8px 16px;
+                margin-left: 8px;
+                border: none;
+                border-radius: 5px;
+                font-size: 14px;
+                cursor: pointer;
+                background: #1a1a2e;
+                color: white;
+            }
+
+            .print-buttons button:hover {
+                background: #0f1419;
             }
         }
     </style>
+</head>
 
+<body>
+    <!-- Print Buttons -->
+    <div class="print-buttons no-print">
+        <button onclick="window.print();">
+            🖨️ Print
+        </button>
+        <button onclick="window.location.href='{% url 'admin_order_list' %}';">
+            ← Back
+        </button>
+    </div>
+
+    <div class="receipt-container">
+        <!-- Logo Watermark -->
+        <div class="logo-watermark"></div>
+
+        <div class="content-wrapper">
+            <div class="main-content">
+                <!-- Header -->
+                <div class="header">
+                    <div class="header-left">
+                        <h1>Shiv Shakti Electrical</h1>
+                        <p>B-115, Abhinandan Nagar, Indore (M.P.)</p>
+                        <p>📞 +91-9993149226</p>
+                        <p><strong>GSTIN:</strong> </p>
+                    </div>
+                    <div class="header-right">
+                        <div
+                            style="width: 60px; height: 60px; background: #f0f0f0; display: flex; align-items: center; justify-content: center; font-size: 8px; border: 1px solid #ddd;">
+                            ONLINE<br>ORDER
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Receipt Info -->
+                <div class="receipt-info">
+                    <div>
+                        <h2>INVOICE / RECEIPT</h2>
+                        <p><strong>Order #:</strong> #{{ order.id }}</p>
+                        <p><strong>Date:</strong> {{ order.created_at|date:"d-M-Y, h:i A" }}</p>
+                        <p><strong>Status:</strong>
+                            <span class="status-badge status-{{ order.status|lower }}">{{ order.status }}</span>
+                        </p>
+                    </div>
+                    <div>
+                        <h3 style="font-size: 14px; margin-bottom: 6px; color: #1a1a2e;">BILL TO:</h3>
+                        <p><strong>{{ order.user.first_name }} {{ order.user.last_name }}</strong></p>
+                        <p>📞 {{ order.user.phone_number }}</p>
+                        {% if order.user.email %}<p>✉️ {{ order.user.email }}</p>{% endif %}
+                        <p>📍 {{ order.address }}</p>
+                        {% if order.distance_km %}<p><strong>Distance:</strong> {{ order.distance_km }} KM</p>{% endif %}
+                    </div>
+                </div>
+
+                <!-- Items Table -->
+                <table class="items-table">
+                    <thead>
+                        <tr>
+                            <th>S.No.</th>
+                            <th>Item</th>
+                            <th class="text-end">Qty</th>
+                            <th class="text-end">MRP</th>
+                            <th class="text-end">Disc%</th>
+                            <th class="text-end">Price</th>
+                            <th class="text-end">Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in order_items %}
+                        <tr>
+                            <td>{{ forloop.counter }}</td>
+                            <td>
+                                <strong>{{ item.product.name }}</strong>
+                                {% if item.product.brand %}<br><small style="color: #666;">{{ item.product.brand
+                                    }}</small>{% endif %}
+                            </td>
+                            <td class="text-end">{{ item.quantity }}</td>
+                            <td class="text-end">₹{{ item.calculated_mrp }}</td>
+                            <td class="text-end" style="color: #28a745; font-weight: bold;">
+                                {% if item.calculated_discount_pct > 0 %}
+                                {{ item.calculated_discount_pct }}%
+                                {% else %}
+                                -
+                                {% endif %}
+                            </td>
+                            <td class="text-end">₹{{ item.price }}</td>
+                            <td class="text-end"><strong>₹{{ item.total_price }}</strong></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+
+                <!-- Totals -->
+                <div class="totals-section">
+                    <table class="totals-table">
+                        <tr>
+                            <td>Subtotal:</td>
+                            <td class="text-end"><strong>₹{{ order.total_price }}</strong></td>
+                        </tr>
+                        <tr>
+                            <td>Delivery Charge {% if order.distance_km %}({{ order.distance_km }} KM){% endif %}:</td>
+                            <td class="text-end"><strong>₹{{ order.delivery_charge }}</strong></td>
+                        </tr>
+                        <tr class="total-row">
+                            <td>GRAND TOTAL:</td>
+                            <td class="text-end">₹{{ grand_total }}</td>
+                        </tr>
+                    </table>
+                </div>
+
+            </div> <!-- end main-content -->
+
+            <!-- Grand Total & Signature Section -->
+            <div style="border-top: 2px solid #1a1a2e; padding-top: 15px; margin-top: 10px; margin-bottom: 15px;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div style="flex: 1;">
+                        <div style="font-size: 18px; font-weight: bold; color: #1a1a2e;">
+                            PAID AMOUNT: <span style="color: #050506;">₹{{ grand_total }}</span>
+                        </div>
+                        <p style="font-size: 10px; color: #666; margin-top: 5px;">
+                            {% if order.status == 'Pending' %}
+                            ⏳ Payment will be collected upon delivery
+                            {% else %}
+                            ✅ Payment collected on {{ order.updated_at|date:"d-M-Y" }}
+                            {% endif %}
+                        </p>
+                    </div>
+                    <div style="text-align: right;">
+                        <p style="font-size: 11px; margin-bottom: 5px;"><strong>Authorized Signature:</strong></p>
+                        <div style="width: 200px; border-bottom: 1px solid #333; margin-top: 30px;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer with Google QR -->
+            <div class="footer">
+                <div class="footer-content">
+                    <div style="flex: 1;">
+                        <p class="thank-you">⚡ Thank You for Shopping! ⚡</p>
+                        <p style="color: #666;">
+                            Online Order - Computer Generated Receipt<br>
+                            Contact: +91-9993149226
+                        </p>
+                    </div>
+                    <div class="google-qr-box">
+                        <h4>Review us on Google!</h4>
+                        <img src="/media/data/ask_for_review.png" alt="Google Reviews" class="google-qr"
+                            onerror="this.style.display='none'">
+                        <p style="font-size: 9px; color: #666; margin-top: 2px;">Scan to review</p>
+                    </div>
+                </div>
+                <p style="font-size: 9px; color: #999; margin-top: 10px;">
+                    This is a computer-generated invoice and does not require a physical signature.<br>
+                    For any queries, please contact us at +91-9993149226
+                </p>
+            </div>
+        </div>
+    </div>
 </body>
 
 </html>

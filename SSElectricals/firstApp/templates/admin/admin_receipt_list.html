@@ -22,11 +22,7 @@
                 <div class="card-body">
                     <form method="get">
                         <div class="row">
-                            <div class="col-md-2 mb-3">
-                                {{ filter_form.status.label_tag }}
-                                {{ filter_form.status }}
-                            </div>
-                            <div class="col-md-2 mb-3">
+                            <div class="col-md-3 mb-3">
                                 {{ filter_form.financial_year.label_tag }}
                                 {{ filter_form.financial_year }}
                             </div>
@@ -42,9 +38,9 @@
                                 {{ filter_form.date_to.label_tag }}
                                 {{ filter_form.date_to }}
                             </div>
-                            <div class="col-md-1 mb-3 d-flex align-items-end">
+                            <div class="col-md-2 mb-3 d-flex align-items-end">
                                 <button type="submit" class="btn btn-primary w-100">
-                                    <i class="fas fa-search"></i>
+                                    <i class="fas fa-search"></i> Search
                                 </button>
                             </div>
                         </div>
@@ -63,8 +59,8 @@
                                     <th>Customer</th>
                                     <th>Date</th>
                                     <th>FY</th>
+                                    <th>Discount</th>
                                     <th>Amount</th>
-                                    <th>Status</th>
                                     <th>Actions</th>
                                 </tr>
                             </thead>
@@ -78,18 +74,17 @@
                                         <br><small class="text-muted">{{ receipt.buyer_email }}</small>
                                         {% endif %}
                                     </td>
-                                    <td>{{ receipt.created_at|date:"d-M-Y" }}<br><small class="text-muted">{{ receipt.created_at|date:"h:i A" }}</small></td>
+                                    <td>{{ receipt.created_at|date:"d-M-Y" }}<br><small class="text-muted">{{
+                                            receipt.created_at|date:"h:i A" }}</small></td>
                                     <td><span class="badge bg-secondary">{{ receipt.financial_year }}</span></td>
-                                    <td><strong>₹{{ receipt.grand_total }}</strong></td>
                                     <td>
-                                        {% if receipt.status == 'ACTIVE' %}
-                                        <span class="badge bg-success">Active</span>
-                                        {% elif receipt.status == 'VOID' %}
-                                        <span class="badge bg-danger">Void</span>
-                                        {% elif receipt.status == 'CORRECTED' %}
-                                        <span class="badge bg-info">Corrected</span>
+                                        {% if receipt.total_discount > 0 %}
+                                        <span class="badge bg-success">{{ receipt.average_discount_percentage }}%</span>
+                                        {% else %}
+                                        <span class="text-muted">-</span>
                                         {% endif %}
                                     </td>
+                                    <td><strong>₹{{ receipt.grand_total }}</strong></td>
                                     <td>
                                         <a href="{% url 'receipt_detail' receipt.id %}" class="btn btn-sm btn-primary"
                                             title="View">
@@ -99,12 +94,6 @@
                                             title="Print" target="_blank">
                                             <i class="fas fa-print"></i>
                                         </a>
-                                        {% if receipt.status == 'ACTIVE' and not receipt.corrected_by_receipt %}
-                                        <a href="{% url 'void_receipt' receipt.id %}" class="btn btn-sm btn-danger"
-                                            title="Void">
-                                            <i class="fas fa-ban"></i>
-                                        </a>
-                                        {% endif %}
                                     </td>
                                 </tr>
                                 {% empty %}

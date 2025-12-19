@@ -190,9 +190,24 @@
                                 {{ product.name }}
                             </a>
                         </h5>
-                        <div class="mb-2">
-                            <!-- Price Removed -->
-                        </div>
+
+                        <!-- TASK 2: Short Description -->
+                        <p class="text-muted small mb-2" style="height: 40px; overflow: hidden;">
+                            {{ product.get_short_description|truncatewords:15 }}
+                        </p>
+
+                        <!-- TASK 1: Stock Status Badge -->
+                        <!-- <div class="mb-2">
+                            {% if product.is_in_stock %}
+                            <span class="badge bg-success-subtle text-success border border-success">
+                                <i class="fas fa-check-circle me-1"></i>{{ product.stock_status }}
+                            </span>
+                            {% else %}
+                            <span class="badge bg-danger-subtle text-danger border border-danger">
+                                <i class="fas fa-times-circle me-1"></i>{{ product.stock_status }}
+                            </span>
+                            {% endif %}
+                        </div> -->
                     </div>
                 </div>
             </div>

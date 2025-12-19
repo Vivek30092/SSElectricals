@@ -5,7 +5,10 @@ from django.utils import timezone
 
 # 1. Authentication System
 class CustomUser(AbstractUser):
-    phone_number = models.CharField(max_length=15, unique=True)
+    # Override email to make it unique (required for USERNAME_FIELD)
+    email = models.EmailField(unique=True)
+    
+    phone_number = models.CharField(max_length=20, blank=True, null=True, unique=True)
     address = models.TextField(blank=True, null=True) # Keeping for backward compatibility
     house_number = models.CharField(max_length=50, blank=True, null=True)
     address_line1 = models.CharField(max_length=255, blank=True, null=True)
@@ -34,11 +37,11 @@ class CustomUser(AbstractUser):
     ]
     theme_preference = models.CharField(max_length=10, choices=THEME_CHOICES, default='light')
 
-    USERNAME_FIELD = 'phone_number'
-    REQUIRED_FIELDS = ['username', 'email']
+    USERNAME_FIELD = 'email'
+    REQUIRED_FIELDS = ['username']
 
     def __str__(self):
-        return self.phone_number
+        return self.email or self.username
 
 # 2. Product Management
 class Category(models.Model):
@@ -64,7 +67,8 @@ class Product(models.Model):
     
     name = models.CharField(max_length=200)
     category = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True, related_name='products')
-    description = models.TextField()
+    description = models.TextField()  # Long description (HTML-enabled)
+    short_description = models.CharField(max_length=200, blank=True, default='', help_text="Brief summary for product cards (max 200 chars)")
     price = models.DecimalField(max_digits=10, decimal_places=2)
     discount_price = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
     stock_quantity = models.PositiveIntegerField(default=0)
@@ -106,6 +110,27 @@ class Product(models.Model):
     @property
     def review_count(self):
         return self.reviews.count()
+    
+    # TASK 1: Stock status properties
+    @property
+    def is_in_stock(self):
+        """Returns True if product is in stock, False otherwise"""
+        return self.stock_quantity > 0
+    
+    @property
+    def stock_status(self):
+        """Returns 'In Stock' or 'Out of Stock' based on quantity"""
+        return "In Stock" if self.is_in_stock else "Out of Stock"
+    
+    # TASK 2: Description helper
+    def get_short_description(self):
+        """Returns short description, or truncated long description if short is empty"""
+        if self.short_description:
+            return self.short_description
+        # Fallback: extract first 160 chars from description (strip HTML)
+        import re
+        plain_text = re.sub('<[^<]+?>', '', self.description)
+        return plain_text[:160] + '...' if len(plain_text) > 160 else plain_text
 
 class ProductImage(models.Model):
     product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='images')
@@ -851,7 +876,7 @@ class OfflineReceipt(models.Model):
     
     # Shop Information (for receipt header)
     shop_name = models.CharField(max_length=200, default="Shiv Shakti Electrical")
-    shop_address = models.TextField(default="Indore, Madhya Pradesh")
+    shop_address = models.TextField(default="B-155,Abhinandan Nagar,Indore, MP")
     shop_phone = models.CharField(max_length=15, default="+91 9993149226")
     shop_gst = models.CharField(max_length=50, blank=True, null=True)
     
@@ -978,6 +1003,8 @@ class OfflineReceipt(models.Model):
                 receipt=corrected,
                 item_name=item.item_name,
                 quantity=item.quantity,
+                mrp=item.mrp,
+                discount=item.discount,
                 unit_price=item.unit_price,
                 description=item.description
             )
@@ -1002,6 +1029,21 @@ class OfflineReceipt(models.Model):
     def is_editable(self):
         """Check if receipt can be edited"""
         return self.status == self.ReceiptStatus.ACTIVE and not self.corrected_by_receipt
+    
+    @property
+    def total_discount(self):
+        """Calculate total discount from all items"""
+        total = sum(item.discount or 0 for item in self.items.all())
+        return round(total, 2)
+    
+    @property
+    def average_discount_percentage(self):
+        """Calculate average discount percentage across all items"""
+        items_with_mrp = [item for item in self.items.all() if item.mrp and item.mrp > 0]
+        if not items_with_mrp:
+            return 0
+        avg_pct = sum(item.discount_percentage for item in items_with_mrp) / len(items_with_mrp)
+        return round(avg_pct, 1)
     
     def generate_qr_code(self):
         """Generate QR code image for receipt"""
@@ -1041,7 +1083,31 @@ class ReceiptItem(models.Model):
     )
     item_name = models.CharField(max_length=200)
     quantity = models.DecimalField(max_digits=10, decimal_places=2, default=1)
-    unit_price = models.DecimalField(max_digits=10, decimal_places=2)
+    
+    # Pricing fields
+    mrp = models.DecimalField(
+        max_digits=10, 
+        decimal_places=2, 
+        null=True, 
+        blank=True,
+        verbose_name="MRP (Maximum Retail Price)",
+        help_text="Original MRP of the product"
+    )
+    discount = models.DecimalField(
+        max_digits=10, 
+        decimal_places=2, 
+        default=0.00,
+        null=True,
+        blank=True,
+        verbose_name="Discount Amount",
+        help_text="Total discount applied (calculated from MRP - Unit Price)"
+    )
+    unit_price = models.DecimalField(
+        max_digits=10, 
+        decimal_places=2,
+        verbose_name="Selling Price",
+        help_text="Final selling price per unit after discount"
+    )
     line_total = models.DecimalField(max_digits=10, decimal_places=2)
     
     # Item description/notes
@@ -1052,10 +1118,127 @@ class ReceiptItem(models.Model):
         verbose_name = "Receipt Item"
         verbose_name_plural = "Receipt Items"
     
+    
     def __str__(self):
         return f"{self.item_name} x {self.quantity}"
     
+    @property
+    def discount_percentage(self):
+        """Calculate discount percentage from MRP"""
+        if self.mrp and self.unit_price and self.mrp > 0:
+            discount_pct = ((self.mrp - self.unit_price) / self.mrp) * 100
+            return round(discount_pct, 1)
+        return 0
+    
     def save(self, *args, **kwargs):
-        """Auto-calculate line total"""
+        """Auto-calculate line total and discount"""
+        # Calculate discount if MRP is provided
+        if self.mrp and self.mrp > self.unit_price:
+            self.discount = (self.mrp - self.unit_price) * self.quantity
+        else:
+            self.discount = 0.00
+            
+        # Calculate line total
         self.line_total = self.quantity * self.unit_price
         super().save(*args, **kwargs)
+
+
+# 16. User Notifications System (TASK 2)
+class Notification(models.Model):
+    """
+    Admin-created notifications that can be sent to specific users or groups.
+    No email/push - only visible in user's notification section.
+    """
+    TARGET_CHOICES = [
+        ('ALL', 'All Users'),
+        ('LOCATION', 'By Location'),
+        ('AREA', 'By Area'),
+        ('INDIVIDUAL', 'Individual User'),
+    ]
+    
+    title = models.CharField(max_length=200, help_text="Notification title/heading")
+    message = models.TextField(help_text="Notification message content")
+    image = models.ImageField(upload_to='notification_images/', blank=True, null=True, help_text="Optional notification image")
+    
+    # Targeting
+    target_type = models.CharField(max_length=20, choices=TARGET_CHOICES, default='ALL')
+    target_city = models.CharField(max_length=100, blank=True, null=True, help_text="Target specific city")
+    target_area = models.CharField(max_length=100, blank=True, null=True, help_text="Target specific area")
+    target_users = models.ManyToManyField(
+        settings.AUTH_USER_MODEL, 
+        blank=True, 
+        related_name='targeted_notifications',
+        help_text="Specific users to target (for INDIVIDUAL type)"
+    )
+    
+    # Metadata
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        related_name='created_notifications'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    is_active = models.BooleanField(default=True, help_text="Whether this notification is active")
+    
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = "Notification"
+        verbose_name_plural = "Notifications"
+    
+    def __str__(self):
+        return f"{self.title} ({self.target_type})"
+    
+    def get_target_users_queryset(self):
+        """Get queryset of users this notification should be sent to"""
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        
+        if self.target_type == 'ALL':
+            return User.objects.filter(role='USER')
+        elif self.target_type == 'LOCATION':
+            return User.objects.filter(role='USER', city=self.target_city)
+        elif self.target_type == 'AREA':
+            # Assuming area is stored in address_line1 or similar field
+            return User.objects.filter(role='USER', address_line1__icontains=self.target_area)
+        elif self.target_type == 'INDIVIDUAL':
+            return self.target_users.all()
+        return User.objects.none()
+
+
+class UserNotification(models.Model):
+    """
+    Junction table linking notifications to specific users.
+    Tracks read/unread status and allows deletion.
+    """
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, 
+        on_delete=models.CASCADE, 
+        related_name='notifications'
+    )
+    notification = models.ForeignKey(
+        Notification, 
+        on_delete=models.CASCADE, 
+        related_name='user_notifications'
+    )
+    is_read = models.BooleanField(default=False)
+    read_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+        unique_together = ('user', 'notification')
+        verbose_name = "User Notification"
+        verbose_name_plural = "User Notifications"
+    
+    def __str__(self):
+        return f"{self.notification.title} for {self.user.username}"
+    
+    def mark_as_read(self):
+        """Mark notification as read"""
+        if not self.is_read:
+            self.is_read = True
+            self.read_at = timezone.now()
+            self.save()
+
+# End of models.py

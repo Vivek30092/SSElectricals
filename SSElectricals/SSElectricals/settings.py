@@ -39,6 +39,7 @@ GOOGLE_PLACES_API_KEY = os.getenv('GOOGLE_PLACES_API_KEY')
 SECRET_KEY = "django-insecure-t07&hx8jj30@9b26uogg&uj_*p!x%0x-+6svt65ft15z5q*k7="
 
 # SECURITY WARNING: don't run with debug turned on in production!
+# SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
 ALLOWED_HOSTS = ['*']
@@ -91,7 +92,6 @@ TEMPLATES = [
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
                 "django.template.context_processors.media",
-                # Add a context processor for cart count if needed later
             ],
         },
     },
@@ -202,4 +202,7 @@ SOCIALACCOUNT_PROVIDERS = {
         },
     }
 }
+
+# Custom adapter to handle Google OAuth users (auto-generate phone numbers)
+SOCIALACCOUNT_ADAPTER = 'firstApp.adapters.CustomSocialAccountAdapter'
 

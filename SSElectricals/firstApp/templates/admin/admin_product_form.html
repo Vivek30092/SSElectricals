@@ -16,11 +16,8 @@
 
                     <div class="mb-3">
                         <label class="form-label">Product Name</label>
-                        <input type="text"
-                               name="name"
-                               class="form-control"
-                               value="{{ product.name|default:'' }}"
-                               required>
+                        <input type="text" name="name" class="form-control" value="{{ product.name|default:'' }}"
+                            required>
                     </div>
 
                     <div class="row mb-3">
@@ -29,68 +26,113 @@
                             <select name="category" class="form-select" required>
                                 <option value="">Select Category</option>
                                 {% for cat in categories %}
-                                    <option value="{{ cat.id }}"
-                                        {% if product and product.category.id == cat.id %}selected{% endif %}>
-                                        {{ cat.name }}
-                                    </option>
+                                <option value="{{ cat.id }}" {% if product and product.category.id == cat.id %}selected{% endif %}>
+                                    {{ cat.name }}
+                                </option>
                                 {% endfor %}
                             </select>
                         </div>
 
                         <div class="col-md-6">
                             <label class="form-label">Brand</label>
-                            <input type="text"
-                                   name="brand"
-                                   class="form-control"
-                                   value="{{ product.brand|default:'' }}">
+                            <input type="text" name="brand" class="form-control" value="{{ product.brand|default:'' }}">
                         </div>
                     </div>
 
+                    <!-- Short Description (Plain Text) -->
                     <div class="mb-3">
-                        <label class="form-label">Description</label>
-                        <textarea name="description"
-                                  class="form-control"
-                                  rows="4"
-                                  required>{{ product.description|default:'' }}</textarea>
+                        <label class="form-label">
+                            <i class="fas fa-align-left me-1"></i>Short Description (for product cards)
+                        </label>
+                        <input type="text" name="short_description" class="form-control" maxlength="200"
+                            id="shortDescInput" value="{{ product.short_description|default:'' }}"
+                            placeholder="Brief summary (max 200 characters)">
+                        <div class="form-text">
+                            <span id="charCount">0</span>/200 characters
+                            <span class="text-muted">• Plain text only • Shown on product cards</span>
+                        </div>
                     </div>
+
+                    <!-- Long Description (HTML Enabled) -->
+                    <div class="mb-3">
+                        <label class="form-label">
+                            <i class="fas fa-align-justify me-1"></i>Long Description (for product detail page)
+                        </label>
+                        <textarea name="description" class="form-control" rows="6" id="longDescInput"
+                            required>{{ product.description|default:'' }}</textarea>
+                        <div class="form-text">
+                            <span class="text-info">
+                                <i class="fas fa-code me-1"></i>HTML supported
+                            </span>
+                            • Use &lt;br&gt; for line breaks, &lt;b&gt; for bold, &lt;ul&gt;&lt;li&gt; for lists
+                        </div>
+
+                        <!-- HTML Preview Button -->
+                        <button type="button" class="btn btn-sm btn-outline-info mt-2" onclick="togglePreview()">
+                            <i class="fas fa-eye me-1"></i>Preview HTML
+                        </button>
+
+                        <!-- Preview Area -->
+                        <div id="htmlPreview" class="mt-2 p-3 border rounded bg-light" style="display: none;">
+                            <strong class="d-block mb-2">Preview:</strong>
+                            <div id="previewContent"></div>
+                        </div>
+                    </div>
+
+                    <script>
+                        // Character counter for short description
+                        const shortDescInput = document.getElementById('shortDescInput');
+                        const charCount = document.getElementById('charCount');
+
+                        function updateCharCount() {
+                            const count = shortDescInput.value.length;
+                            charCount.textContent = count;
+                            charCount.className = count > 180 ? 'text-danger fw-bold' : count > 150 ? 'text-warning' : '';
+                        }
+
+                        if (shortDescInput) {
+                            shortDescInput.addEventListener('input', updateCharCount);
+                            updateCharCount(); // Initial count
+                        }
+
+                        // HTML Preview
+                        function togglePreview() {
+                            const preview = document.getElementById('htmlPreview');
+                            const content = document.getElementById('previewContent');
+                            const longDesc = document.getElementById('longDescInput').value;
+
+                            if (preview.style.display === 'none') {
+                                content.innerHTML = longDesc;
+                                preview.style.display = 'block';
+                            } else {
+                                preview.style.display = 'none';
+                            }
+                        }
+                    </script>
 
                     <div class="row mb-3">
                         <div class="col-md-3">
                             <label class="form-label">Price (₹)</label>
-                            <input type="number"
-                                   step="0.01"
-                                   name="price"
-                                   class="form-control"
-                                   value="{{ product.price|default:'' }}"
-                                   required>
+                            <input type="number" step="0.01" name="price" class="form-control"
+                                value="{{ product.price|default:'' }}" required>
                         </div>
 
                         <div class="col-md-3">
                             <label class="form-label">Discount Price (₹)</label>
-                            <input type="number"
-                                   step="0.01"
-                                   name="discount_price"
-                                   class="form-control"
-                                   value="{{ product.discount_price|default:'' }}">
+                            <input type="number" step="0.01" name="discount_price" class="form-control"
+                                value="{{ product.discount_price|default:'' }}">
                             <div class="form-text">Optional</div>
                         </div>
 
                         <div class="col-md-3">
                             <label class="form-label">Stock</label>
-                            <input type="number"
-                                   name="stock_quantity"
-                                   class="form-control"
-                                   value="{{ product.stock_quantity|default:0 }}"
-                                   required>
+                            <input type="number" name="stock_quantity" class="form-control"
+                                value="{{ product.stock_quantity|default:0 }}" required>
                         </div>
 
                         <div class="col-md-3 d-flex align-items-center pt-3">
                             <div class="form-check form-switch">
-                                <input class="form-check-input"
-                                       type="checkbox"
-                                       id="is_trending"
-                                       name="is_trending"
-                                       {% if product and product.is_trending %}checked{% endif %}>
+                                <input class="form-check-input" type="checkbox" id="is_trending" name="is_trending" {% if product and product.is_trending %}checked{% endif %}>
                                 <label class="form-check-label fw-bold" for="is_trending">
                                     Trending
                                 </label>
@@ -102,35 +144,24 @@
                         <label class="form-label">Main Image</label>
 
                         {% if product and product.image %}
-                            <div class="mb-2">
-                                <img src="{{ product.image.url }}"
-                                     alt="Current Image"
-                                     style="height: 100px;">
-                            </div>
+                        <div class="mb-2">
+                            <img src="{{ product.image.url }}" alt="Current Image" style="height: 100px;">
+                        </div>
                         {% endif %}
 
-                        <input type="file"
-                               name="image"
-                               class="form-control"
-                               accept="image/*"
-                               {% if not product %}required{% endif %}>
+                        <input type="file" name="image" class="form-control" accept="image/*" {% if not product %}required{% endif %}>
                     </div>
 
                     <div class="mb-4">
                         <label class="form-label">Additional Images (Select Multiple)</label>
-                        <input type="file"
-                               name="more_images"
-                               class="form-control"
-                               accept="image/*"
-                               multiple>
+                        <input type="file" name="more_images" class="form-control" accept="image/*" multiple>
 
                         {% if product and product.images.all %}
-                            <div class="d-flex mt-2 gap-2 overflow-auto">
-                                {% for img in product.images.all %}
-                                    <img src="{{ img.image.url }}"
-                                         style="height: 60px; border: 1px solid #ddd;">
-                                {% endfor %}
-                            </div>
+                        <div class="d-flex mt-2 gap-2 overflow-auto">
+                            {% for img in product.images.all %}
+                            <img src="{{ img.image.url }}" style="height: 60px; border: 1px solid #ddd;">
+                            {% endfor %}
+                        </div>
                         {% endif %}
                     </div>
 
