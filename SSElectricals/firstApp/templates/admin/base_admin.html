@@ -40,6 +40,10 @@
             class="{% if 'appointment' in request.resolver_match.url_name %}active{% endif %}">
             <i class="fas fa-calendar-check me-2"></i> Appointments
         </a>
+        <a href="{% url 'admin_service_prices' %}"
+            class="{% if 'service_price' in request.resolver_match.url_name %}active{% endif %}">
+            <i class="fas fa-tag me-2"></i> Service Pricing
+        </a>
         <a href="{% url 'admin_user_list' %}"
             class="{% if 'user' in request.resolver_match.url_name %}active{% endif %}">
             <i class="fas fa-users me-2"></i> Users
@@ -67,10 +71,6 @@
         <a href="{% url 'admin_notifications_list' %}"
             class="{% if 'notification' in request.resolver_match.url_name %}active{% endif %}">
             <i class="fas fa-bell me-2"></i> Notifications
-        </a>
-        <a href="{% url 'admin_popups_list' %}"
-            class="{% if 'popup' in request.resolver_match.url_name %}active{% endif %}">
-            <i class="fas fa-window-restore me-2"></i> Login Popups
         </a>
         <a href="{% url 'admin_activity_log' %}"
             class="{% if 'log' in request.resolver_match.url_name %}active{% endif %}">

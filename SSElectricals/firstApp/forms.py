@@ -124,7 +124,8 @@ class CheckoutForm(forms.Form):
 
     payment_method = forms.ChoiceField(
         choices=[
-            ('COD', 'Cash on Delivery (COD) Only'),
+            ('COD', 'Cash on Delivery (COD)'),
+            ('Online_QR', 'Online (Pay at delivery using QR code)'),
         ],
         widget=forms.RadioSelect(attrs={'class': 'payment-method-radio'}),
         initial='COD',

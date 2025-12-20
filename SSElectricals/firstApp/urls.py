@@ -115,11 +115,18 @@ urlpatterns = [
     path('appointment-success/', views.appointment_success, name='appointment_success'),
     path('my-appointments/', views.my_appointments, name='my_appointments'),
     path('cancel-appointment/<int:pk>/', views.cancel_appointment, name='cancel_appointment'),
+    path('api/service-price/', views.get_service_price, name='get_service_price'),
     
     # Admin Appointment URLs
     path('shop-admin/appointments/', admin_views.admin_appointment_list, name='admin_appointment_list'),
     path('shop-admin/appointments/update/<int:pk>/', admin_views.admin_appointment_update, name='admin_appointment_update'),
     path('shop-admin/appointments/delete/<int:pk>/', admin_views.admin_appointment_delete, name='admin_appointment_delete'),
+    
+    # Admin Service Pricing URLs
+    path('shop-admin/service-prices/', admin_views.admin_service_prices, name='admin_service_prices'),
+    path('shop-admin/service-prices/save/', admin_views.admin_service_price_save, name='admin_service_price_save'),
+    path('shop-admin/service-prices/delete/<int:pk>/', admin_views.admin_service_price_delete, name='admin_service_price_delete'),
+    path('shop-admin/service-prices/bulk-create/', admin_views.admin_bulk_create_prices, name='admin_bulk_create_prices'),
 
     # Admin Analytics URLs
     path('shop-admin/analytics/', admin_views.admin_analytics_new, name='admin_analytics'),
@@ -137,7 +144,10 @@ urlpatterns = [
     path('api/cart/update/', views.ajax_update_cart, name='ajax_update_cart'),
     path('api/search/', views.ajax_search, name='ajax_search'),
     
+    # Google Reviews
     path('reviews/', views.google_reviews, name='google_reviews'),
+    path('api/google-reviews/', views.google_reviews_api, name='google_reviews_api'),
+    
     path('onetap-login/request/', views.onetap_login_request, name='onetap_login_request'),
     path('onetap-login/verify/<str:token>/', views.onetap_login_verify, name='onetap_login_verify'),
     path('onetap-login/sent/', views.onetap_login_sent, name='onetap_login_sent'),

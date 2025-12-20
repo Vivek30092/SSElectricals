@@ -377,107 +377,163 @@ SHOP_LNG = 75.8692938
 
 def calculate_distance_and_price(user_address):
     """
-    Calculate distance using Google Maps API, falling back to Geopy (OpenStreetMap) if necessary.
+    Calculate ROAD distance using Google Maps Distance Matrix API.
+    This gives actual driving distance, not straight-line distance.
+    
     Returns: (distance_km, price, error_message, latitude, longitude)
     """
-    api_key = getattr(settings, 'GOOGLE_PLACES_API_KEY', None)
+    # Use server API key for backend calls (no HTTP referer restrictions)
+    api_key = getattr(settings, 'GOOGLE_SERVER_API_KEY', None) or getattr(settings, 'GOOGLE_PLACES_API_KEY', None)
     
-    # Try Google Maps API first if key exists
+    user_lat = None
+    user_lng = None
+    distance_km = 0
+    
+    # Ensure Indore is in the address for accurate results
+    search_address = user_address
+    if "indore" not in search_address.lower():
+        search_address += ", Indore"
+    if "india" not in search_address.lower():
+        search_address += ", India"
+    
+    print(f"[Distance Calc] Input: '{user_address}' → Search: '{search_address}'")
+    
+    # Try Google APIs if key exists
     if api_key:
         try:
-            origin = f"{SHOP_LAT},{SHOP_LNG}"
-            destination = user_address
-            # Note: Distance Matrix doesn't return destination coords. 
-            # If strictly needed, we'd need Geocoding API here. 
-            # For now returning None, None for coords if strictly using Distance Matrix.
-            url = f"https://maps.googleapis.com/maps/api/distancematrix/json?origins={origin}&destinations={destination}&key={api_key}"
+            # Step 1: Geocode the address to get coordinates
+            geocode_url = f"https://maps.googleapis.com/maps/api/geocode/json?address={requests.utils.quote(search_address)}&key={api_key}&region=in"
             
-            response = requests.get(url)
-            data = response.json()
+            print(f"[Distance Calc] Calling Geocoding API...")
+            geocode_response = requests.get(geocode_url, timeout=10)
+            geocode_data = geocode_response.json()
             
-            if data['status'] == 'OK':
-                if 'rows' in data and data['rows']:
-                    element = data['rows'][0]['elements'][0]
-                    if element['status'] == 'OK':
-                        distance_value = element['distance']['value']
-                        distance_km = distance_value / 1000.0
-                        return _calculate_price(distance_km) # Returns (dist, price, err, None, None) by default logic below? No, need to update _calculate_price
-                    else:
-                        pass
+            print(f"[Distance Calc] Geocoding status: {geocode_data.get('status', 'Unknown')}")
+            
+            if geocode_data['status'] == 'OK' and geocode_data['results']:
+                location = geocode_data['results'][0]['geometry']['location']
+                user_lat = location['lat']
+                user_lng = location['lng']
+                
+                print(f"[Distance Calc] Geocoded to: {user_lat}, {user_lng}")
+                
+                # Validate the result is in Indore area (approximate bounds check)
+                if not (22.5 <= user_lat <= 23.0 and 75.5 <= user_lng <= 76.2):
+                    print(f"[Distance Calc] WARNING: Location outside Indore bounds!")
+                    return 0, 0, "Address appears to be outside Indore service area. Please verify.", user_lat, user_lng
+                
+                # Step 2: Use Distance Matrix API for ROAD distance
+                origin = f"{SHOP_LAT},{SHOP_LNG}"
+                destination = f"{user_lat},{user_lng}"
+                
+                distance_url = f"https://maps.googleapis.com/maps/api/distancematrix/json?origins={origin}&destinations={destination}&mode=driving&key={api_key}"
+                
+                print(f"[Distance Calc] Calling Distance Matrix API...")
+                distance_response = requests.get(distance_url, timeout=10)
+                distance_data = distance_response.json()
+                
+                print(f"[Distance Calc] Distance Matrix status: {distance_data.get('status', 'Unknown')}")
+                
+                if distance_data['status'] == 'OK':
+                    if distance_data['rows'] and distance_data['rows'][0]['elements']:
+                        element = distance_data['rows'][0]['elements'][0]
+                        
+                        print(f"[Distance Calc] Element status: {element.get('status', 'Unknown')}")
+                        
+                        if element['status'] == 'OK':
+                            # Road distance in meters -> km
+                            distance_value = element['distance']['value']
+                            distance_km = round(distance_value / 1000.0, 2)  # Round to 2 decimals
+                            
+                            # Duration info
+                            duration_text = element.get('duration', {}).get('text', 'N/A')
+                            print(f"✓ [Distance Calc] ROAD Distance: {distance_km} KM, ETA: {duration_text}")
+                            
+                            return _calculate_price(distance_km, user_lat, user_lng)
+                        else:
+                            print(f"[Distance Calc] Element Error: {element['status']}")
+                            # Fall through to geodesic calculation
                 else:
-                    pass
-            elif data['status'] == 'REQUEST_DENIED':
-                print("Google Maps API Request Denied. Falling back to Geopy.")
-                # Fallback to Geopy
+                    print(f"[Distance Calc] Distance Matrix API Error: {distance_data}")
+                    # Fall through to geodesic calculation
             else:
-                 return 0, 0, f"Distance API Error: {data['status']}", None, None
+                error_msg = geocode_data.get('error_message', geocode_data.get('status', 'No results'))
+                print(f"[Distance Calc] Geocoding failed: {error_msg}")
+                # Fall through to Geopy fallback
+                
+        except requests.exceptions.Timeout:
+            print("[Distance Calc] Google API Timeout!")
         except Exception as e:
-            print(f"Google Maps API Error: {e}")
-            # Fallback to Geopy
-
-    # Fallback: Geopy (Nominatim)
+            print(f"[Distance Calc] Google API Exception: {e}")
+            # Fall through to Geopy fallback
+    else:
+        print("[Distance Calc] No API key found, using Geopy fallback")
+    
+    # Fallback 1: If we have coordinates but Distance Matrix failed, use geodesic
+    if user_lat and user_lng:
+        from geopy.distance import geodesic
+        user_coords = (user_lat, user_lng)
+        shop_coords = (SHOP_LAT, SHOP_LNG)
+        distance_km = round(geodesic(shop_coords, user_coords).km, 2)  # Round to 2 decimals
+        print(f"⚠ [Distance Calc] Using GEODESIC (straight-line): {distance_km} KM")
+        return _calculate_price(distance_km, user_lat, user_lng)
+    
+    # Fallback 2: Geopy (Nominatim) for geocoding + geodesic distance
     try:
         from geopy.geocoders import Nominatim
+        from geopy.distance import geodesic
         
-        # Initialize with user agent
+        print("[Distance Calc] Using Geopy fallback for geocoding...")
         geolocator = Nominatim(user_agent="sselectricals_app_v2", timeout=10)
         
-        # 1. Structured Query (More reliable)
-        # We try to extract components if the input string is structured specifically, 
-        # but since 'user_address' is often a single string, we might just append 'Indore'
-        
-        search_query = user_address
-        if "indore" not in search_query.lower():
-            search_query += ", Indore"
+        # Add location context
+        search_query = search_address
         if "madhya pradesh" not in search_query.lower():
             search_query += ", Madhya Pradesh"
-        if "india" not in search_query.lower():
-            search_query += ", India"
-
-        # 2. Viewbox Restriction (Box around Indore)
-        # Approximate box: Top-Left (23.0, 75.5), Bottom-Right (22.5, 76.2)
-        # This helps ignore results from other states/countries
+        
+        # Viewbox around Indore for bounded search
         viewbox = [
-            (23.0, 75.5), # North-West
-            (22.5, 76.2)  # South-East
+            (23.0, 75.5),  # North-West
+            (22.5, 76.2)   # South-East
         ]
         
         location = geolocator.geocode(search_query, viewbox=viewbox, bounded=True)
         
-        # 3. Validation
         if location:
-            # Check if really in Indore (redundant if bounded=True works, but good safety)
-            # Or just check distance bounds immediately
-            pass
-            
             user_coords = (location.latitude, location.longitude)
             shop_coords = (SHOP_LAT, SHOP_LNG)
-            distance_km = geodesic(shop_coords, user_coords).km
+            distance_km = round(geodesic(shop_coords, user_coords).km, 2)  # Round to 2 decimals
             
-            # Sanity Check: If distance > 100km, something is wrong with geocoding result
+            # Sanity check
             if distance_km > 50:
-                 print(f"Geocoding Warning: Found location too far ({distance_km}km). Query: {search_query}, Result: {location.address}")
-                 return 0, 0, f"We could not locate this address precisely in Indore. (Distance calculated: {distance_km:.2f} KM). Please provide a landmark or use the map pin.", None, None
-
+                print(f"[Distance Calc] WARNING: Geopy distance too far ({distance_km}km)")
+                return 0, 0, f"Address location seems incorrect (calculated: {distance_km} KM). Please verify or use a landmark.", None, None
+            
+            print(f"⚠ [Distance Calc] Geopy GEODESIC: {distance_km} KM (straight-line)")
             return _calculate_price(distance_km, location.latitude, location.longitude)
         else:
-            print(f"Geocoding Failed: No location found for {search_query}")
-            # Try a broader search without bounds just in case, but usually dangerous
-            return 0, 0, "Address could not be located on map. Please ensure valid area/landmark inside Indore.", None, None
+            print(f"[Distance Calc] Geopy geocoding failed for: {search_query}")
+            return 0, 0, "Address could not be located. Please provide a valid Indore address with landmark.", None, None
             
     except Exception as e:
-        print(f"Geocoding Error: {e}")
-        return 0, 0, f"Error calculating distance: {str(e)}", None, None
+        print(f"[Distance Calc] Geopy Exception: {e}")
+        return 0, 0, f"Unable to calculate distance. Please try again or contact us.", None, None
+
 
 def _calculate_price(distance_km, lat=None, lng=None):
-    distance_km = round(distance_km, 2)
+    """Calculate delivery price based on distance."""
+    # Ensure distance is rounded to 2 decimal places
+    distance_km = round(float(distance_km), 2)
     price = 0
+    
     if distance_km <= 3:
         price = 50
-    elif distance_km <= 7:
+    elif distance_km <= 5:
         price = 70
+    elif distance_km <= 7:
+        price = 80
     else:
-        return distance_km, 0, f"Delivery available only within 7 KM. Your distance: {distance_km} KM.", lat, lng
+        return distance_km, 0, f"Out of delivery range. Distance: {distance_km} KM (max 7 KM).", lat, lng
     
     return distance_km, price, None, lat, lng
 

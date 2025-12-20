@@ -126,7 +126,11 @@
                                     <label class="form-label small text-muted">Area <span
                                             class="text-danger">*</span></label>
                                     {{ form.area }}
-                                    {{ form.other_area }}
+                                    <div id="otherAreaWrapper" style="display:none; margin-top: 8px;">
+                                        <label class="form-label small text-muted">Enter your area name <span
+                                                class="text-danger">*</span></label>
+                                        {{ form.other_area }}
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -780,11 +784,14 @@
 
     // Toggle other area field
     function toggleOtherArea(select) {
+        const otherWrapper = document.getElementById('otherAreaWrapper');
         const otherInput = document.getElementById('id_other_area');
         if (select.value === 'Other') {
+            otherWrapper.style.display = 'block';
             otherInput.style.display = 'block';
             otherInput.required = true;
         } else {
+            otherWrapper.style.display = 'none';
             otherInput.style.display = 'none';
             otherInput.required = false;
             otherInput.value = '';

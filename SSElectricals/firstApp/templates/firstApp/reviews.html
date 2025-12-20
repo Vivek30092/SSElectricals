@@ -1,57 +1,357 @@
 {% extends 'firstApp/base.html' %}
 {% load static %}
 
-{% block title %}Customer Reviews - SS Electricals{% endblock %}
+{% block title %}Customer Reviews - {{ business_name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Google Reviews Section Styling */
+    .google-reviews-section {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        padding: 60px 0;
+    }
+
+    .google-header {
+        text-align: center;
+        margin-bottom: 40px;
+    }
+
+    .google-logo {
+        height: 30px;
+        margin-bottom: 15px;
+    }
+
+    .google-attribution {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        color: #5f6368;
+        font-size: 14px;
+        margin-top: 10px;
+    }
+
+    .google-attribution img {
+        height: 20px;
+    }
+
+    /* Rating Summary Card */
+    .rating-summary-card {
+        background: white;
+        border-radius: 16px;
+        padding: 30px;
+        text-align: center;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        margin-bottom: 40px;
+    }
+
+    .rating-big {
+        font-size: 64px;
+        font-weight: 700;
+        color: #1a73e8;
+        line-height: 1;
+    }
+
+    .rating-stars {
+        color: #fbbc04;
+        font-size: 28px;
+        margin: 10px 0;
+    }
+
+    .rating-count {
+        color: #5f6368;
+        font-size: 16px;
+    }
+
+    /* Review Cards */
+    .google-review-card {
+        background: white;
+        border-radius: 12px;
+        padding: 24px;
+        height: 100%;
+        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        border: 1px solid #e8eaed;
+    }
+
+    .google-review-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+    }
+
+    .reviewer-info {
+        display: flex;
+        align-items: center;
+        margin-bottom: 15px;
+    }
+
+    .reviewer-avatar {
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        object-fit: cover;
+        margin-right: 12px;
+        border: 2px solid #e8eaed;
+    }
+
+    .reviewer-name {
+        font-weight: 600;
+        color: #202124;
+        margin-bottom: 2px;
+    }
+
+    .review-time {
+        font-size: 12px;
+        color: #5f6368;
+    }
+
+    .review-rating {
+        color: #fbbc04;
+        margin-bottom: 12px;
+    }
+
+    .review-text {
+        color: #3c4043;
+        line-height: 1.6;
+        font-size: 14px;
+    }
+
+    .view-on-google {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        color: #1a73e8;
+        font-size: 13px;
+        text-decoration: none;
+        margin-top: 12px;
+    }
+
+    .view-on-google:hover {
+        text-decoration: underline;
+    }
+
+    /* Error State */
+    .reviews-error {
+        text-align: center;
+        padding: 60px 20px;
+        background: #fff3cd;
+        border-radius: 12px;
+        margin: 20px 0;
+    }
+
+    .reviews-error i {
+        font-size: 48px;
+        color: #856404;
+        margin-bottom: 15px;
+    }
+
+    /* Cache indicator (for staff) */
+    .cache-indicator {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        background: rgba(0, 0, 0, 0.8);
+        color: white;
+        padding: 10px 15px;
+        border-radius: 8px;
+        font-size: 12px;
+        z-index: 1000;
+    }
+
+    /* Schema markup (hidden) */
+    .schema-data {
+        display: none;
+    }
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="container my-5">
-    <div class="text-center mb-5">
-        <h2 class="fw-bold display-5">What Our Customers Say</h2>
-        <p class="text-muted lead">Based on Google Reviews</p>
-    </div>
+<!-- JSON-LD Schema Markup for SEO -->
+{% if success %}
+<script type="application/ld+json">
+{
+    "@context": "https://schema.org",
+    "@type": "LocalBusiness",
+    "name": "{{ business_name }}",
+    "aggregateRating": {
+        "@type": "AggregateRating",
+        "ratingValue": "{{ rating }}",
+        "reviewCount": "{{ total_reviews }}",
+        "bestRating": "5",
+        "worstRating": "1"
+    }
+}
+</script>
+{% endif %}
 
-    <div class="row justify-content-center">
+<section class="google-reviews-section">
+    <div class="container">
+        <!-- Header with Google Branding -->
+        <div class="google-header">
+            <h1 class="display-5 fw-bold mb-3">What Our Customers Say</h1>
+            <div class="google-attribution">
+                <img src="https://www.google.com/images/branding/googlelogo/2x/googlelogo_color_92x30dp.png"
+                    alt="Google" style="height: 24px;">
+                <span>Reviews powered by Google</span>
+            </div>
+        </div>
+
+        {% if success %}
+        <!-- Rating Summary -->
+        <div class="row justify-content-center mb-5">
+            <div class="col-md-6 col-lg-4">
+                <div class="rating-summary-card">
+                    <div class="rating-big">{{ rating|floatformat:1 }}</div>
+                    <div class="rating-stars">
+                        {% with ''|center:rating|floatformat:0 as range %}
+                        {% for _ in range %}★{% endfor %}
+                        {% endwith %}
+                        {% with 5|add:"-"|add:rating|floatformat:0 as empty_stars %}
+                        {% if empty_stars > 0 %}
+                        {% with ''|center:empty_stars as range %}
+                        {% for _ in range %}☆{% endfor %}
+                        {% endwith %}
+                        {% endif %}
+                        {% endwith %}
+                    </div>
+                    <div class="rating-count">
+                        Based on <strong>{{ total_reviews }}</strong> Google reviews
+                    </div>
+                    <a href="https://search.google.com/local/writereview?placeid=ChIJgfA7KTUDYzkR6n9gjeGDYoI"
+                        target="_blank" rel="noopener noreferrer" class="btn btn-primary mt-3">
+                        <i class="fab fa-google me-2"></i>Write a Review
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Reviews Grid -->
         {% if reviews %}
-        {% for review in reviews %}
-        <div class="col-md-6 col-lg-4 mb-4">
-            <div class="card h-100 shadow-sm border-0 rounded-lg">
-                <div class="card-body">
-                    <div class="d-flex align-items-center mb-3">
-                        <img src="{{ review.profile_photo_url }}" alt="{{ review.author_name }}"
-                            class="rounded-circle me-3" width="50" height="50"
-                            onerror="this.src='https://ui-avatars.com/api/?name={{ review.author_name|urlencode }}&background=random'">
+        <div class="row g-4">
+            {% for review in reviews %}
+            <div class="col-md-6 col-lg-4">
+                <div class="google-review-card">
+                    <div class="reviewer-info">
+                        <img src="{{ review.profile_photo_url }}" alt="{{ review.author_name }}" class="reviewer-avatar"
+                            onerror="this.src='https://ui-avatars.com/api/?name={{ review.author_name|urlencode }}&background=4285f4&color=fff&size=96'">
                         <div>
-                            <h5 class="card-title mb-0 fw-bold">{{ review.author_name }}</h5>
-                            <small class="text-muted">{{ review.relative_time_description }}</small>
+                            <div class="reviewer-name">{{ review.author_name }}</div>
+                            <div class="review-time">{{ review.relative_time_description }}</div>
                         </div>
                     </div>
-                    <div class="mb-3 text-warning">
+
+                    <div class="review-rating">
                         {% with ''|center:review.rating as range %}
                         {% for _ in range %}
                         <i class="fas fa-star"></i>
                         {% endfor %}
                         {% endwith %}
+                        {% with 5|add:"-"|add:review.rating as empty_stars %}
+                        {% if empty_stars > 0 %}
+                        {% with ''|center:empty_stars as range %}
+                        {% for _ in range %}<i class="far fa-star"></i>{% endfor %}
+                        {% endwith %}
+                        {% endif %}
+                        {% endwith %}
                     </div>
-                    <p class="card-text text-secondary">{{ review.text|truncatechars:180 }}</p>
+
+                    <!-- Review text displayed exactly as received - no modifications -->
+                    <p class="review-text">{{ review.text }}</p>
+
+                    {% if review.author_url %}
+                    <a href="{{ review.author_url }}" target="_blank" rel="noopener noreferrer" class="view-on-google">
+                        View on Google <i class="fas fa-external-link-alt"></i>
+                    </a>
+                    {% endif %}
                 </div>
-                {% if review.author_url %}
-                <div class="card-footer bg-white border-0 text-end">
-                    <a href="{{ review.author_url }}" target="_blank"
-                        class="text-primary text-decoration-none small">Read on Google <i
-                            class="fas fa-external-link-alt ms-1"></i></a>
-                </div>
-                {% endif %}
             </div>
+            {% endfor %}
         </div>
-        {% endfor %}
+
+        <!-- View More on Google -->
+        <div class="text-center mt-5">
+            <a href="https://www.google.com/maps/place/?q=place_id:ChIJgfA7KTUDYzkR6n9gjeGDYoI" target="_blank"
+                rel="noopener noreferrer" class="btn btn-outline-primary btn-lg">
+                <i class="fab fa-google me-2"></i>View All Reviews on Google
+            </a>
+        </div>
         {% else %}
-        <div class="col-12 text-center">
-            <div class="alert alert-info py-4">
-                <h4><i class="fas fa-info-circle me-2"></i>No reviews available at the moment.</h4>
-                <p class="mb-0">Please fetch our latest reviews from Google later.</p>
-            </div>
+        <div class="text-center py-5">
+            <i class="fas fa-star-half-alt fa-3x text-warning mb-3"></i>
+            <h4>No reviews available yet</h4>
+            <p class="text-muted">Be the first to leave a review!</p>
+            <a href="https://search.google.com/local/writereview?placeid=ChIJgfA7KTUDYzkR6n9gjeGDYoI" target="_blank"
+                class="btn btn-primary mt-2">
+                <i class="fab fa-google me-2"></i>Write a Review
+            </a>
         </div>
         {% endif %}
+
+        {% else %}
+        <!-- Error State - Graceful fallback -->
+        <div class="reviews-error">
+            <i class="fas fa-exclamation-circle"></i>
+            <h4>Google reviews currently unavailable</h4>
+            <p class="text-muted mb-3">Please try again later or visit our Google Business page directly.</p>
+            <a href="https://www.google.com/maps/place/?q=place_id:ChIJgfA7KTUDYzkR6n9gjeGDYoI" target="_blank"
+                class="btn btn-primary">
+                <i class="fab fa-google me-2"></i>View on Google Maps
+            </a>
+            {% if user.is_staff and error_code %}
+            <p class="mt-3 small text-danger">
+                <strong>Admin Debug:</strong> {{ error_code }} - {{ error }}
+            </p>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        <!-- Google Attribution Footer (Required) -->
+        <div class="text-center mt-5 pt-4 border-top">
+            <div class="google-attribution">
+                <img src="https://www.google.com/images/branding/googlelogo/2x/googlelogo_color_92x30dp.png"
+                    alt="Google" style="height: 20px;">
+                <span class="small text-muted">
+                    Reviews are from Google Business Profile and displayed without modification.
+                </span>
+            </div>
+        </div>
     </div>
+</section>
+
+<!-- Cache indicator for staff (optional debugging) -->
+{% if user.is_staff %}
+<div class="cache-indicator">
+    {% if from_cache %}
+    📦 Cached data
+    {% else %}
+    🔄 Fresh data
+    {% endif %}
+    {% if fetched_at %}
+    <br><small>{{ fetched_at }}</small>
+    {% endif %}
+    <br><a href="?refresh=1" class="text-warning small">Force Refresh</a>
 </div>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Lazy loading for review images
+    document.addEventListener('DOMContentLoaded', function () {
+        const images = document.querySelectorAll('.reviewer-avatar');
+        if ('IntersectionObserver' in window) {
+            const imageObserver = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        const img = entry.target;
+                        img.src = img.dataset.src || img.src;
+                        imageObserver.unobserve(img);
+                    }
+                });
+            });
+            images.forEach(img => imageObserver.observe(img));
+        }
+    });
+</script>
 {% endblock %}

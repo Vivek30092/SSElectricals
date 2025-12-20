@@ -173,7 +173,7 @@
                     {% endif %}
                     <div class="position-relative overflow-hidden group">
                         <img src="{{ product.image.url }}" class="card-img-top transition-transform duration-300"
-                            alt="{{ product.name }}" style="height: 220px; object-fit: cover;">
+                            alt="{{ product.name }}" style="height: 200px; object-fit: cover;">
                         <div
                             class="overlay position-absolute top-0 start-0 w-100 h-100 bg-dark bg-opacity-25 d-flex align-items-center justify-content-center opacity-0 transition-opacity duration-300">
                             <a href="{% url 'product_detail' product.pk %}" class="btn btn-light rounded-circle mx-1"
@@ -192,9 +192,9 @@
                         </h5>
 
                         <!-- TASK 2: Short Description -->
-                        <p class="text-muted small mb-2" style="height: 40px; overflow: hidden;">
+                        <!-- <p class="text-muted small mb-2" style="height: 40px; overflow: hidden;">
                             {{ product.get_short_description|truncatewords:15 }}
-                        </p>
+                        </p> -->
 
                         <!-- TASK 1: Stock Status Badge -->
                         <!-- <div class="mb-2">

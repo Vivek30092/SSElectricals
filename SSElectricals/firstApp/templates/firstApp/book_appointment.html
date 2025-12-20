@@ -187,19 +187,47 @@
                                         {{ form.problem_description }}
                                     </div>
 
-                                    <!-- Cost Summary Section (Moved here)-->
+                                    <!-- Cost Summary Section (Dynamic Pricing) -->
                                     <div class="mt-auto pt-4">
                                         <div id="costSummaryCard" class="card border-warning bg-warning bg-opacity-10">
                                             <div class="card-body">
-                                                <h6 class="card-title fw-bold text-dark"><i
-                                                        class="fas fa-file-invoice-dollar me-2"></i>Estimated Cost</h6>
+                                                <h6 class="card-title fw-bold text-dark">
+                                                    <i class="fas fa-file-invoice-dollar me-2"></i>Estimated Cost
+                                                </h6>
                                                 <div id="chargeDisplay">
-                                                    <p class="mb-1 text-muted small">Please detect your location to
-                                                        calculate visiting charges.</p>
-                                                    <p class="mb-0 fw-bold text-dark fs-5">₹0</p>
+                                                    <p class="mb-1 text-muted small">Select service and area to see
+                                                        estimated cost.</p>
+                                                    <p class="mb-0 fw-bold text-dark fs-5">₹---</p>
                                                 </div>
-                                                <p class="mt-2 mb-0 text-muted" style="font-size: 0.75rem;">* Service
-                                                    charge includes only the visit fee. Material costs are extra. </p>
+
+                                                <!-- Dynamic Price Breakdown -->
+                                                <div id="priceBreakdown" class="mt-3 pt-3 border-top"
+                                                    style="display: none;">
+                                                    <div class="d-flex justify-content-between mb-1">
+                                                        <span class="text-muted small">Visiting Charge:</span>
+                                                        <span id="baseChargeDisplay" class="fw-bold">₹200</span>
+                                                    </div>
+                                                    <div class="d-flex justify-content-between mb-1">
+                                                        <span class="text-muted small">Service Charge (Est.):</span>
+                                                        <span id="serviceChargeRange" class="text-muted">₹300 -
+                                                            ₹1500</span>
+                                                    </div>
+                                                    <hr class="my-2">
+                                                    <div class="d-flex justify-content-between">
+                                                        <span class="fw-bold">Total Estimate:</span>
+                                                        <span id="totalEstimate" class="fw-bold text-primary fs-5">₹500
+                                                            - ₹1700</span>
+                                                    </div>
+                                                    <small class="text-muted d-block mt-2">
+                                                        <i class="fas fa-info-circle"></i>
+                                                        Zone: <span id="zoneDisplay">--</span>
+                                                    </small>
+                                                </div>
+
+                                                <p class="mt-2 mb-0 text-muted" style="font-size: 0.75rem;">
+                                                    * Final charge may vary based on actual work. Parts/material cost is
+                                                    extra.
+                                                </p>
                                             </div>
                                         </div>
                                     </div>
@@ -355,7 +383,88 @@
                 detectBtn.classList.add('btn-outline-success');
             }
         }
+
+        // Add listeners for dynamic pricing
+        var serviceSelect = document.getElementById('id_service_type');
+        var areaSelectElem = document.getElementById('id_area');
+
+        if (serviceSelect) {
+            serviceSelect.addEventListener('change', fetchServicePrice);
+        }
+        if (areaSelectElem) {
+            areaSelectElem.addEventListener('change', function () {
+                toggleOtherArea(this);
+                fetchServicePrice();
+            });
+        }
+
+        // Initial price fetch if both are already selected
+        if (serviceSelect && serviceSelect.value && areaSelectElem && areaSelectElem.value) {
+            fetchServicePrice();
+        }
     });
+
+    // Fetch service price from API
+    function fetchServicePrice() {
+        var serviceType = document.getElementById('id_service_type').value;
+        var area = document.getElementById('id_area').value;
+
+        if (!serviceType || !area) {
+            return;
+        }
+
+        // Show loading
+        var breakdown = document.getElementById('priceBreakdown');
+        var chargeDisplay = document.getElementById('chargeDisplay');
+        chargeDisplay.innerHTML = '<p class="mb-1 text-info small"><i class="fas fa-spinner fa-spin"></i> Fetching price...</p>';
+
+        fetch('/api/service-price/?service_type=' + encodeURIComponent(serviceType) + '&area=' + encodeURIComponent(area))
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    updatePriceDisplay(data);
+                } else {
+                    chargeDisplay.innerHTML = '<p class="mb-1 text-muted small">Price information unavailable.</p>';
+                    breakdown.style.display = 'none';
+                }
+            })
+            .catch(error => {
+                console.error('Price fetch error:', error);
+                chargeDisplay.innerHTML = '<p class="mb-1 text-muted small">Select service and area for pricing.</p>';
+            });
+    }
+
+    // Update price display with API data
+    function updatePriceDisplay(data) {
+        var chargeDisplay = document.getElementById('chargeDisplay');
+        var breakdown = document.getElementById('priceBreakdown');
+        var card = document.getElementById('costSummaryCard');
+
+        // Show service type info
+        chargeDisplay.innerHTML = `
+            <p class="mb-1 text-success fw-semibold">${data.service_type}</p>
+            <p class="mb-0 text-muted small">in ${data.area}</p>
+        `;
+
+        // Update breakdown
+        document.getElementById('baseChargeDisplay').textContent = '₹' + data.base_price;
+        document.getElementById('serviceChargeRange').textContent = '₹' + data.min_service_charge + ' - ₹' + data.max_service_charge;
+
+        var totalMin = data.base_price + data.min_service_charge;
+        var totalMax = data.base_price + data.max_service_charge;
+        document.getElementById('totalEstimate').textContent = '₹' + totalMin + ' - ₹' + totalMax;
+        document.getElementById('zoneDisplay').textContent = data.zone_display;
+
+        // Show breakdown
+        breakdown.style.display = 'block';
+        card.className = 'card border-success bg-success bg-opacity-10';
+
+        // Update hidden visiting charge field
+        var chargeInput = document.getElementById('id_visiting_charge');
+        if (chargeInput) {
+            chargeInput.value = data.base_price;
+        }
+    }
 
     // GPS Assist Button
     document.getElementById('detectLocationBtn').addEventListener('click', useGpsLocation);

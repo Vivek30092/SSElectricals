@@ -1,0 +1,251 @@
+{% extends 'admin/base_admin.html' %}
+
+{% block title %}Service Pricing - Admin{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1"><i class="fas fa-tag text-primary me-2"></i>Service Pricing</h2>
+            <p class="text-muted mb-0">Set appointment service charges by service type and area zone</p>
+        </div>
+        <div>
+            <button class="btn btn-success me-2" data-bs-toggle="modal" data-bs-target="#bulkCreateModal">
+                <i class="fas fa-magic me-1"></i> Bulk Create Defaults
+            </button>
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addPriceModal">
+                <i class="fas fa-plus me-1"></i> Add New Price
+            </button>
+        </div>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body text-center">
+                    <h3 class="mb-0">{{ prices.count }}</h3>
+                    <small>Total Prices Set</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body text-center">
+                    <h3 class="mb-0">{{ service_types|length }}</h3>
+                    <small>Service Types</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-info text-white">
+                <div class="card-body text-center">
+                    <h3 class="mb-0">{{ zones|length }}</h3>
+                    <small>Area Zones</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-warning text-dark">
+                <div class="card-body text-center">
+                    <h3 class="mb-0">{{ service_types|length }}×{{ zones|length }}</h3>
+                    <small>Max Combinations</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pricing Table by Service -->
+    {% if services %}
+    {% for service_type, prices_list in services.items %}
+    <div class="card mb-4">
+        <div class="card-header bg-light">
+            <h5 class="mb-0">
+                <i class="fas fa-tools text-primary me-2"></i>{{ service_type }}
+                <span class="badge bg-primary ms-2">{{ prices_list|length }} zones</span>
+            </h5>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Zone</th>
+                            <th class="text-center">Base Price (₹)</th>
+                            <th class="text-center">Min Service (₹)</th>
+                            <th class="text-center">Max Service (₹)</th>
+                            <th class="text-center">Status</th>
+                            <th class="text-center">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for price in prices_list %}
+                        <tr>
+                            <td>
+                                <span class="badge bg-secondary">{{ price.zone }}</span>
+                                {{ price.get_zone_display }}
+                            </td>
+                            <td class="text-center fw-bold text-primary">₹{{ price.base_price }}</td>
+                            <td class="text-center">₹{{ price.min_service_charge }}</td>
+                            <td class="text-center">₹{{ price.max_service_charge }}</td>
+                            <td class="text-center">
+                                {% if price.is_active %}
+                                <span class="badge bg-success">Active</span>
+                                {% else %}
+                                <span class="badge bg-danger">Inactive</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                <button class="btn btn-sm btn-outline-primary edit-price-btn" data-id="{{ price.id }}"
+                                    data-service="{{ price.service_type }}" data-zone="{{ price.zone }}"
+                                    data-base="{{ price.base_price }}" data-min="{{ price.min_service_charge }}"
+                                    data-max="{{ price.max_service_charge }}" data-active="{{ price.is_active }}">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <a href="{% url 'admin_service_price_delete' price.id %}"
+                                    class="btn btn-sm btn-outline-danger"
+                                    onclick="return confirm('Delete this pricing?')">
+                                    <i class="fas fa-trash"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+    {% else %}
+    <div class="alert alert-info text-center py-5">
+        <i class="fas fa-info-circle fa-3x mb-3"></i>
+        <h4>No Prices Configured Yet</h4>
+        <p>Click "Bulk Create Defaults" to set up default pricing for all services and zones, or add them individually.
+        </p>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Add/Edit Price Modal -->
+<div class="modal fade" id="addPriceModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="POST" action="{% url 'admin_service_price_save' %}">
+                {% csrf_token %}
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title"><i class="fas fa-tag me-2"></i>Add/Edit Service Price</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Service Type</label>
+                        <select name="service_type" id="modal_service_type" class="form-select" required>
+                            {% for value, label in service_types %}
+                            <option value="{{ value }}">{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Area Zone</label>
+                        <select name="zone" id="modal_zone" class="form-select" required>
+                            {% for value, label in zones %}
+                            <option value="{{ value }}">{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Base Price (₹)</label>
+                            <input type="number" name="base_price" id="modal_base" class="form-control" value="200"
+                                min="0" step="10" required>
+                            <small class="text-muted">Visiting charge</small>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Min Service (₹)</label>
+                            <input type="number" name="min_service_charge" id="modal_min" class="form-control"
+                                value="300" min="0" step="50" required>
+                            <small class="text-muted">Minimum work charge</small>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Max Service (₹)</label>
+                            <input type="number" name="max_service_charge" id="modal_max" class="form-control"
+                                value="1500" min="0" step="100" required>
+                            <small class="text-muted">Typical max charge</small>
+                        </div>
+                    </div>
+                    <div class="form-check mb-3">
+                        <input type="checkbox" name="is_active" id="modal_active" class="form-check-input" checked>
+                        <label class="form-check-label" for="modal_active">Active</label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Price</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Bulk Create Modal -->
+<div class="modal fade" id="bulkCreateModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="POST" action="{% url 'admin_bulk_create_prices' %}">
+                {% csrf_token %}
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title"><i class="fas fa-magic me-2"></i>Bulk Create Default Prices</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-muted">This will create pricing entries for all service-zone combinations that don't
+                        exist yet.</p>
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Default Base (₹)</label>
+                            <input type="number" name="default_base" class="form-control" value="200" required>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Default Min (₹)</label>
+                            <input type="number" name="default_min" class="form-control" value="300" required>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Default Max (₹)</label>
+                            <input type="number" name="default_max" class="form-control" value="1500" required>
+                        </div>
+                    </div>
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-1"></i>
+                        Will create up to {{ service_types|length }} × {{ zones|length }} =
+                        <strong>{{ service_types|length|add:0 }}</strong> entries
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-success">Create All</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // Edit button handler
+        document.querySelectorAll('.edit-price-btn').forEach(btn => {
+            btn.addEventListener('click', function () {
+                document.getElementById('modal_service_type').value = this.dataset.service;
+                document.getElementById('modal_zone').value = this.dataset.zone;
+                document.getElementById('modal_base').value = this.dataset.base;
+                document.getElementById('modal_min').value = this.dataset.min;
+                document.getElementById('modal_max').value = this.dataset.max;
+                document.getElementById('modal_active').checked = this.dataset.active === 'True';
+
+                var modal = new bootstrap.Modal(document.getElementById('addPriceModal'));
+                modal.show();
+            });
+        });
+    });
+</script>
+{% endblock %}

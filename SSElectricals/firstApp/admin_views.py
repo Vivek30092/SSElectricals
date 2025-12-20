@@ -3,7 +3,7 @@ from django.core.files.storage import FileSystemStorage
 from django.contrib.admin.views.decorators import staff_member_required # Keep for reference or fallback
 from .decorators import admin_required, staff_required
 from django.contrib import messages
-from .models import Appointment, AdminActivityLog, AdminSession, Order, Product, Category, ProductImage, OrderItem, Review, DailySales, DailyExpenditure, PurchaseEntry, CustomUser, Notification, UserNotification
+from .models import Appointment, AdminActivityLog, AdminSession, Order, Product, Category, ProductImage, OrderItem, Review, DailySales, DailyExpenditure, PurchaseEntry, CustomUser, Notification, UserNotification, ServicePrice
 import os
 from django.conf import settings
 import pandas as pd
@@ -1159,7 +1159,7 @@ def admin_product_add(request):
         except Exception as e:
             messages.error(request, f"Error adding product: {str(e)}")
 
-    categories = Category.objects.all()
+    categories = Category.objects.all().order_by('name')
     return render(request, 'admin/admin_product_form.html', {'categories': categories})
 
 @staff_member_required
@@ -1197,7 +1197,7 @@ def admin_product_edit(request, pk):
         )
         return redirect('admin_product_list')
 
-    categories = Category.objects.all()
+    categories = Category.objects.all().order_by('name')
     return render(request, 'admin/admin_product_form.html', {'product': product, 'categories': categories})
 
 @staff_member_required
@@ -2070,3 +2070,129 @@ def admin_notification_detail(request, pk):
     
 
     return render(request, 'admin/admin_notification_detail.html', context)
+
+
+# ------------------------------------------------------------------
+# Service Pricing Management
+# ------------------------------------------------------------------
+
+@staff_member_required
+def admin_service_prices(request):
+    """List and manage service prices by service type and zone."""
+    prices = ServicePrice.objects.all().order_by('service_type', 'zone')
+    
+    # Group by service type for better display
+    services = {}
+    for price in prices:
+        if price.service_type not in services:
+            services[price.service_type] = []
+        services[price.service_type].append(price)
+    
+    # Get available service types and zones for the form
+    service_types = ServicePrice.SERVICE_TYPE_CHOICES
+    zones = ServicePrice.ZONE_CHOICES
+    
+    context = {
+        'prices': prices,
+        'services': services,
+        'service_types': service_types,
+        'zones': zones,
+    }
+    return render(request, 'admin/admin_service_prices.html', context)
+
+
+@staff_member_required
+def admin_service_price_save(request):
+    """Save or update a service price."""
+    if request.method == 'POST':
+        service_type = request.POST.get('service_type')
+        zone = request.POST.get('zone')
+        base_price = request.POST.get('base_price', 200)
+        min_service_charge = request.POST.get('min_service_charge', 300)
+        max_service_charge = request.POST.get('max_service_charge', 1500)
+        is_active = request.POST.get('is_active') == 'on'
+        
+        try:
+            # Try to get existing record or create new
+            price, created = ServicePrice.objects.update_or_create(
+                service_type=service_type,
+                zone=zone,
+                defaults={
+                    'base_price': base_price,
+                    'min_service_charge': min_service_charge,
+                    'max_service_charge': max_service_charge,
+                    'is_active': is_active,
+                }
+            )
+            
+            action = 'Created' if created else 'Updated'
+            messages.success(request, f'{action} pricing for {service_type} in {price.get_zone_display()}')
+            
+            AdminActivityLog.objects.create(
+                admin=request.user,
+                action='CREATE' if created else 'UPDATE',
+                module='SERVICE_PRICE',
+                description=f'{action} {service_type} - {zone}: ₹{base_price}',
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
+        except Exception as e:
+            messages.error(request, f'Error saving price: {str(e)}')
+    
+    return redirect('admin_service_prices')
+
+
+@staff_member_required
+def admin_service_price_delete(request, pk):
+    """Delete a service price."""
+    price = get_object_or_404(ServicePrice, pk=pk)
+    service_info = f"{price.service_type} - {price.get_zone_display()}"
+    price.delete()
+    
+    messages.success(request, f'Deleted pricing for {service_info}')
+    
+    AdminActivityLog.objects.create(
+        admin=request.user,
+        action='DELETE',
+        module='SERVICE_PRICE',
+        description=f'Deleted {service_info}',
+        ip_address=request.META.get('REMOTE_ADDR')
+    )
+    
+    return redirect('admin_service_prices')
+
+
+@staff_member_required
+def admin_bulk_create_prices(request):
+    """Bulk create default prices for all service-zone combinations."""
+    if request.method == 'POST':
+        default_base = float(request.POST.get('default_base', 200))
+        default_min = float(request.POST.get('default_min', 300))
+        default_max = float(request.POST.get('default_max', 1500))
+        
+        created_count = 0
+        for service_type, _ in ServicePrice.SERVICE_TYPE_CHOICES:
+            for zone, _ in ServicePrice.ZONE_CHOICES:
+                _, created = ServicePrice.objects.get_or_create(
+                    service_type=service_type,
+                    zone=zone,
+                    defaults={
+                        'base_price': default_base,
+                        'min_service_charge': default_min,
+                        'max_service_charge': default_max,
+                        'is_active': True,
+                    }
+                )
+                if created:
+                    created_count += 1
+        
+        messages.success(request, f'Created {created_count} new price entries')
+        
+        AdminActivityLog.objects.create(
+            admin=request.user,
+            action='CREATE',
+            module='SERVICE_PRICE',
+            description=f'Bulk created {created_count} price entries',
+            ip_address=request.META.get('REMOTE_ADDR')
+        )
+    
+    return redirect('admin_service_prices')

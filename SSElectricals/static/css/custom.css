@@ -1,0 +1,247 @@
+/*
+ * SS Electricals - Custom CSS
+ * Global styles for the application
+ */
+
+/* ============================================
+   DARK MODE GLOBAL STYLES
+   ============================================ */
+
+/* Form Controls */
+body.dark-mode .form-control,
+body.dark-mode .form-select {
+    background-color: #2d2d2d;
+    border-color: #444;
+    color: #e0e0e0;
+}
+
+body.dark-mode .form-control:focus,
+body.dark-mode .form-select:focus {
+    background-color: #333;
+    border-color: #ffc107;
+    color: #fff;
+    box-shadow: 0 0 0 0.25rem rgba(255, 193, 7, 0.25);
+}
+
+body.dark-mode .form-control::placeholder {
+    color: #777;
+}
+
+body.dark-mode .form-control:disabled,
+body.dark-mode .form-control[readonly] {
+    background-color: #252525;
+    color: #bbb;
+}
+
+body.dark-mode .form-label {
+    color: #e0e0e0;
+}
+
+body.dark-mode .form-text {
+    color: #aaa !important;
+}
+
+/* Cards */
+body.dark-mode .card {
+    background-color: #1e1e1e;
+    border-color: #333;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+}
+
+body.dark-mode .card-body {
+    background-color: #1e1e1e;
+}
+
+body.dark-mode .card-header {
+    background-color: #252525;
+    border-color: #333;
+}
+
+body.dark-mode .card-footer {
+    background-color: #252525;
+    border-color: #333;
+}
+
+/* Tables */
+body.dark-mode .table {
+    color: #e0e0e0;
+    --bs-table-bg: #1e1e1e;
+    --bs-table-hover-bg: #2c2c2c;
+}
+
+body.dark-mode .table tbody tr {
+    background-color: #1e1e1e;
+    border-color: #333;
+}
+
+body.dark-mode .table tbody td {
+    border-color: #333;
+    color: #e0e0e0;
+}
+
+body.dark-mode .table thead th {
+    color: #e0e0e0;
+    border-color: #444;
+    background-color: #2c2c2c;
+}
+
+body.dark-mode .table-hover tbody tr:hover {
+    background-color: #2d2d2d !important;
+}
+
+body.dark-mode .table.bg-white {
+    background-color: #1e1e1e !important;
+}
+
+body.dark-mode .table thead.bg-light {
+    background-color: #2c2c2c !important;
+}
+
+body.dark-mode .table-responsive {
+    background-color: #1e1e1e;
+    border-color: #333;
+}
+
+/* Modals */
+body.dark-mode .modal-content {
+    background-color: #1e1e1e;
+    color: #e0e0e0;
+    border-color: #333;
+}
+
+body.dark-mode .modal-header {
+    border-color: #333;
+}
+
+body.dark-mode .modal-footer {
+    border-color: #333;
+}
+
+body.dark-mode .modal-title {
+    color: #e0e0e0;
+}
+
+body.dark-mode .btn-close {
+    filter: invert(1) grayscale(100%) brightness(200%);
+}
+
+/* Typography */
+body.dark-mode h1,
+body.dark-mode h2,
+body.dark-mode h3,
+body.dark-mode h4,
+body.dark-mode h5,
+body.dark-mode h6 {
+    color: #e0e0e0;
+}
+
+body.dark-mode p {
+    color: #d0d0d0;
+}
+
+body.dark-mode .text-muted {
+    color: #aaa !important;
+}
+
+body.dark-mode strong {
+    color: #e0e0e0;
+}
+
+/* Utilities */
+body.dark-mode hr {
+    border-color: #444;
+}
+
+body.dark-mode .bg-light {
+    background-color: #2c2c2c !important;
+}
+
+body.dark-mode .bg-white {
+    background-color: #1e1e1e !important;
+}
+
+body.dark-mode .shadow-sm {
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.5) !important;
+}
+
+/* Alerts */
+body.dark-mode .alert-info {
+    background-color: #1a3a4a;
+    border-color: #2d5a6a;
+    color: #9dd5ea;
+}
+
+body.dark-mode .alert-warning {
+    background-color: #4a3a1a;
+    border-color: #6a5a2d;
+    color: #ead59d;
+}
+
+body.dark-mode .alert-success {
+    background-color: #1a4a2a;
+    border-color: #2d6a3d;
+    color: #9dea9d;
+}
+
+body.dark-mode .alert-danger {
+    background-color: #4a1a1a;
+    border-color: #6a2d2d;
+    color: #ea9d9d;
+}
+
+/* List Groups */
+body.dark-mode .list-group-item {
+    background-color: #1e1e1e;
+    color: #e0e0e0;
+    border-color: #333;
+}
+
+/* Breadcrumbs */
+body.dark-mode .breadcrumb {
+    background-color: #2c2c2c;
+}
+
+body.dark-mode .breadcrumb-item a {
+    color: #9dd5ea;
+}
+
+body.dark-mode .breadcrumb-item.active {
+    color: #aaa;
+}
+
+/* Pagination */
+body.dark-mode .page-link {
+    background-color: #1e1e1e;
+    border-color: #333;
+    color: #e0e0e0;
+}
+
+body.dark-mode .page-link:hover {
+    background-color: #2c2c2c;
+    color: #ffc107;
+}
+
+body.dark-mode .page-item.active .page-link {
+    background-color: #ffc107;
+    border-color: #ffc107;
+    color: #000;
+}
+
+/* Dropdowns */
+body.dark-mode .dropdown-menu {
+    background-color: #1e1e1e;
+    border-color: #333;
+}
+
+body.dark-mode .dropdown-item {
+    color: #e0e0e0;
+}
+
+body.dark-mode .dropdown-item:hover {
+    background-color: #333;
+    color: #fff;
+}
+
+body.dark-mode .dropdown-divider {
+    border-color: #444;
+}

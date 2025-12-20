@@ -29,8 +29,15 @@ EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')
 EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 
-# Google Maps API
+# Google Maps/Places API Configuration
+# Client-side key (with HTTP referer restrictions) - for JavaScript/browser
 GOOGLE_PLACES_API_KEY = os.getenv('GOOGLE_PLACES_API_KEY')
+
+# Server-side key (with IP restrictions or none) - for Python backend calls
+GOOGLE_SERVER_API_KEY = os.getenv('GOOGLE_SERVER_API_KEY', os.getenv('GOOGLE_PLACES_API_KEY'))
+
+# Google Business Place ID for reviews
+GOOGLE_PLACE_ID = os.getenv('GOOGLE_PLACE_ID', 'ChIJgfA7KTUDYzkR6n9gjeGDYoI')  # SS Electricals
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
@@ -38,7 +45,6 @@ GOOGLE_PLACES_API_KEY = os.getenv('GOOGLE_PLACES_API_KEY')
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = "django-insecure-t07&hx8jj30@9b26uogg&uj_*p!x%0x-+6svt65ft15z5q*k7="
 
-# SECURITY WARNING: don't run with debug turned on in production!
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 

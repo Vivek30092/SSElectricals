@@ -505,7 +505,7 @@ def confirm_delivery_otp(request):
     return render(request, 'firstApp/delivery_confirmation.html')
 
 def home(request):
-    categories = Category.objects.all()
+    categories = Category.objects.all().order_by('name')
     # Filter Trending Products
     trending_products = Product.objects.filter(is_trending=True).order_by('-created_at')[:8]
     return render(request, 'firstApp/home.html', {'categories': categories, 'trending_products': trending_products})
@@ -529,7 +529,7 @@ def product_list(request):
     elif sort_by == 'newest':
         products = products.order_by('-created_at')
         
-    categories = Category.objects.all()
+    categories = Category.objects.all().order_by('name')
     return render(request, 'firstApp/product_list.html', {'products': products, 'categories': categories})
 
 def product_detail(request, pk):
@@ -770,8 +770,22 @@ def cancel_order(request, order_id):
     return render(request, 'firstApp/cancel_order.html', {'order': order, 'form': form})
 
 def about(request):
-    reviews = fetch_google_reviews()
-    return render(request, 'firstApp/about.html', {'reviews': reviews})
+    from .google_reviews_service import get_google_reviews
+    
+    # Force refresh to bypass cache and see live API response
+    review_data = get_google_reviews(force_refresh=True)
+    
+    # Debug: Print API response
+    print(f"[Google Reviews] API Response Success: {review_data.get('success')}")
+    print(f"[Google Reviews] Error: {review_data.get('error', 'None')}")
+    print(f"[Google Reviews] Reviews Count: {len(review_data.get('reviews', []))}")
+    
+    reviews = review_data.get('reviews', []) if review_data.get('success') else []
+    return render(request, 'firstApp/about.html', {
+        'reviews': reviews,
+        'rating': review_data.get('rating', 0),
+        'total_reviews': review_data.get('total_reviews', 0),
+    })
 
 from .forms import CustomUserCreationForm, CustomUserUpdateForm, CheckoutForm, AppointmentForm, EmailSignupForm, EmailLoginForm, OTPVerificationForm, AccountDeletionForm, ForgotPasswordForm, ResetPasswordForm, ContactForm, CancelAppointmentForm
 
@@ -822,8 +836,7 @@ def book_appointment(request):
                 # If verified, force the email to be the user's email
                 if request.user.is_email_verified:
                     appointment.email = request.user.email
-            
-            # --- 3KM Radius Check ---
+
             # --- 3KM Radius Check ---
             # Construct address for distance check using all fields for better accuracy
             full_address_search = f"{appointment.house_number} {appointment.address_line1} {appointment.city} {appointment.pincode}"
@@ -861,8 +874,12 @@ def book_appointment(request):
                           pass
                 else:
                      # Strict 3KM limit for others
-                     messages.error(request, f"Service available only within 3 KM. Your calculated distance: {distance_km} KM. Please select a valid service area.")
-                     return redirect('book_appointment')
+                     messages.error(request, f"Service available only within 3 KM. Your calculated distance: {distance_km:.1f} KM. Please select a valid service area.")
+                     # Re-render form with user's data instead of redirecting
+                     return render(request, 'firstApp/book_appointment.html', {
+                         'form': form,
+                         'GOOGLE_PLACES_API_KEY': settings.GOOGLE_PLACES_API_KEY,
+                     })
 
             # Append location warning if applicable
             if distance_km == 0 and error_msg and "could not be located" in error_msg:
@@ -910,8 +927,12 @@ Shiv Shakti Electrical
                 return redirect('appointment_success')
             except Exception as e:
                 print(f"Appointment Save Error: {e}")
-                messages.error(request, "Your request could not be processed. We will contact you soon.")
-                return redirect('book_appointment')
+                messages.error(request, "Your request could not be processed. Please try again or contact us directly.")
+                # Re-render form with user's data instead of redirecting
+                return render(request, 'firstApp/book_appointment.html', {
+                    'form': form,
+                    'GOOGLE_PLACES_API_KEY': settings.GOOGLE_PLACES_API_KEY,
+                })
         else:
             # Debugging: Print errors to console and show user
             print("Form Errors:", form.errors)
@@ -954,18 +975,77 @@ Shiv Shakti Electrical
                  # Allow editing
                  form.fields['landmark'].widget.attrs.pop('readonly', None)
     
-    return render(request, 'firstApp/book_appointment.html', {'form': form})
+    return render(request, 'firstApp/book_appointment.html', {
+        'form': form,
+        'GOOGLE_PLACES_API_KEY': settings.GOOGLE_PLACES_API_KEY,
+    })
 
 def appointment_success(request):
+    from .models import ServicePrice
+    
     appointment_id = request.session.get('booked_appointment_id')
     appointment = None
+    price_info = None
+    estimated_min = 0
+    estimated_max = 0
+    
     if appointment_id:
         try:
             appointment = Appointment.objects.get(id=appointment_id)
+            
+            # Get service pricing for this appointment
+            price_info = ServicePrice.get_price(appointment.service_type, appointment.area)
+            
+            # Calculate estimated totals
+            visiting_charge = float(appointment.visiting_charge)
+            min_service = price_info.get('min_service_charge', 300)
+            max_service = price_info.get('max_service_charge', 1500)
+            
+            estimated_min = int(visiting_charge + min_service)
+            estimated_max = int(visiting_charge + max_service)
+            
         except Appointment.DoesNotExist:
             pass
             
-    return render(request, 'firstApp/appointment_success.html', {'appointment': appointment})
+    return render(request, 'firstApp/appointment_success.html', {
+        'appointment': appointment,
+        'price_info': price_info,
+        'estimated_min': estimated_min,
+        'estimated_max': estimated_max,
+    })
+
+
+def get_service_price(request):
+    """
+    API endpoint to get estimated service price based on service type and area.
+    Used by the book appointment page for dynamic pricing display.
+    """
+    from django.http import JsonResponse
+    from .models import ServicePrice
+    
+    service_type = request.GET.get('service_type', '')
+    area = request.GET.get('area', '')
+    
+    if not service_type or not area:
+        return JsonResponse({
+            'success': False,
+            'error': 'Service type and area are required'
+        })
+    
+    price_info = ServicePrice.get_price(service_type, area)
+    
+    return JsonResponse({
+        'success': True,
+        'service_type': service_type,
+        'area': area,
+        'zone': price_info['zone'],
+        'zone_display': price_info['zone_display'],
+        'base_price': price_info['base_price'],
+        'min_service_charge': price_info['min_service_charge'],
+        'max_service_charge': price_info['max_service_charge'],
+        'is_configured': price_info['found'],
+    })
+
 
 @login_required
 def my_appointments(request):
@@ -1393,33 +1473,6 @@ def reset_password(request):
         form = ResetPasswordForm()
     return render(request, 'firstApp/reset_password.html', {'form': form})
 
-def fetch_google_reviews():
-    api_key = settings.GOOGLE_PLACES_API_KEY
-    place_id = "ChIJgfA7KTUDYzkR6n9gjeGDYoI"
-
-    if not api_key:
-        print("Google Places API Key is missing.")
-        return []
-
-    url = f"https://maps.googleapis.com/maps/api/place/details/json?place_id={place_id}&fields=name,rating,reviews&key={api_key}"
-
-    try:
-        response = requests.get(url)
-        if response.status_code != 200:
-            print(f"Google Places API Error: {response.status_code} - {response.text}")
-            return []
-            
-        result = response.json()
-        if "error_message" in result:
-             print(f"Google Places API Error: {result['error_message']}")
-             return []
-             
-        reviews = result.get("result", {}).get("reviews", [])
-        return reviews
-    except Exception as e:
-        print(f"Error fetching reviews: {e}")
-        return []
-
 
 @login_required
 def order_receipt(request, order_id):
@@ -1470,10 +1523,68 @@ def order_receipt(request, order_id):
     return render(request, 'admin/admin_order_receipt.html', {'order': order, 'order_items': order_items, 'grand_total': grand_total})
 
 def google_reviews(request):
-    reviews = fetch_google_reviews()
-    return render(request, "firstApp/reviews.html", {"reviews": reviews})
+    """
+    Display Google Business Profile reviews.
+    Uses cached data when available (24-hour cache).
+    Compliant with Google's Terms of Service.
+    """
+    from .google_reviews_service import get_google_reviews
+    
+    # Check if force refresh is requested (admin only)
+    force_refresh = request.GET.get('refresh') == '1' and request.user.is_staff
+    
+    # Get reviews (from cache or API)
+    review_data = get_google_reviews(force_refresh=force_refresh)
+    
+    context = {
+        'success': review_data.get('success', False),
+        'business_name': review_data.get('business_name', 'SS Electricals'),
+        'rating': review_data.get('rating', 0),
+        'total_reviews': review_data.get('total_reviews', 0),
+        'reviews': review_data.get('reviews', []),
+        'from_cache': review_data.get('from_cache', False),
+        'fetched_at': review_data.get('fetched_at'),
+        'error': review_data.get('error'),
+        'error_code': review_data.get('error_code'),
+    }
+    
+    return render(request, "firstApp/reviews.html", context)
+
+
+# API endpoint for AJAX requests (optional)
+from django.http import JsonResponse
+
+def google_reviews_api(request):
+    """
+    API endpoint for Google reviews.
+    Returns JSON data for AJAX requests.
+    API key is never exposed to frontend.
+    """
+    from .google_reviews_service import get_google_reviews
+    
+    # Only allow staff to force refresh
+    force_refresh = request.GET.get('refresh') == '1' and request.user.is_staff
+    
+    review_data = get_google_reviews(force_refresh=force_refresh)
+    
+    # Sanitize response (remove any sensitive data)
+    safe_response = {
+        'success': review_data.get('success', False),
+        'business_name': review_data.get('business_name', ''),
+        'rating': review_data.get('rating', 0),
+        'total_reviews': review_data.get('total_reviews', 0),
+        'reviews': review_data.get('reviews', []),
+        'from_cache': review_data.get('from_cache', False),
+    }
+    
+    if not review_data.get('success'):
+        safe_response['error'] = 'Google reviews currently unavailable'
+    
+    return JsonResponse(safe_response)
+
 
 # --- Profile Password Change Views ---
+
 
 @login_required
 def initiate_profile_password_change(request):

@@ -403,19 +403,141 @@ class EmailOTP(models.Model):
             self.save()
             return False, f"Invalid OTP. {self.max_retries - self.retry_count} attempts remaining"
 
-# 6. Appointment System
-class Appointment(models.Model):
-    SERVICE_CHOICES = [
+
+# 6a. Service Pricing System
+class ServicePrice(models.Model):
+    """
+    Stores service pricing based on service type and area zone.
+    Admin can set different prices for different areas.
+    """
+    SERVICE_TYPE_CHOICES = [
+        # Sorted Alphabetically (Other at end)
+        ('AC Installation', 'AC Installation'),
         ('CCTV Installation', 'CCTV Installation'),
+        ('Cooler Repair', 'Cooler Repair'),
         ('Electrical Wiring / Short Circuit', 'Electrical Wiring / Short Circuit'),
         ('Fan / Motor Repair', 'Fan / Motor Repair'),
+        ('Fan Installation', 'Fan Installation'),
         ('Fridge Repair', 'Fridge Repair'),
+        ('Geyser Installation', 'Geyser Installation'),
         ('Geyser Repair', 'Geyser Repair'),
         ('LED / Tube Light Repair', 'LED / Tube Light Repair'),
+        ('TV Installation', 'TV Installation'),
         ('Underground Wiring', 'Underground Wiring'),
         ('Washing Machine Repair', 'Washing Machine Repair'),
         ('Other Appliance Repair', 'Other Appliance Repair'),
+    ]
+    
+    ZONE_CHOICES = [
+        ('CENTRAL', 'Central Indore (Rajwada, Juni Indore, etc.)'),
+        ('EAST', 'East Indore (Pardesipura, Gumasta Nagar, etc.)'),
+        ('WEST', 'West/Northwest Indore (Vijay Nagar, Nipania, etc.)'),
+        ('NORTH', 'North Indore (Patnipura, Hawa Bangla, etc.)'),
+        ('SOUTH', 'South Indore (Rajendra Nagar, Kanadia Road, etc.)'),
+        ('RESIDENTIAL', 'Residential Colonies (Sukhliya, LIG, etc.)'),
+        ('OTHER', 'Other Areas'),
+    ]
+    
+    # Map areas to zones
+    AREA_TO_ZONE = {
+        # Central
+        'Rajwada': 'CENTRAL', 'Yashwant Ganj': 'CENTRAL', 'Juni Indore': 'CENTRAL',
+        'Chhatribagh': 'CENTRAL', 'Malwa Mill': 'CENTRAL', 'Kesar Bagh': 'CENTRAL',
+        # East
+        'Pardesipura': 'EAST', 'Gumasta Nagar': 'EAST', 'Veena Nagar': 'EAST',
+        'Usha Nagar': 'EAST', 'Snehlataganj': 'EAST',
+        # West/Northwest
+        'Palasia': 'WEST', 'Zanjeerwala Square': 'WEST', 'Scheme No. 74': 'WEST',
+        'Mahalaxmi Nagar': 'WEST', 'Vijay Nagar': 'WEST', 'Nipania': 'WEST',
+        'Bapat Square': 'WEST', 'MR10': 'WEST', 'Silicon City': 'WEST',
+        # North
+        'Patnipura': 'NORTH', 'Hawa Bangla': 'NORTH', 'Tilak Nagar': 'NORTH',
+        # South
+        'Rajendra Nagar': 'SOUTH', 'Annapurna Nagar': 'SOUTH', 'Manik Bagh': 'SOUTH',
+        'Kanadia Road': 'SOUTH',
+        # Residential
+        'Sukhliya': 'RESIDENTIAL', 'Abhinandan Nagar': 'RESIDENTIAL', 'LIG Colony': 'RESIDENTIAL',
+        'Prime City': 'RESIDENTIAL', 'Royal Bungalow City': 'RESIDENTIAL', 'Sundar Nagar': 'RESIDENTIAL',
+        'Gauri Nagar': 'RESIDENTIAL', 'Luv Kush': 'RESIDENTIAL',
+    }
+    
+    service_type = models.CharField(max_length=100, choices=SERVICE_TYPE_CHOICES)
+    zone = models.CharField(max_length=20, choices=ZONE_CHOICES)
+    
+    # Pricing
+    base_price = models.DecimalField(max_digits=10, decimal_places=2, default=200.00,
+                                     help_text="Base visiting/inspection charge")
+    min_service_charge = models.DecimalField(max_digits=10, decimal_places=2, default=300.00,
+                                              help_text="Minimum service charge (excluding parts)")
+    max_service_charge = models.DecimalField(max_digits=10, decimal_places=2, default=1500.00,
+                                              help_text="Maximum typical service charge")
+    
+    # Status
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        unique_together = ['service_type', 'zone']
+        ordering = ['service_type', 'zone']
+        verbose_name = 'Service Price'
+        verbose_name_plural = 'Service Prices'
+    
+    def __str__(self):
+        return f"{self.service_type} - {self.get_zone_display()}: ₹{self.base_price}"
+    
+    @classmethod
+    def get_zone_for_area(cls, area):
+        """Get the zone for a given area."""
+        return cls.AREA_TO_ZONE.get(area, 'OTHER')
+    
+    @classmethod
+    def get_price(cls, service_type, area):
+        """
+        Get pricing for a service type and area.
+        Returns dict with base_price, min_service_charge, max_service_charge.
+        """
+        zone = cls.get_zone_for_area(area)
+        try:
+            price = cls.objects.get(service_type=service_type, zone=zone, is_active=True)
+            return {
+                'found': True,
+                'base_price': float(price.base_price),
+                'min_service_charge': float(price.min_service_charge),
+                'max_service_charge': float(price.max_service_charge),
+                'zone': zone,
+                'zone_display': price.get_zone_display(),
+            }
+        except cls.DoesNotExist:
+            # Return default pricing if not configured
+            return {
+                'found': False,
+                'base_price': 200.00,
+                'min_service_charge': 300.00,
+                'max_service_charge': 1500.00,
+                'zone': zone,
+                'zone_display': 'Default',
+            }
 
+
+# 6b. Appointment System
+class Appointment(models.Model):
+    SERVICE_CHOICES = [
+        # Sorted Alphabetically (Other at end)
+        ('AC Installation', 'AC Installation'),
+        ('CCTV Installation', 'CCTV Installation'),
+        ('Cooler Repair', 'Cooler Repair'),
+        ('Electrical Wiring / Short Circuit', 'Electrical Wiring / Short Circuit'),
+        ('Fan / Motor Repair', 'Fan / Motor Repair'),
+        ('Fan Installation', 'Fan Installation'),
+        ('Fridge Repair', 'Fridge Repair'),
+        ('Geyser Installation', 'Geyser Installation'),
+        ('Geyser Repair', 'Geyser Repair'),
+        ('LED / Tube Light Repair', 'LED / Tube Light Repair'),
+        ('TV Installation', 'TV Installation'),
+        ('Underground Wiring', 'Underground Wiring'),
+        ('Washing Machine Repair', 'Washing Machine Repair'),
+        ('Other Appliance Repair', 'Other Appliance Repair'),
     ]
 
     STATUS_CHOICES = [
@@ -430,55 +552,44 @@ class Appointment(models.Model):
     ]
 
     AREA_CHOICES = [
-         # Central Indore
-    ('Rajwada', 'Rajwada'),
-    ('Yashwant Ganj', 'Yashwant Ganj'),
-    ('Juni Indore', 'Juni Indore'),
-    ('Chhatribagh', 'Chhatribagh'),
-    ('Malwa Mill', 'Malwa Mill'),
-    ('Kesar Bagh', 'Kesar Bagh'),
-
-    # East Indore
-    ('Pardesipura', 'Pardesipura'),
-    ('Gumasta Nagar', 'Gumasta Nagar'),
-    ('Veena Nagar', 'Veena Nagar'),
-    ('Usha Nagar', 'Usha Nagar'),
-    ('Snehlataganj', 'Snehlataganj'),
-
-    # West / Northwest Indore
-    ('Palasia', 'Palasia'),
-    ('Zanjeerwala Square', 'Zanjeerwala Square'),
-    ('Scheme No. 74', 'Scheme No. 74'),
-    ('Mahalaxmi Nagar', 'Mahalaxmi Nagar'),
-    ('Vijay Nagar', 'Vijay Nagar'),
-    ('Nipania', 'Nipania'),
-    ('Bapat Square', 'Bapat Square'),
-    ('MR10', 'MR10'),
-    ('Silicon City', 'Silicon City'),
-
-    # North Indore
-    ('Patnipura', 'Patnipura'),
-    ('Hawa Bangla', 'Hawa Bangla'),
-    ('Tilak Nagar', 'Tilak Nagar'),
-
-    # South Indore
-    ('Rajendra Nagar', 'Rajendra Nagar'),
-    ('Annapurna Nagar', 'Annapurna Nagar'),
-    ('Manik Bagh', 'Manik Bagh'),
-    ('Kanadia Road', 'Kanadia Road'),
-
-    # Residential Colonies
-    ('Sukhliya', 'Sukhliya'),
-    ('Abhinandan Nagar', 'Abhinandan Nagar'),
-    ('LIG Colony', 'LIG Colony'),
-    ('Prime City', 'Prime City'),
-    ('Royal Bungalow City', 'Royal Bungalow City'),
-    ('Sundar Nagar', 'Sundar Nagar'),
-    ('Gauri Nagar', 'Gauri Nagar'),
-    ('Luv Kush', 'Luv Kush'),
-
-    # Fallback
-    ('Other', 'Other region'),
+        # Sorted Alphabetically (Other at end)
+        ('Abhinandan Nagar', 'Abhinandan Nagar'),
+        ('Annapurna Nagar', 'Annapurna Nagar'),
+        ('Bapat Square', 'Bapat Square'),
+        ('Chhatribagh', 'Chhatribagh'),
+        ('Gauri Nagar', 'Gauri Nagar'),
+        ('Gumasta Nagar', 'Gumasta Nagar'),
+        ('Hawa Bangla', 'Hawa Bangla'),
+        ('Juni Indore', 'Juni Indore'),
+        ('Kanadia Road', 'Kanadia Road'),
+        ('Kesar Bagh', 'Kesar Bagh'),
+        ('LIG Colony', 'LIG Colony'),
+        ('Luv Kush', 'Luv Kush'),
+        ('Mahalaxmi Nagar', 'Mahalaxmi Nagar'),
+        ('Malwa Mill', 'Malwa Mill'),
+        ('Manik Bagh', 'Manik Bagh'),
+        ('MR10', 'MR10'),
+        ('Nipania', 'Nipania'),
+        ('Palasia', 'Palasia'),
+        ('Pardesipura', 'Pardesipura'),
+        ('Patnipura', 'Patnipura'),
+        ('Prime City', 'Prime City'),
+        ('Rajendra Nagar', 'Rajendra Nagar'),
+        ('Rajwada', 'Rajwada'),
+        ('Royal Bungalow City', 'Royal Bungalow City'),
+        ('Scheme No. 74', 'Scheme No. 74'),
+        ('Silicon City', 'Silicon City'),
+        ('Snehlataganj', 'Snehlataganj'),
+        ('Sukhliya', 'Sukhliya'),
+        ('Sundar Nagar', 'Sundar Nagar'),
+        ('Tilak Nagar', 'Tilak Nagar'),
+        ('Usha Nagar', 'Usha Nagar'),
+        ('Veena Nagar', 'Veena Nagar'),
+        ('Vijay Nagar', 'Vijay Nagar'),
+        ('Yashwant Ganj', 'Yashwant Ganj'),
+        ('Zanjeerwala Square', 'Zanjeerwala Square'),
+        # Fallback option at end
+        ('Other', 'Other region'),
     ]
 
     # Link to user if logged in (optional but good for history)
