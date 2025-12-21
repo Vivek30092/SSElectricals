@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 BUSINESS_INFO = {
     'name': 'Shiv Shakti Electricals',
     'address': 'Indore, Madhya Pradesh, India',
-    'phone': '+91-XXXXXXXXXX',
+    'phone': '+91-9993149226',
     'email': 'shivshaktielectrical1430@gmail.com',
     'website': 'https://yourdomain.com',  # Update with actual domain
 }

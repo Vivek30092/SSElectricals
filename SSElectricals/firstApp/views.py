@@ -406,50 +406,49 @@ def checkout(request):
                 is_free_delivery = True
             
             total_amount = cart.total_price + delivery_charge
+            
+            # Get user notes from form
+            user_notes = request.POST.get('user_notes', '')
 
-            # Create Order
+            # Create Enquiry-Based Order (prices hidden from user)
             order = Order.objects.create(
                 user=request.user,
                 address=full_address,
                 latitude=lat,
                 longitude=lng,
-                total_price=cart.total_price, 
-                delivery_charge=delivery_charge,
+                # Enquiry-based: prices are 0 until admin confirms
+                total_price=Decimal('0.00'),  # Admin will set this
+                delivery_charge=Decimal('0.00'),  # Admin will set this
                 distance_km=dist_km,
-                final_price=None, # To be confirmed by Admin
-                status='Pending',
-                payment_method=payment_method,
-                free_delivery_applied=is_free_delivery,
+                final_price=None,
+                # Enquiry-based order status
+                order_type='enquiry',
+                status='Pending Enquiry',
+                pricing_confirmed=False,
+                user_notes=user_notes,
+                payment_method='COD',  # Default to COD
+                free_delivery_applied=False,
                 delivery_charge_status='ESTIMATED'
             )
             
-            # Create Order Items
+            # Create Order Items (without prices - admin will set them)
             for item in cart.items.all():
                 OrderItem.objects.create(
                     order=order,
                     product=item.product,
                     quantity=item.quantity,
-                    price=item.product.final_price
+                    price=Decimal('0.00')  # Price to be set by admin
                 )
-                # Reduce Stock
-                item.product.stock_quantity -= item.quantity
-                item.product.save()
+                # NOTE: Stock is NOT reduced until admin confirms the order
             
-            # Update User Order Count
+            # Update User Enquiry Count
             request.user.total_orders_count += 1
-            if is_free_delivery:
-                request.user.free_delivery_used_count += 1
             request.user.save()
 
             # Clear Cart
             cart.items.all().delete()
-            
-            if is_free_delivery:
-                 dist_msg = f"{dist_km} KM (Free Delivery Applied)"
-            else:
-                 dist_msg = f"{dist_km} KM" if dist_km > 0 else "Pending Verification"
                  
-            messages.success(request, f"Order placed successfully! Delivery distance: {dist_msg}. Admin will contact you for final confirmation.")
+            messages.success(request, f"Enquiry submitted successfully! Our team will contact you shortly with pricing details.")
             return redirect('order_history')
         else:
             print(f"Checkout Form Errors: {form.errors}")
@@ -508,7 +507,22 @@ def home(request):
     categories = Category.objects.all().order_by('name')
     # Filter Trending Products
     trending_products = Product.objects.filter(is_trending=True).order_by('-created_at')[:8]
-    return render(request, 'firstApp/home.html', {'categories': categories, 'trending_products': trending_products})
+    
+    # Context for template
+    context = {
+        'categories': categories, 
+        'trending_products': trending_products
+    }
+    
+    # Render page
+    response = render(request, 'firstApp/home.html', context)
+    
+    # Clear welcome popup flag after showing once
+    if 'show_welcome_popup' in request.session:
+        del request.session['show_welcome_popup']
+    
+    return response
+
 
 def product_list(request):
     products = Product.objects.all()
@@ -711,6 +725,31 @@ def add_to_cart(request, product_id):
     return redirect('view_cart')
 
 @login_required
+def buy_now(request, product_id):
+    """
+    Buy Now - Adds product to cart and redirects directly to checkout.
+    Clears cart first to ensure only the selected product is in the enquiry.
+    """
+    product = get_object_or_404(Product, pk=product_id)
+    
+    # Check stock
+    if product.stock_quantity < 1:
+        messages.error(request, f"{product.name} is currently out of stock.")
+        return redirect('product_detail', pk=product_id)
+    
+    # Get or create cart
+    cart, created = Cart.objects.get_or_create(user=request.user)
+    
+    # Clear existing cart items for a clean "Buy Now" experience
+    cart.items.all().delete()
+    
+    # Add this product to cart
+    CartItem.objects.create(cart=cart, product=product, quantity=1)
+    
+    # Redirect to checkout
+    return redirect('checkout')
+
+@login_required
 def view_cart(request):
     cart, created = Cart.objects.get_or_create(user=request.user)
     return render(request, 'firstApp/cart.html', {'cart': cart})
@@ -901,7 +940,10 @@ Full Name: {appointment.customer_name}
 Mobile Number: {appointment.phone}
 Email: {appointment.email if appointment.email else 'Not Provided'}
 Address: {appointment.house_number}, {appointment.address_line1}, {appointment.address_line2 if appointment.address_line2 else ''}, {appointment.landmark if appointment.landmark else ''}, {appointment.city} - {appointment.pincode}
-Service Type: {appointment.get_service_type_display()}
+Service Type: {appointment.service_name}
+Distance: {appointment.distance_km} KM 
+Visiting Charge: ₹{appointment.visiting_charge}
+Pricing Confirmed: {'Yes' if appointment.pricing_confirmed else 'Pending Admin Confirmation'}
 Date: {appointment.date}
 Time: {appointment.time}
 Description: {appointment.problem_description}
@@ -910,6 +952,7 @@ Timestamp: {timezone.now().strftime('%Y-%m-%d %H:%M:%S')}
 Regards,
 Shiv Shakti Electrical
 """
+
                     
                     # 2. Send Email to Admin
                     send_mail(
@@ -975,10 +1018,16 @@ Shiv Shakti Electrical
                  # Allow editing
                  form.fields['landmark'].widget.attrs.pop('readonly', None)
     
+    # Check if any active services are available
+    from .models import ServiceType
+    services_available = ServiceType.objects.filter(is_active=True).exists()
+    
     return render(request, 'firstApp/book_appointment.html', {
         'form': form,
         'GOOGLE_PLACES_API_KEY': settings.GOOGLE_PLACES_API_KEY,
+        'services_available': services_available,
     })
+
 
 def appointment_success(request):
     from .models import ServicePrice
@@ -1017,34 +1066,69 @@ def appointment_success(request):
 
 def get_service_price(request):
     """
-    API endpoint to get estimated service price based on service type and area.
+    API endpoint to get estimated service price based on service ID and distance.
     Used by the book appointment page for dynamic pricing display.
+    Now uses the new ServiceType model with distance-based pricing.
     """
     from django.http import JsonResponse
-    from .models import ServicePrice
+    from .models import ServiceType
     
-    service_type = request.GET.get('service_type', '')
-    area = request.GET.get('area', '')
+    service_id = request.GET.get('service_id', '')
+    distance_km = request.GET.get('distance_km', '')
     
-    if not service_type or not area:
+    # Convert distance to float
+    try:
+        distance = float(distance_km) if distance_km else None
+    except (ValueError, TypeError):
+        distance = None
+    
+    if not service_id:
         return JsonResponse({
             'success': False,
-            'error': 'Service type and area are required'
+            'error': 'Service ID is required'
         })
     
-    price_info = ServicePrice.get_price(service_type, area)
+    try:
+        service = ServiceType.objects.get(id=service_id, is_active=True)
+    except ServiceType.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': 'Service not found'
+        })
+    
+    # Get pricing based on distance
+    charge, is_confirmed = service.get_charge_for_distance(distance)
+    
+    # Determine which distance slab applies
+    distance_slab = 'default'
+    if distance is not None:
+        if distance <= 0.5:
+            distance_slab = '500m'
+        elif distance <= 1:
+            distance_slab = '1km'
+        elif distance <= 3:
+            distance_slab = '3km'
+        elif distance <= 5:
+            distance_slab = '5km'
+        elif distance <= 7:
+            distance_slab = '7km'
+        else:
+            distance_slab = 'above_7km'
     
     return JsonResponse({
         'success': True,
-        'service_type': service_type,
-        'area': area,
-        'zone': price_info['zone'],
-        'zone_display': price_info['zone_display'],
-        'base_price': price_info['base_price'],
-        'min_service_charge': price_info['min_service_charge'],
-        'max_service_charge': price_info['max_service_charge'],
-        'is_configured': price_info['found'],
+        'service_id': service.id,
+        'service_name': service.name,
+        'pricing_mode': service.pricing_mode,
+        'distance_km': distance,
+        'distance_slab': distance_slab,
+        'charge': charge,
+        'is_confirmed': is_confirmed,
+        'default_charge': float(service.default_charge),
+        'requires_confirmation': service.pricing_mode == 'confirm',
+        'message': 'Charges will be confirmed by admin after booking via call/email' if service.pricing_mode == 'confirm' else None,
     })
+
 
 
 @login_required
@@ -1234,12 +1318,51 @@ def email_signup_verify(request):
                     user.is_email_verified = True
                     user.save()
                     login(request, user, backend='django.contrib.auth.backends.ModelBackend')
+                    
+                    # Send welcome email with important notices
+                    try:
+                        welcome_message = f"""
+Dear {user.first_name or user.username},
+
+Welcome to Shiv Shakti Electrical! 🎉
+
+Thank you for registering with us. Here are some important updates:
+
+⚠️ TESTING PHASE NOTICE:
+Our web app is currently running in testing phase. If you face any glitch, error, or bug, please reach out to us at: vivekkumar934@gmail.com
+
+🚚 FREE DELIVERY OFFER:
+Great news! If you are within 2 KM range of our shop, you get FREE DELIVERY on your first order!
+
+📍 Our Location:
+B-115, Abhinandan Nagar, Indore (M.P.)
+📞 Contact: +91-9993149226
+
+We're excited to have you on board!
+
+Best Regards,
+Team Shiv Shakti Electrical
+"""
+                        send_mail(
+                            subject="Welcome to Shiv Shakti Electrical! 🎉",
+                            message=welcome_message,
+                            from_email=settings.DEFAULT_FROM_EMAIL,
+                            recipient_list=[user.email],
+                            fail_silently=True,
+                        )
+                    except Exception as e:
+                        print(f"Welcome email error: {e}")
+                    
+                    # Set session flag for popup message on home page
+                    request.session['show_welcome_popup'] = True
+                    
                     # Cleanup
                     del request.session['signup_data']
                     del request.session['otp_email']
                     del request.session['otp_purpose']
-                    messages.success(request, "Signup successful!")
+                    messages.success(request, "Signup successful! Welcome to Shiv Shakti Electrical!")
                     return redirect('home')
+
                 else:
                     messages.error(request, message)
             except EmailOTP.DoesNotExist:

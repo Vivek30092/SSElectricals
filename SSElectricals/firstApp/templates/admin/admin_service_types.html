@@ -1,0 +1,350 @@
+{% extends 'admin/base_admin.html' %}
+
+{% block title %}Manage Services - Admin{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1"><i class="fas fa-cogs text-primary me-2"></i>Manage Services</h2>
+            <p class="text-muted mb-0">Add, edit, or remove services with distance-based pricing</p>
+        </div>
+        <div>
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addServiceModal">
+                <i class="fas fa-plus me-1"></i> Add New Service
+            </button>
+        </div>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body text-center">
+                    <h3 class="mb-0">{{ total_active }}</h3>
+                    <small>Active Services</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-secondary text-white">
+                <div class="card-body text-center">
+                    <h3 class="mb-0">{{ total_inactive }}</h3>
+                    <small>Inactive Services</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body text-center">
+                    <h3 class="mb-0">{{ total_fixed }}</h3>
+                    <small>Fixed Price</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-warning text-dark">
+                <div class="card-body text-center">
+                    <h3 class="mb-0">{{ total_confirm }}</h3>
+                    <small>Confirm Later</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Services Table -->
+    {% if service_types %}
+    <div class="card">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Order</th>
+                            <th>Service Name</th>
+                            <th class="text-center">Pricing Mode</th>
+                            <th class="text-center">Default</th>
+                            <th class="text-center">500m</th>
+                            <th class="text-center">1 KM</th>
+                            <th class="text-center">3 KM</th>
+                            <th class="text-center">5 KM</th>
+                            <th class="text-center">7 KM</th>
+                            <th class="text-center">Status</th>
+                            <th class="text-center">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for service in service_types %}
+                        <tr>
+                            <td><span class="badge bg-light text-dark">{{ service.display_order }}</span></td>
+                            <td>
+                                <i class="fas {{ service.icon }} text-primary me-2"></i>
+                                <strong>{{ service.name }}</strong>
+                                {% if service.description %}
+                                <small class="text-muted d-block">{{ service.description|truncatewords:8 }}</small>
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                {% if service.pricing_mode == 'fixed' %}
+                                <span class="badge bg-success"><i class="fas fa-check me-1"></i>Fixed</span>
+                                {% else %}
+                                <span class="badge bg-warning text-dark"><i class="fas fa-phone me-1"></i>Confirm</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-center fw-bold text-primary">₹{{ service.default_charge }}</td>
+                            <td class="text-center">{{ service.charge_within_500m|default:"-" }}</td>
+                            <td class="text-center">{{ service.charge_within_1km|default:"-" }}</td>
+                            <td class="text-center">{{ service.charge_within_3km|default:"-" }}</td>
+                            <td class="text-center">{{ service.charge_within_5km|default:"-" }}</td>
+                            <td class="text-center">{{ service.charge_within_7km|default:"-" }}</td>
+                            <td class="text-center">
+                                {% if service.is_active %}
+                                <span class="badge bg-success">Active</span>
+                                {% else %}
+                                <span class="badge bg-danger">Inactive</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                <button class="btn btn-sm btn-outline-primary edit-service-btn"
+                                    data-id="{{ service.id }}" data-name="{{ service.name }}"
+                                    data-description="{{ service.description }}" data-icon="{{ service.icon }}"
+                                    data-order="{{ service.display_order }}" data-active="{{ service.is_active }}"
+                                    data-pricing-mode="{{ service.pricing_mode }}"
+                                    data-default-charge="{{ service.default_charge }}"
+                                    data-charge-500m="{{ service.charge_within_500m|default:'' }}"
+                                    data-charge-1km="{{ service.charge_within_1km|default:'' }}"
+                                    data-charge-3km="{{ service.charge_within_3km|default:'' }}"
+                                    data-charge-5km="{{ service.charge_within_5km|default:'' }}"
+                                    data-charge-7km="{{ service.charge_within_7km|default:'' }}">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <a href="{% url 'admin_service_type_delete' service.id %}"
+                                    class="btn btn-sm btn-outline-danger"
+                                    onclick="return confirm('Delete service &quot;{{ service.name }}&quot;? This cannot be undone.')">
+                                    <i class="fas fa-trash"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="alert alert-info text-center py-5">
+        <i class="fas fa-info-circle fa-3x mb-3"></i>
+        <h4>No Services Configured</h4>
+        <p>Click "Add New Service" to create your first service type.</p>
+        <p class="text-muted">Services you add here will appear in the Book Appointment page.</p>
+    </div>
+    {% endif %}
+
+    <!-- Help Section -->
+    <div class="card mt-4 border-info">
+        <div class="card-header bg-info text-white">
+            <h6 class="mb-0"><i class="fas fa-question-circle me-2"></i>How Distance-Based Pricing Works</h6>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <h6 class="fw-bold">Fixed Price Mode</h6>
+                    <ul class="small text-muted">
+                        <li>Price is automatically shown to the customer</li>
+                        <li>Distance-based charges are applied based on customer location</li>
+                        <li>If distance field is empty, Default Charge is used</li>
+                    </ul>
+                </div>
+                <div class="col-md-6">
+                    <h6 class="fw-bold">Confirm Later Mode</h6>
+                    <ul class="small text-muted">
+                        <li>No price is shown to the customer</li>
+                        <li>Message displayed: "Charges will be confirmed by admin"</li>
+                        <li>Admin can set final price after reviewing the booking</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add/Edit Service Modal -->
+<div class="modal fade" id="addServiceModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <form method="POST" action="{% url 'admin_service_type_save' %}">
+                {% csrf_token %}
+                <input type="hidden" name="id" id="modal_id">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title"><i class="fas fa-cogs me-2"></i>Add/Edit Service</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- Basic Info -->
+                    <h6 class="text-muted mb-3"><i class="fas fa-info-circle me-1"></i>Basic Information</h6>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Service Name <span class="text-danger">*</span></label>
+                            <input type="text" name="name" id="modal_name" class="form-control"
+                                placeholder="e.g., AC Installation" required>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Icon Class</label>
+                            <input type="text" name="icon" id="modal_icon" class="form-control" value="fa-tools"
+                                placeholder="fa-tools">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Display Order</label>
+                            <input type="number" name="display_order" id="modal_order" class="form-control" value="0"
+                                min="0">
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Description (Optional)</label>
+                        <textarea name="description" id="modal_description" class="form-control" rows="2"
+                            placeholder="Brief description of the service"></textarea>
+                    </div>
+
+                    <!-- Pricing Mode -->
+                    <hr>
+                    <h6 class="text-muted mb-3"><i class="fas fa-rupee-sign me-1"></i>Pricing Configuration</h6>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Pricing Mode <span class="text-danger">*</span></label>
+                            <select name="pricing_mode" id="modal_pricing_mode" class="form-select" required>
+                                <option value="fixed">Fixed Price (Auto-applied)</option>
+                                <option value="confirm">Confirm Later (Admin confirms)</option>
+                            </select>
+                            <small class="text-muted">Fixed: Show price to customer. Confirm: Admin sets price
+                                later.</small>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Default Charge (₹) <span class="text-danger">*</span></label>
+                            <input type="number" name="default_charge" id="modal_default_charge" class="form-control"
+                                value="300" min="0" step="10" required>
+                            <small class="text-muted">Fallback charge if no distance match</small>
+                        </div>
+                    </div>
+
+                    <!-- Distance-Based Pricing -->
+                    <div id="distancePricingSection">
+                        <div class="alert alert-light border mb-3">
+                            <strong><i class="fas fa-map-marker-alt me-1"></i>Distance-Based Charges</strong>
+                            <small class="text-muted d-block">Leave empty to use Default Charge for that range</small>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Within 500m (₹)</label>
+                                <input type="number" name="charge_within_500m" id="modal_charge_500m"
+                                    class="form-control" min="0" step="10" placeholder="Optional">
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Within 1 KM (₹)</label>
+                                <input type="number" name="charge_within_1km" id="modal_charge_1km" class="form-control"
+                                    min="0" step="10" placeholder="Optional">
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Within 3 KM (₹)</label>
+                                <input type="number" name="charge_within_3km" id="modal_charge_3km" class="form-control"
+                                    min="0" step="10" placeholder="Optional">
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Within 5 KM (₹)</label>
+                                <input type="number" name="charge_within_5km" id="modal_charge_5km" class="form-control"
+                                    min="0" step="10" placeholder="Optional">
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Within 7 KM (₹)</label>
+                                <input type="number" name="charge_within_7km" id="modal_charge_7km" class="form-control"
+                                    min="0" step="10" placeholder="Optional">
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Above 7 KM</label>
+                                <input type="text" class="form-control" value="Uses Default Charge" disabled>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Status -->
+                    <hr>
+                    <div class="form-check mb-3">
+                        <input type="checkbox" name="is_active" id="modal_active" class="form-check-input" checked>
+                        <label class="form-check-label" for="modal_active">
+                            <strong>Active</strong>
+                            <small class="text-muted d-block">Only active services appear in the booking page</small>
+                        </label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary"><i class="fas fa-save me-1"></i>Save Service</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // Toggle distance pricing visibility based on pricing mode
+        const pricingModeSelect = document.getElementById('modal_pricing_mode');
+        const distancePricingSection = document.getElementById('distancePricingSection');
+
+        function toggleDistancePricing() {
+            if (pricingModeSelect.value === 'confirm') {
+                distancePricingSection.style.opacity = '0.5';
+                distancePricingSection.querySelectorAll('input').forEach(inp => inp.disabled = true);
+            } else {
+                distancePricingSection.style.opacity = '1';
+                distancePricingSection.querySelectorAll('input:not([disabled])').forEach(inp => inp.disabled = false);
+            }
+        }
+
+        pricingModeSelect.addEventListener('change', toggleDistancePricing);
+
+        // Edit button handler
+        document.querySelectorAll('.edit-service-btn').forEach(btn => {
+            btn.addEventListener('click', function () {
+                document.getElementById('modal_id').value = this.dataset.id;
+                document.getElementById('modal_name').value = this.dataset.name;
+                document.getElementById('modal_description').value = this.dataset.description;
+                document.getElementById('modal_icon').value = this.dataset.icon;
+                document.getElementById('modal_order').value = this.dataset.order;
+                document.getElementById('modal_active').checked = this.dataset.active === 'True';
+                document.getElementById('modal_pricing_mode').value = this.dataset.pricingMode;
+                document.getElementById('modal_default_charge').value = this.dataset.defaultCharge;
+                document.getElementById('modal_charge_500m').value = this.dataset.charge500m || '';
+                document.getElementById('modal_charge_1km').value = this.dataset.charge1km || '';
+                document.getElementById('modal_charge_3km').value = this.dataset.charge3km || '';
+                document.getElementById('modal_charge_5km').value = this.dataset.charge5km || '';
+                document.getElementById('modal_charge_7km').value = this.dataset.charge7km || '';
+
+                toggleDistancePricing();
+
+                var modal = new bootstrap.Modal(document.getElementById('addServiceModal'));
+                modal.show();
+            });
+        });
+
+        // Clear form when modal is closed
+        document.getElementById('addServiceModal').addEventListener('hidden.bs.modal', function () {
+            document.getElementById('modal_id').value = '';
+            document.getElementById('modal_name').value = '';
+            document.getElementById('modal_description').value = '';
+            document.getElementById('modal_icon').value = 'fa-tools';
+            document.getElementById('modal_order').value = '0';
+            document.getElementById('modal_active').checked = true;
+            document.getElementById('modal_pricing_mode').value = 'fixed';
+            document.getElementById('modal_default_charge').value = '300';
+            document.getElementById('modal_charge_500m').value = '';
+            document.getElementById('modal_charge_1km').value = '';
+            document.getElementById('modal_charge_3km').value = '';
+            document.getElementById('modal_charge_5km').value = '';
+            document.getElementById('modal_charge_7km').value = '';
+
+            toggleDistancePricing();
+        });
+    });
+</script>
+{% endblock %}

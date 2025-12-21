@@ -1,0 +1,181 @@
+{% extends 'admin/base_admin.html' %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <a href="{% url 'admin_announcements_list' %}" class="btn btn-outline-secondary mb-3">
+            <i class="fas fa-arrow-left"></i> Back to Announcements
+        </a>
+        <h2 class="d-inline-block ms-2">
+            {% if mode == 'edit' %}Edit Announcement{% else %}Create New Announcement{% endif %}
+        </h2>
+    </div>
+</div>
+
+<form method="post">
+    {% csrf_token %}
+
+    <div class="row">
+        <div class="col-lg-8">
+            <!-- Basic Info Card -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <i class="fas fa-info-circle me-1"></i> Announcement Details
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label" for="title">Title <span class="text-danger">*</span></label>
+                        <input type="text" name="title" id="title" class="form-control" required
+                            value="{% if announcement %}{{ announcement.title }}{% endif %}"
+                            placeholder="e.g., Welcome to Our Store!">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label" for="message">Message <span class="text-danger">*</span></label>
+                        <textarea name="message" id="message" class="form-control" rows="5" required
+                            placeholder="Write your announcement message here. HTML is allowed.">{% if announcement %}{{ announcement.message }}{% endif %}</textarea>
+                        <small class="text-muted">HTML tags are allowed for formatting (e.g., &lt;strong&gt;,
+                            &lt;br&gt;, &lt;a href&gt;)</small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Button Settings Card -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <i class="fas fa-mouse-pointer me-1"></i> Action Button (Optional)
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label" for="button_text">Button Text</label>
+                            <input type="text" name="button_text" id="button_text" class="form-control"
+                                value="{% if announcement %}{{ announcement.button_text|default:'' }}{% endif %}"
+                                placeholder="e.g., Shop Now">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label" for="button_url">Button URL</label>
+                            <input type="url" name="button_url" id="button_url" class="form-control"
+                                value="{% if announcement %}{{ announcement.button_url|default:'' }}{% endif %}"
+                                placeholder="https://example.com">
+                        </div>
+                    </div>
+                    <small class="text-muted">Leave both empty if you don't want an action button.</small>
+                </div>
+            </div>
+
+            <!-- Scheduling Card -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <i class="fas fa-calendar-alt me-1"></i> Scheduling (Optional)
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label" for="start_date">Start Date & Time</label>
+                            <input type="datetime-local" name="start_date" id="start_date" class="form-control"
+                                value="{% if announcement.start_date %}{{ announcement.start_date|date:'Y-m-d' }}T{{ announcement.start_date|time:'H:i' }}{% endif %}">
+                            <small class="text-muted">Leave empty to start immediately</small>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label" for="end_date">End Date & Time</label>
+                            <input type="datetime-local" name="end_date" id="end_date" class="form-control"
+                                value="{% if announcement.end_date %}{{ announcement.end_date|date:'Y-m-d' }}T{{ announcement.end_date|time:'H:i' }}{% endif %}">
+                            <small class="text-muted">Leave empty for indefinite</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <!-- Display Settings Card -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <i class="fas fa-sliders-h me-1"></i> Display Settings
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label" for="position">Position <span class="text-danger">*</span></label>
+                        <select name="position" id="position" class="form-select" required>
+                            {% for value, label in position_choices %}
+                            <option value="{{ value }}" {% if announcement.position == value %}selected{% endif %}>
+                                {{ label }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label" for="style">Style <span class="text-danger">*</span></label>
+                        <select name="style" id="style" class="form-select" required>
+                            {% for value, label in style_choices %}
+                            <option value="{{ value }}" {% if announcement.style == value %}selected{% endif %}>
+                                {{ label }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label" for="target_audience">Target Audience <span
+                                class="text-danger">*</span></label>
+                        <select name="target_audience" id="target_audience" class="form-select" required>
+                            {% for value, label in target_choices %}
+                            <option value="{{ value }}" {% if announcement.target_audience == value %}selected{% endif %}>
+                                {{ label }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Behavior Settings Card -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <i class="fas fa-cog me-1"></i> Behavior
+                </div>
+                <div class="card-body">
+                    <div class="form-check mb-3">
+                        <input type="checkbox" name="is_active" class="form-check-input" id="is_active" 
+                        {% if not announcement or announcement.is_active %}checked{% endif %}>
+                        <label class="form-check-label" for="is_active">
+                            <strong>Active</strong>
+                            <small class="text-muted d-block">Show this announcement to visitors</small>
+                        </label>
+                    </div>
+
+                    <div class="form-check mb-3">
+                        <input type="checkbox" name="is_dismissible" class="form-check-input" id="is_dismissible" 
+                        {% if not announcement or announcement.is_dismissible %}checked{% endif %}>
+                        <label class="form-check-label" for="is_dismissible">
+                            <strong>Dismissible</strong>
+                            <small class="text-muted d-block">Users can close this announcement</small>
+                        </label>
+                    </div>
+
+                    <div class="form-check">
+                        <input type="checkbox" name="show_once_per_session" class="form-check-input"
+                            id="show_once_per_session" 
+                            {% if not announcement or announcement.show_once_per_session %}checked{% endif %}>
+                        <label class="form-check-label" for="show_once_per_session">
+                            <strong>Show Once Per Session</strong>
+                            <small class="text-muted d-block">Only show once until browser is closed</small>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Submit Button -->
+            <div class="d-grid">
+                <button type="submit" class="btn btn-success btn-lg">
+                    <i class="fas fa-save me-2"></i>
+                    {% if mode == 'edit' %}Update Announcement{% else %}Create Announcement{% endif %}
+                </button>
+            </div>
+        </div>
+    </div>
+</form>
+{% endblock %}

@@ -7,66 +7,105 @@
     Hello {{ customer_name }},
 </div>
 
-<div class="content-block">
-    <h2 style="color: #27ae60;">✓ Service Completed Successfully!</h2>
-    <p>We're pleased to inform you that your service has been completed.</p>
+<!-- Completion Success Banner -->
+<div
+    style="background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%); padding: 30px; border-radius: 8px; text-align: center; margin: 20px 0;">
+    <h1 style="color: #ffffff; margin: 0; font-size: 28px;">🎉 Service Completed Successfully!</h1>
+    <p style="color: #ffffff; opacity: 0.95; margin: 10px 0 0 0; font-size: 16px;">We're pleased to inform you that your
+        service has been completed.</p>
 </div>
 
+<!-- Service Summary Table -->
 <div class="info-box">
     <h3>Service Summary</h3>
-    <div class="info-row">
-        <span class="info-label">Appointment ID:</span>
-        <span class="info-value">#{{ appointment.id }}</span>
-    </div>
-    <div class="info-row">
-        <span class="info-label">Service Type:</span>
-        <span class="info-value">{{ appointment.get_service_type_display }}</span>
-    </div>
-    <div class="info-row">
-        <span class="info-label">Completed On:</span>
-        <span class="info-value">{{ appointment.date|date:"F d, Y" }}</span>
-    </div>
-    <div class="info-row">
-        <span class="info-label">Total Charge:</span>
-        <span class="info-value">₹{{ appointment.total_charge }}</span>
-    </div>
+    <table
+        style="width: 100%; border-collapse: collapse; background-color: #ffffff; border-radius: 8px; overflow: hidden;">
+        <tr style="border-bottom: 1px solid #e2e8f0;">
+            <td style="padding: 14px 12px; font-weight: 600; color: #4a5568; width: 40%;">Appointment ID:</td>
+            <td style="padding: 14px 12px; color: #2d3748;"><strong>#{{ appointment.id }}</strong></td>
+        </tr>
+        <tr style="border-bottom: 1px solid #e2e8f0; background-color: #f7fafc;">
+            <td style="padding: 14px 12px; font-weight: 600; color: #4a5568;">Service Type:</td>
+            <td style="padding: 14px 12px; color: #2d3748;">{{ appointment.service_name }}</td>
+        </tr>
+        <tr style="border-bottom: 1px solid #e2e8f0;">
+            <td style="padding: 14px 12px; font-weight: 600; color: #4a5568;">Completed On:</td>
+            <td style="padding: 14px 12px; color: #2d3748;">{{ appointment.date|date:"F d, Y" }}</td>
+        </tr>
+        <tr style="background-color: #e8f5e9;">
+            <td style="padding: 16px 12px; font-weight: 700; color: #2e7d32; font-size: 18px;">Total Charge:</td>
+            <td style="padding: 16px 12px; font-weight: 700; color: #27ae60; font-size: 20px;">₹{{
+                appointment.total_charge }}</td>
+        </tr>
+    </table>
 </div>
 
+<!-- Review Request Section -->
 <div
-    style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; border-radius: 8px; text-align: center; margin: 30px 0;">
-    <h2 style="color: #ffffff; margin-top: 0;">How Was Our Service?</h2>
-    <p style="color: #ffffff; opacity: 0.95; font-size: 16px;">
+    style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 35px; border-radius: 12px; text-align: center; margin: 30px 0;">
+    <h2 style="color: #ffffff; margin: 0 0 10px 0; font-size: 24px;">⭐ How Was Our Service?</h2>
+    <p style="color: #ffffff; opacity: 0.95; font-size: 16px; margin: 0 0 25px 0;">
         Your feedback is invaluable to us. Please take a moment to share your experience.
     </p>
-    <a href="{{ review_url }}"
-        style="display: inline-block; background-color: #ffffff; color: #667eea; padding: 14px 32px; text-decoration: none; border-radius: 6px; font-weight: 600; margin-top: 15px;">
-        ⭐ Leave a Review
+    <a href="https://g.page/r/CbW4kNefqzm0EBM/review"
+        style="display: inline-block; background-color: #ffffff; color: #667eea; padding: 16px 40px; text-decoration: none; border-radius: 8px; font-weight: 700; font-size: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
+        ⭐ Leave a Google Review
     </a>
 </div>
 
-<div class="content-block">
-    <h3>What to Share in Your Review:</h3>
-    <ul style="line-height: 2;">
-        <li>✓ Quality of work performed</li>
-        <li>✓ Professionalism of our technician</li>
-        <li>✓ Timeliness and punctuality</li>
-        <li>✓ Overall satisfaction</li>
+<!-- Why Review Matters -->
+<div class="content-block" style="background-color: #f7fafc; padding: 25px; border-radius: 8px;">
+    <h3 style="margin: 0 0 15px 0; color: #2d3748;">What to Share in Your Review:</h3>
+    <ul style="line-height: 2.2; padding-left: 20px; margin: 0;">
+        <li style="color: #4a5568;"><span style="color: #27ae60; font-weight: bold;">✓</span> Quality of work performed
+        </li>
+        <li style="color: #4a5568;"><span style="color: #27ae60; font-weight: bold;">✓</span> Professionalism of our
+            technician</li>
+        <li style="color: #4a5568;"><span style="color: #27ae60; font-weight: bold;">✓</span> Timeliness and punctuality
+        </li>
+        <li style="color: #4a5568;"><span style="color: #27ae60; font-weight: bold;">✓</span> Overall satisfaction</li>
     </ul>
 </div>
 
-<div class="content-block">
-    <p><strong>Need Additional Support?</strong></p>
-    <p>If you experience any issues with the completed service, please don't hesitate to contact us. We stand behind our
-        work!</p>
+<!-- Support Section -->
+<div class="content-block" style="text-align: center; margin-top: 30px;">
+    <div
+        style="background-color: #e3f2fd; border-left: 4px solid #2196f3; padding: 15px 20px; border-radius: 4px; text-align: left;">
+        <strong style="color: #1565c0;">🔧 Need Additional Support?</strong>
+        <p style="margin: 10px 0 0 0; color: #1565c0;">If you experience any issues with the completed service, please
+            don't hesitate to contact us. We stand behind our work!</p>
+    </div>
 </div>
 
-<div class="info-box">
-    <h3>Warranty Information</h3>
-    <p>All our services come with a warranty period. Please keep this email for your records.</p>
-    <p><strong>Warranty Period:</strong> As discussed with the technician</p>
+<!-- Warranty Information -->
+<div class="info-box" style="margin-top: 25px;">
+    <h3>📜 Warranty Information</h3>
+    <p style="margin: 0 0 10px 0;">All our services come with a warranty period. Please keep this email for your
+        records.</p>
+    <table style="width: 100%; border-collapse: collapse;">
+        <tr style="background-color: #fff3cd;">
+            <td style="padding: 12px; font-weight: 600; color: #856404;">Warranty Period:</td>
+            <td style="padding: 12px; color: #856404;">As discussed with the technician</td>
+        </tr>
+    </table>
 </div>
 
-<div class="content-block">
-    <p>Thank you for choosing {{ business.name }} for your electrical needs. We look forward to serving you again!</p>
+<!-- Contact Information -->
+<div class="content-block"
+    style="background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%); padding: 20px; border-radius: 8px; text-align: center; margin-top: 25px;">
+    <h4 style="margin: 0 0 15px 0; color: #4a5568;">Contact Us</h4>
+    <p style="margin: 0;">
+        📞 <strong>+91 9993149226</strong> &nbsp; | &nbsp;
+        ✉️ <strong>shivshaktielectrical1430@gmail.com</strong>
+    </p>
+</div>
+
+<!-- Thank You Message -->
+<div class="content-block"
+    style="text-align: center; margin-top: 25px; padding: 20px; background-color: #e8f5e9; border-radius: 8px;">
+    <p style="margin: 0; color: #2e7d32; font-size: 16px;">
+        🙏 Thank you for choosing <strong>{{ business.name }}</strong> for your electrical needs!<br>
+        <span style="font-size: 14px; color: #4caf50;">We look forward to serving you again.</span>
+    </p>
 </div>
 {% endblock %}

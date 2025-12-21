@@ -524,6 +524,151 @@
 
 
     {% block extra_js %}{% endblock %}
+
+    <!-- Site Announcements -->
+    {% if center_announcements or toast_announcements %}
+
+    <!-- Center Modal Announcements -->
+    {% for announcement in center_announcements %}
+    <div class="modal fade" id="centerAnnouncement{{ announcement.id }}" tabindex="-1"
+        aria-labelledby="announcementModalLabel{{ announcement.id }}" aria-hidden="true"
+        data-announcement-id="{{ announcement.id }}"
+        data-show-once="{{ announcement.show_once_per_session|yesno:'true,false' }}">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content"
+                style="background: #ffffff; border: none; border-radius: 16px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.3);">
+                <!-- Header with gradient based on style -->
+                <div class="modal-header" style="
+                    {% if announcement.style == 'info' %}background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    {% elif announcement.style == 'success' %}background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+                    {% elif announcement.style == 'warning' %}background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+                    {% elif announcement.style == 'danger' %}background: linear-gradient(135deg, #eb3349 0%, #f45c43 100%);
+                    {% else %}background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);{% endif %}
+                    border: none; padding: 20px;">
+                    <h5 class="modal-title" id="announcementModalLabel{{ announcement.id }}"
+                        style="color: #ffffff; font-weight: 700; font-size: 1.25rem;">
+                        <i class="fas fa-bullhorn me-2"></i>{{ announcement.title }}
+                    </h5>
+                    {% if announcement.is_dismissible %}
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                        aria-label="Close"></button>
+                    {% endif %}
+                </div>
+                <div class="modal-body" style="padding: 25px; color: #212529; background: #ffffff;">
+                    <div style="font-size: 1rem; line-height: 1.6;">{{ announcement.message|safe }}</div>
+                </div>
+                {% if announcement.button_text and announcement.button_url %}
+                <div class="modal-footer" style="border: none; padding: 15px 25px 25px; background: #ffffff;">
+                    <a href="{{ announcement.button_url }}" class="btn btn-lg w-100" style="
+                        {% if announcement.style == 'info' %}background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                        {% elif announcement.style == 'success' %}background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+                        {% elif announcement.style == 'warning' %}background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+                        {% elif announcement.style == 'danger' %}background: linear-gradient(135deg, #eb3349 0%, #f45c43 100%);
+                        {% else %}background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);{% endif %}
+                        color: #ffffff; border: none; font-weight: 600; padding: 12px; border-radius: 8px;">
+                        {{ announcement.button_text }} <i class="fas fa-arrow-right ms-2"></i>
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+
+    <!-- Bottom Right Toast Announcements -->
+    <div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 1090;"
+        id="announcementToastContainer">
+        {% for announcement in toast_announcements %}
+        <div class="toast announcement-toast" role="alert" aria-live="assertive" aria-atomic="true"
+            id="toastAnnouncement{{ announcement.id }}" data-announcement-id="{{ announcement.id }}"
+            data-show-once="{{ announcement.show_once_per_session|yesno:'true,false' }}" data-bs-autohide="false"
+            style="background-color: #ffffff; border: none; border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); min-width: 320px; max-width: 380px;">
+            <div class="toast-header" style="
+                {% if announcement.style == 'info' %}background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                {% elif announcement.style == 'success' %}background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+                {% elif announcement.style == 'warning' %}background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+                {% elif announcement.style == 'danger' %}background: linear-gradient(135deg, #eb3349 0%, #f45c43 100%);
+                {% else %}background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);{% endif %}
+                color: #ffffff; border: none; border-radius: 12px 12px 0 0; padding: 12px 15px;">
+                <i class="fas fa-bell me-2"></i>
+                <strong class="me-auto">{{ announcement.title }}</strong>
+                {% if announcement.is_dismissible %}
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast"
+                    aria-label="Close"></button>
+                {% endif %}
+            </div>
+            <div class="toast-body"
+                style="padding: 15px; color: #212529; background: #ffffff; border-radius: 0 0 12px 12px;">
+                <div style="font-size: 0.95rem; line-height: 1.5; margin-bottom: 10px;">{{ announcement.message|safe }}
+                </div>
+                {% if announcement.button_text and announcement.button_url %}
+                <a href="{{ announcement.button_url }}" class="btn btn-sm w-100" style="
+                    {% if announcement.style == 'info' %}background: #667eea;
+                    {% elif announcement.style == 'success' %}background: #11998e;
+                    {% elif announcement.style == 'warning' %}background: #f093fb;
+                    {% elif announcement.style == 'danger' %}background: #eb3349;
+                    {% else %}background: #667eea;{% endif %}
+                    color: #ffffff; border: none; font-weight: 500;">
+                    {{ announcement.button_text }}
+                </a>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            // Handle Center Modal Announcements
+            document.querySelectorAll('.modal[data-announcement-id]').forEach(function (modal) {
+                const announcementId = modal.dataset.announcementId;
+                const showOnce = modal.dataset.showOnce === 'true';
+                const storageKey = 'announcement_dismissed_' + announcementId;
+
+                // Check if already dismissed in this session
+                if (showOnce && sessionStorage.getItem(storageKey)) {
+                    return; // Skip showing
+                }
+
+                // Show the modal
+                const bsModal = new bootstrap.Modal(modal);
+                bsModal.show();
+
+                // Mark as dismissed when closed
+                modal.addEventListener('hidden.bs.modal', function () {
+                    if (showOnce) {
+                        sessionStorage.setItem(storageKey, 'true');
+                    }
+                });
+            });
+
+            // Handle Toast Announcements
+            document.querySelectorAll('.announcement-toast[data-announcement-id]').forEach(function (toastEl) {
+                const announcementId = toastEl.dataset.announcementId;
+                const showOnce = toastEl.dataset.showOnce === 'true';
+                const storageKey = 'toast_dismissed_' + announcementId;
+
+                // Check if already dismissed in this session
+                if (showOnce && sessionStorage.getItem(storageKey)) {
+                    return; // Skip showing
+                }
+
+                // Show the toast with slight delay for better UX
+                setTimeout(function () {
+                    const toast = new bootstrap.Toast(toastEl);
+                    toast.show();
+                }, 1000);
+
+                // Mark as dismissed when closed
+                toastEl.addEventListener('hidden.bs.toast', function () {
+                    if (showOnce) {
+                        sessionStorage.setItem(storageKey, 'true');
+                    }
+                });
+            });
+        });
+    </script>
+    {% endif %}
 </body>
 
 </html>

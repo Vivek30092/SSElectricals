@@ -1,110 +1,173 @@
 {% extends 'firstApp/base.html' %}
 
 {% block content %}
-<h2 class="mb-4">Order History</h2>
+<div class="container my-4">
+    <h2 class="mb-4"><i class="fas fa-clipboard-list me-2"></i>My Orders & Enquiries</h2>
 
-{% if orders %}
-{% for order in orders %}
-<div class="card mb-4">
-    <div class="card-header d-flex justify-content-between align-items-center">
-        <div>
-            <strong>Order #{{ order.id }}</strong>
-            <span class="text-muted ms-2">{{ order.created_at|date:"F j, Y" }}</span>
+    {% if orders %}
+    {% for order in orders %}
+    <div class="card mb-4 shadow-sm">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <div>
+                <strong>Order #{{ order.id }}</strong>
+                <span class="text-muted ms-2">{{ order.created_at|date:"F j, Y" }}</span>
+            </div>
+            <div>
+                <!-- Enquiry-Based Status Badges -->
+                {% if order.status == 'Pending Enquiry' %}
+                <span class="badge bg-warning text-dark"><i class="fas fa-clock me-1"></i>Awaiting Price Quote</span>
+                {% elif order.status == 'Price Shared' %}
+                <span class="badge bg-info text-dark"><i class="fas fa-tag me-1"></i>Price Shared - Awaiting Your
+                    Approval</span>
+                {% elif order.status == 'Confirmed' %}
+                <span class="badge bg-primary"><i class="fas fa-check me-1"></i>Order Confirmed</span>
+                {% elif order.status == 'Out for Delivery' %}
+                <span class="badge bg-info text-dark"><i class="fas fa-truck me-1"></i>Out for Delivery</span>
+                {% elif order.status == 'Delivered' %}
+                <span class="badge bg-success"><i class="fas fa-check-circle me-1"></i>Delivered</span>
+                {% elif order.status == 'Cancelled' %}
+                <span class="badge bg-danger"><i class="fas fa-times me-1"></i>Cancelled</span>
+                <!-- Legacy Status for backward compatibility -->
+                {% elif order.status == 'Pending' %}
+                <span class="badge bg-warning text-dark"><i class="fas fa-clock me-1"></i>Pending</span>
+                {% else %}
+                <span class="badge bg-secondary">{{ order.status }}</span>
+                {% endif %}
+            </div>
         </div>
-        <div>
-            {% if order.status == 'Delivered' %}
-            <span class="badge bg-success">Delivered</span>
-            {% elif order.status == 'Pending' %}
-            <span class="badge bg-warning text-dark">Pending</span>
+
+        <div class="card-body">
+            <!-- Products List -->
+            <div class="table-responsive">
+                <table class="table table-borderless">
+                    <thead>
+                        <tr>
+                            <th>Product</th>
+                            <th>Quantity</th>
+                            {% if order.pricing_confirmed %}
+                            <th>Unit Price</th>
+                            <th>Subtotal</th>
+                            {% endif %}
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in order.items.all %}
+                        <tr>
+                            <td>{{ item.product.name }}</td>
+                            <td>{{ item.quantity }}</td>
+                            {% if order.pricing_confirmed %}
+                            <td>₹{{ item.price }}</td>
+                            <td><strong>₹{% widthratio item.price 1 item.quantity %}</strong></td>
+                            {% endif %}
+                            <td>
+                                {% if order.status == 'Delivered' %}
+                                {% if item.product.id in reviewed_product_ids %}
+                                <span class="badge bg-success"><i class="fas fa-check"></i> Reviewed</span>
+                                {% else %}
+                                <a href="{% url 'product_detail' item.product.id %}"
+                                    class="btn btn-sm btn-outline-primary">Rate & Review</a>
+                                {% endif %}
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+
+                    <!-- Pricing Footer (Only shown if confirmed) -->
+                    {% if order.pricing_confirmed and order.grand_total %}
+                    <tfoot>
+                        <tr class="border-top">
+                            <td colspan="3" class="text-end fw-bold">Delivery Charge:</td>
+                            <td class="fw-bold">
+                                {% if order.free_delivery_applied %}
+                                <span class="text-success">FREE</span>
+                                {% elif order.delivery_charge %}
+                                ₹{{ order.delivery_charge }}
+                                {% else %}
+                                TBD
+                                {% endif %}
+                            </td>
+                            <td></td>
+                        </tr>
+                        <tr>
+                            <td colspan="3" class="text-end fw-bold">Grand Total:</td>
+                            <td class="fw-bold text-success fs-5">₹{{ order.grand_total }}</td>
+                            <td></td>
+                        </tr>
+                    </tfoot>
+                    {% endif %}
+                </table>
+            </div>
+
+            <!-- Order Details -->
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <p class="mb-0"><strong>Payment Method:</strong> {{ order.get_payment_method_display }}</p>
+                </div>
+                <div class="col-md-6">
+                    <p class="mb-0"><strong>Shipping Address:</strong><br>{{ order.address }}</p>
+                </div>
+            </div>
+
+            <!-- User Notes -->
+            {% if order.user_notes %}
+            <div class="alert alert-light mb-3 p-2 small">
+                <strong><i class="fas fa-sticky-note me-1"></i>Your Notes:</strong> {{ order.user_notes }}
+            </div>
+            {% endif %}
+
+            <!-- Status-specific Messages -->
+            {% if order.status == 'Pending Enquiry' %}
+            <div class="alert alert-warning mt-3 mb-0 p-3">
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <div>
+                        <h6 class="mb-1"><i class="fas fa-clock me-1"></i> Enquiry Submitted</h6>
+                        <p class="mb-0 small">{{ order.price_display_status }}. Our team will contact you shortly with
+                            pricing details.</p>
+                    </div>
+                    <a href="{% url 'cancel_order' order.id %}" class="btn btn-sm btn-outline-danger">
+                        <i class="fas fa-times me-1"></i>Cancel Enquiry
+                    </a>
+                </div>
+            </div>
+            {% elif order.status == 'Price Shared' %}
+            <div class="alert alert-info mt-3 mb-0 p-3">
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <div>
+                        <h6 class="mb-1"><i class="fas fa-tag me-1"></i> Price Quote Ready</h6>
+                        <p class="mb-0 small">We've shared the pricing with you. Please confirm to proceed with your
+                            order.</p>
+                        {% if order.grand_total %}
+                        <p class="mb-0 mt-2"><strong class="text-primary fs-5">Total: ₹{{ order.grand_total }}</strong>
+                        </p>
+                        {% endif %}
+                    </div>
+                    <a href="{% url 'cancel_order' order.id %}" class="btn btn-sm btn-outline-danger">
+                        <i class="fas fa-times me-1"></i>Cancel
+                    </a>
+                </div>
+            </div>
             {% elif order.status == 'Confirmed' %}
-            <span class="badge bg-primary">Confirmed</span>
-            {% elif order.status == 'Out for Delivery' %}
-            <span class="badge bg-info text-dark">Out for Delivery</span>
-            {% elif order.status == 'Cancelled' %}
-            <span class="badge bg-danger">Cancelled</span>
-            {% else %}
-            <span class="badge bg-secondary">{{ order.status }}</span>
+            <div class="alert alert-success mt-3 mb-0 p-2">
+                <i class="fas fa-check-circle me-1"></i> <strong>Order Confirmed!</strong> We're preparing your order.
+            </div>
+            {% elif order.status == 'Pending' %}
+            <!-- Legacy status support -->
+            <div class="alert alert-warning mt-3 mb-0 p-2 small d-flex justify-content-between align-items-center">
+                <span><i class="fas fa-clock"></i> Waiting for admin confirmation. You will receive a call/SMS
+                    shortly.</span>
+                <a href="{% url 'cancel_order' order.id %}" class="btn btn-sm btn-danger">Cancel Order</a>
+            </div>
             {% endif %}
         </div>
     </div>
-    <div class="card-body">
-        <div class="table-responsive">
-            <table class="table table-borderless">
-                <thead>
-                    <tr>
-                        <th>Product</th>
-                        <th>Quantity</th>
-                        {% if order.final_price %}
-                        <th>Unit Price</th>
-                        <th>Subtotal</th>
-                        {% else %}
-                        <th>Est. Price</th>
-                        <th>Subtotal</th>
-                        {% endif %}
-                        <th>Action</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for item in order.items.all %}
-                    <tr>
-                        <td>{{ item.product.name }}</td>
-                        <td>{{ item.quantity }}</td>
-                        <td>₹{{ item.price }}</td>
-                        <td><strong>₹{% widthratio item.price 1 item.quantity %}</strong></td>
-                        <td>
-                            {% if order.status == 'Delivered' %}
-                            {% if item.product.id in reviewed_product_ids %}
-                            <span class="badge bg-success">Reviewed</span>
-                            {% else %}
-                            <a href="{% url 'product_detail' item.product.id %}"
-                                class="btn btn-sm btn-outline-primary">Rate & Review</a>
-                            {% endif %}
-                            {% endif %}
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-                <tfoot>
-                    <tr class="border-top">
-                        <td colspan="3" class="text-end fw-bold">Delivery Charge:</td>
-                        <td class="fw-bold">
-                            {% if order.delivery_charge %}
-                            ₹{{ order.delivery_charge }}
-                            {% else %}
-                            TBD
-                            {% endif %}
-                        </td>
-                    </tr>
-                    <tr>
-                        <td colspan="2" class="text-end fw-bold">Total:</td>
-                        <td class="fw-bold">
-                            ₹{{ order.grand_total }}
-                        </td>
-                    </tr>
-                </tfoot>
-            </table>
-        </div>
-        <div class="row">
-            <div class="col-md-6">
-                <p class="mb-0"><strong>Payment Method:</strong> {{ order.get_payment_method_display }}</p>
-                <p class="mb-0"><strong>Status:</strong> {{ order.get_status_display }}</p>
-            </div>
-            <div class="col-md-6">
-                <p class="mb-0"><strong>Shipping Address:</strong><br>{{ order.address }}</p>
-            </div>
-        </div>
-
-        {% if order.status == 'Pending' %}
-        <div class="alert alert-warning mt-3 mb-0 p-2 small d-flex justify-content-between align-items-center">
-            <span><i class="fas fa-clock"></i> Waiting for admin confirmation. You will receive a call/SMS
-                shortly.</span>
-            <a href="{% url 'cancel_order' order.id %}" class="btn btn-sm btn-danger">Cancel Order</a>
-        </div>
-        {% endif %}
+    {% endfor %}
+    {% else %}
+    <div class="alert alert-info">
+        <i class="fas fa-info-circle me-2"></i>You haven't placed any enquiries yet.
+        <a href="{% url 'product_list' %}" class="alert-link">Browse Products</a> to get started!
     </div>
+    {% endif %}
 </div>
-{% endfor %}
-{% else %}
-<div class="alert alert-info">You haven't placed any orders yet.</div>
-{% endif %}
 {% endblock %}

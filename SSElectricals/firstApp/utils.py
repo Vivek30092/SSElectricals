@@ -279,92 +279,17 @@ Shiv Shakti Electrical, Indore (M.P.)
 
 def send_order_status_email(order):
     """
-    Send email notification to user when order status changes.
+    DEPRECATED: This function is deprecated and should not be used.
+    Use the email_utils module instead for professional HTML emails with logging:
+    
+    from .email_utils import send_order_status_email, send_order_delivered_email
+    
+    This legacy function is kept for backward compatibility but will be removed
+    in a future update. All new code should use email_utils.py.
     """
-    subject = f'Order Notification - {order.status} (Order #{order.id})'
-    email_from = settings.DEFAULT_FROM_EMAIL
-    recipient_list = [order.user.email]
-    
-    # Determine Status Color
-    status_color = "#17a2b8" # Info
-    if order.status == 'Confirmed':
-        status_color = "#28a745"
-    elif order.status == 'Out for Delivery':
-        status_color = "#ffc107"
-    elif order.status == 'Delivered':
-        status_color = "#007bff"
-    elif order.status == 'Cancelled':
-        status_color = "#dc3545"
-
-    html_content = f"""
-<!DOCTYPE html>
-<html>
-<head>
-    <style>
-        body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #444; }}
-        .container {{ max-width: 600px; margin: 0 auto; border: 1px solid #eee; border-radius: 8px; overflow: hidden; }}
-        .header {{ background-color: #343a40; color: #fff; padding: 20px; text-align: center; }}
-        .content {{ padding: 20px; background-color: #f9f9f9; }}
-        .status-badge {{ background-color: {status_color}; color: white; padding: 5px 10px; border-radius: 4px; display: inline-block; font-weight: bold; }}
-        .details {{ margin-top: 20px; border-top: 1px solid #ddd; padding-top: 20px; }}
-        .footer {{ background-color: #eee; padding: 15px; text-align: center; font-size: 12px; color: #777; }}
-        ul {{ list-style: none; padding: 0; }}
-        li {{ border-bottom: 1px solid #eee; padding: 5px 0; }}
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="header">
-            <h2>Shiv Shakti Electrical</h2>
-        </div>
-        <div class="content">
-            <h3>Hello {order.user.username},</h3>
-            <p>Your order <strong>#{order.id}</strong> status has been updated.</p>
-            
-            <p>Current Status: <span class="status-badge">{order.status}</span></p>
-            
-            <div class="details">
-                <h4>Order Details:</h4>
-                <p><strong>Total Amount:</strong> ₹{order.grand_total}</p>
-                <p><strong>Delivery Charge:</strong> ₹{order.delivery_charge} 
-                   <small>({'Confirmed' if order.final_price else 'Estimated'})</small>
-                </p>
-                
-                <h4>Items:</h4>
-                <ul>
-    """
-    
-    for item in order.items.all():
-        html_content += f"<li>{item.quantity} x {item.product.name} - ₹{item.price}</li>"
-        
-    html_content += f"""
-                </ul>
-            </div>
-            
-            <p><strong>Delivery Address:</strong><br>{order.address}</p>
-            
-            <br>
-            <p>If you have any questions, please contact us at:</p>
-            <p>📞 +91 9977228020<br>✉️ shivshaktielectrical1430@gmail.com</p>
-        </div>
-        <div class="footer">
-            &copy; 2025 Shiv Shakti Electrical. All rights reserved.
-        </div>
-    </div>
-</body>
-</html>
-    """
-    
-    text_content = strip_tags(html_content)
-    
-    try:
-        msg = EmailMultiAlternatives(subject, text_content, email_from, recipient_list)
-        msg.attach_alternative(html_content, "text/html")
-        msg.send()
-        return True
-    except Exception as e:
-        print(f"Error sending order status email: {e}")
-        return False
+    # Redirect to the email_utils module for consistency
+    from .email_utils import send_order_status_email as professional_email
+    return professional_email(order)
 
 from geopy.geocoders import Nominatim
 from geopy.distance import geodesic

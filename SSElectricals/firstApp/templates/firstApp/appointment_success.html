@@ -18,7 +18,7 @@
                 <div class="alert alert-info d-inline-block text-start">
                     <h5 class="alert-heading"><i class="fas fa-file-invoice-dollar me-2"></i>Estimated Charges</h5>
                     <hr>
-                    <p class="mb-1"><strong>Service:</strong> {{ appointment.get_service_type_display }}</p>
+                    <p class="mb-1"><strong>Service:</strong> {{ appointment.service_name }}</p>
                     <p class="mb-1"><strong>Area:</strong> {{ appointment.area }}</p>
                     <hr>
                     <p class="mb-1"><strong>Visiting Charge:</strong> ₹{{ appointment.visiting_charge|floatformat:0 }}

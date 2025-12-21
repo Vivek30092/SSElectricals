@@ -167,10 +167,19 @@ class CheckoutForm(forms.Form):
 
 class AppointmentForm(forms.ModelForm):
     other_area = forms.CharField(required=False, widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Enter your area name', 'id': 'id_other_area', 'style': 'display:none;'}))
+    
+    # New: Dynamic service selection from database
+    service = forms.ModelChoiceField(
+        queryset=None,  # Set dynamically in __init__
+        empty_label="-- Select a Service --",
+        widget=forms.Select(attrs={'class': 'form-select', 'id': 'id_service'}),
+        required=True,
+        help_text="Select the service you need"
+    )
 
     class Meta:
         model = Appointment
-        fields = ['customer_name', 'phone', 'email', 'pincode', 'house_number', 'address_line1', 'address_line2', 'landmark', 'city', 'area', 'service_type', 'date', 'time', 'problem_description', 'visiting_charge']
+        fields = ['customer_name', 'phone', 'email', 'pincode', 'house_number', 'address_line1', 'address_line2', 'landmark', 'city', 'area', 'service', 'date', 'time', 'problem_description', 'visiting_charge', 'distance_km']
         widgets = {
             'customer_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Full Name'}),
             'phone': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '10-digit Phone Number'}),
@@ -182,11 +191,11 @@ class AppointmentForm(forms.ModelForm):
             'landmark': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Near Landmark (Optional)', 'id': 'id_landmark'}),
             'city': forms.Select(attrs={'class': 'form-select', 'readonly': 'readonly'}),
             'area': forms.Select(choices=Appointment.AREA_CHOICES, attrs={'class': 'form-select', 'id': 'id_area', 'onchange': 'toggleOtherArea(this)'}),
-            'service_type': forms.Select(attrs={'class': 'form-select'}),
             'date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
             'time': forms.TimeInput(attrs={'class': 'form-control', 'type': 'time', 'min': '09:00', 'max': '20:00'}),
             'problem_description': forms.Textarea(attrs={'class': 'form-control', 'rows': 4, 'placeholder': 'Describe the issue...'}),
             'visiting_charge': forms.HiddenInput(),
+            'distance_km': forms.HiddenInput(),
         }
 
     def __init__(self, *args, **kwargs):
@@ -199,6 +208,10 @@ class AppointmentForm(forms.ModelForm):
         self.fields['city'].disabled = True 
         # Manually set choices for area since we removed them from model
         self.fields['area'].widget.choices = Appointment.AREA_CHOICES
+        
+        # Dynamic service selection - only show active services
+        from .models import ServiceType
+        self.fields['service'].queryset = ServiceType.objects.filter(is_active=True).order_by('display_order', 'name')
 
     def clean_city(self):
         return 'Indore'
@@ -226,7 +239,18 @@ class AppointmentForm(forms.ModelForm):
             else:
                 cleaned_data['area'] = other_area
         
+        # Calculate visiting charge based on service and distance
+        service = cleaned_data.get('service')
+        distance_km = cleaned_data.get('distance_km')
+        
+        if service:
+            charge, is_confirmed = service.get_charge_for_distance(float(distance_km) if distance_km else None)
+            if charge:
+                cleaned_data['visiting_charge'] = charge
+            cleaned_data['pricing_confirmed'] = is_confirmed
+        
         return cleaned_data
+
 
 class AdminAppointmentForm(forms.ModelForm):
     class Meta:

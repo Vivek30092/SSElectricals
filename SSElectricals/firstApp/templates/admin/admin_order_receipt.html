@@ -348,11 +348,18 @@
                         <p><strong>GSTIN:</strong> </p>
                     </div>
                     <div class="header-right">
-                        <div
-                            style="width: 60px; height: 60px; background: #f0f0f0; display: flex; align-items: center; justify-content: center; font-size: 8px; border: 1px solid #ddd;">
-                            ONLINE<br>ORDER
-                        </div>
+                        {% if order.receipt_qr_code %}
+                        <!-- Receipt QR Code if available -->
+                        <img src="{{ order.receipt_qr_code.url }}" alt="Receipt QR"
+                            style="width: 60px; height: 60px; border: 1px solid #ddd; padding: 2px;">
+                        {% else %}
+                        <!-- Shop Logo -->
+                        <img src="{% static 'images/logo.png' %}" alt="Shop Logo"
+                            style="width: 60px; height: 60px; object-fit: contain;"
+                            onerror="this.outerHTML='<div style=&quot;width: 60px; height: 60px; background: #ffc107; display: flex; align-items: center; justify-content: center; font-size: 28px; border-radius: 8px;&quot;>⚡</div>'">
+                        {% endif %}
                     </div>
+
                 </div>
 
                 <!-- Receipt Info -->
@@ -360,10 +367,7 @@
                     <div>
                         <h2>INVOICE / RECEIPT</h2>
                         <p><strong>Order #:</strong> #{{ order.id }}</p>
-                        <p><strong>Date:</strong> {{ order.created_at|date:"d-M-Y, h:i A" }}</p>
-                        <p><strong>Status:</strong>
-                            <span class="status-badge status-{{ order.status|lower }}">{{ order.status }}</span>
-                        </p>
+                        <p><strong>Date:</strong> {{ order.created_at|date:"d-M-Y" }}</p>
                     </div>
                     <div>
                         <h3 style="font-size: 14px; margin-bottom: 6px; color: #1a1a2e;">BILL TO:</h3>
@@ -394,8 +398,8 @@
                             <td>{{ forloop.counter }}</td>
                             <td>
                                 <strong>{{ item.product.name }}</strong>
-                                {% if item.product.brand %}<br><small style="color: #666;">{{ item.product.brand
-                                    }}</small>{% endif %}
+                                {% if item.product.brand %}<br><small style="color: #666;">{{ item.product.brand }}
+                                </small>{% endif %}
                             </td>
                             <td class="text-end">{{ item.quantity }}</td>
                             <td class="text-end">₹{{ item.calculated_mrp }}</td>
@@ -428,56 +432,55 @@
                             <td>GRAND TOTAL:</td>
                             <td class="text-end">₹{{ grand_total }}</td>
                         </tr>
+                        <tr style="background: #e7f3ff;">
+                            <td><strong>💳 Payment Method:</strong></td>
+                            <td class="text-end"><strong>{{ order.get_payment_method_display }}</strong></td>
+                        </tr>
                     </table>
                 </div>
 
+
+
             </div> <!-- end main-content -->
 
-            <!-- Grand Total & Signature Section -->
-            <div style="border-top: 2px solid #1a1a2e; padding-top: 15px; margin-top: 10px; margin-bottom: 15px;">
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <div style="flex: 1;">
-                        <div style="font-size: 18px; font-weight: bold; color: #1a1a2e;">
-                            PAID AMOUNT: <span style="color: #050506;">₹{{ grand_total }}</span>
-                        </div>
-                        <p style="font-size: 10px; color: #666; margin-top: 5px;">
-                            {% if order.status == 'Pending' %}
-                            ⏳ Payment will be collected upon delivery
-                            {% else %}
-                            ✅ Payment collected on {{ order.updated_at|date:"d-M-Y" }}
-                            {% endif %}
-                        </p>
-                    </div>
-                    <div style="text-align: right;">
-                        <p style="font-size: 11px; margin-bottom: 5px;"><strong>Authorized Signature:</strong></p>
-                        <div style="width: 200px; border-bottom: 1px solid #333; margin-top: 30px;"></div>
-                    </div>
+            <!-- Signature Section -->
+            <!-- <div style="border-top: 2px solid #1a1a2e; padding-top: 15px; margin-top: 10px; margin-bottom: 15px;"> -->
+            <div style="text-align: right;">
+                <p style="font-size: 11px; margin-bottom: 5px;"><strong>Authorized Signature:</strong></p>
+                <div style="width: 200px; border-bottom: 1px solid #333; margin-top: 30px; margin-left: auto;">
                 </div>
-            </div>
-
-            <!-- Footer with Google QR -->
-            <div class="footer">
-                <div class="footer-content">
-                    <div style="flex: 1;">
-                        <p class="thank-you">⚡ Thank You for Shopping! ⚡</p>
-                        <p style="color: #666;">
-                            Online Order - Computer Generated Receipt<br>
-                            Contact: +91-9993149226
-                        </p>
-                    </div>
-                    <div class="google-qr-box">
-                        <h4>Review us on Google!</h4>
-                        <img src="/media/data/ask_for_review.png" alt="Google Reviews" class="google-qr"
-                            onerror="this.style.display='none'">
-                        <p style="font-size: 9px; color: #666; margin-top: 2px;">Scan to review</p>
-                    </div>
-                </div>
-                <p style="font-size: 9px; color: #999; margin-top: 10px;">
-                    This is a computer-generated invoice and does not require a physical signature.<br>
-                    For any queries, please contact us at +91-9993149226
-                </p>
             </div>
         </div>
+
+
+        <!-- Footer -->
+        <div class="footer">
+            <div style="display: flex; justify-content: space-between; align-items: flex-end;">
+                <!-- Thank You Message (bottom left/center) -->
+                <div style="flex: 1; text-align: center;">
+                    <p class="thank-you">⚡ Thank You for Shopping! ⚡</p>
+                    <p style="color: #666; font-size: 11px;">
+                        Online Order - Computer Generated Receipt<br>
+                        Contact: +91-9993149226
+                    </p>
+                    <p style="font-size: 9px; color: #999; margin-top: 10px;">
+                        This is a computer-generated invoice and does not require a physical signature.<br>
+                        For any queries, please contact us at +91-9993149226
+                    </p>
+                </div>
+
+                <!-- QR Code Section (bottom right) -->
+                <div class="google-qr-box" style="text-align: center; margin-left: 20px;">
+                    <h4>Review us on Google!</h4>
+                    <img src="/media/data/ask_for_review.png" alt="Google Reviews" class="google-qr"
+                        onerror="this.style.display='none'">
+                    <p style="font-size: 9px; color: #666; margin-top: 2px;">Scan to review</p>
+                </div>
+            </div>
+        </div>
+
+
+    </div>
     </div>
 </body>
 

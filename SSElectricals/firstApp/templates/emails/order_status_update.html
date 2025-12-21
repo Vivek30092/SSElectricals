@@ -11,18 +11,59 @@
     <p>We're writing to update you about your recent order.</p>
 </div>
 
+<!-- Status Display with Icon -->
+{% if order.status == 'Pending Enquiry' %}
+<div
+    style="background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%); padding: 20px; border-radius: 8px; text-align: center; margin: 20px 0;">
+    <h2 style="color: #ffffff; margin: 0;">📋 Enquiry Received!</h2>
+    <p style="color: #ffffff; opacity: 0.95; margin: 10px 0 0 0;">We've received your product enquiry. Our team will
+        contact you shortly with pricing.</p>
+</div>
+{% elif order.status == 'Price Shared' %}
+<div
+    style="background: linear-gradient(135deg, #1abc9c 0%, #16a085 100%); padding: 20px; border-radius: 8px; text-align: center; margin: 20px 0;">
+    <h2 style="color: #ffffff; margin: 0;">💰 Price Quote Ready!</h2>
+    <p style="color: #ffffff; opacity: 0.95; margin: 10px 0 0 0;">We've shared the pricing details. Please confirm to
+        proceed with your order.</p>
+</div>
+{% elif order.status == 'Pending' %}
+<div
+    style="background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%); padding: 20px; border-radius: 8px; text-align: center; margin: 20px 0;">
+    <h2 style="color: #ffffff; margin: 0;">⏳ Order Received</h2>
+    <p style="color: #ffffff; opacity: 0.95; margin: 10px 0 0 0;">Your order is being reviewed by our team.</p>
+</div>
+{% elif order.status == 'Confirmed' %}
+<div
+    style="background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%); padding: 20px; border-radius: 8px; text-align: center; margin: 20px 0;">
+    <h2 style="color: #ffffff; margin: 0;">✓ Order Confirmed!</h2>
+    <p style="color: #ffffff; opacity: 0.95; margin: 10px 0 0 0;">Great news! Your order has been confirmed.</p>
+</div>
+{% elif order.status == 'Out for Delivery' %}
+<div
+    style="background: linear-gradient(135deg, #3498db 0%, #2980b9 100%); padding: 20px; border-radius: 8px; text-align: center; margin: 20px 0;">
+    <h2 style="color: #ffffff; margin: 0;">🚚 Out for Delivery!</h2>
+    <p style="color: #ffffff; opacity: 0.95; margin: 10px 0 0 0;">Your order is on its way to you.</p>
+</div>
+{% elif order.status == 'Cancelled' %}
+<div
+    style="background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%); padding: 20px; border-radius: 8px; text-align: center; margin: 20px 0;">
+    <h2 style="color: #ffffff; margin: 0;">✕ Order Cancelled</h2>
+    <p style="color: #ffffff; opacity: 0.95; margin: 10px 0 0 0;">Your order has been cancelled.</p>
+</div>
+{% endif %}
+
 <div class="info-box">
     <h3>Order Information</h3>
     <div class="info-row">
         <span class="info-label">Order ID:</span>
-        <span class="info-value">#{{ order.id }}</span>
+        <span class="info-value"><strong>#{{ order.id }}</strong></span>
     </div>
     <div class="info-row">
         <span class="info-label">Order Date:</span>
         <span class="info-value">{{ order.created_at|date:"F d, Y" }}</span>
     </div>
     <div class="info-row">
-        <span class="info-label">Status:</span>
+        <span class="info-label">Current Status:</span>
         <span class="info-value">
             <span class="status-badge status-{{ order.status|lower }}">
                 {{ status }}
@@ -31,92 +72,137 @@
     </div>
 </div>
 
-{% if order.status == 'Pending' %}
+{% if order.status == 'Pending Enquiry' %}
+<div class="content-block">
+    <p>Thank you for your product enquiry! Our team has received your request and will contact you soon.</p>
+    <p><strong>What happens next?</strong></p>
+    <ul style="line-height: 2;">
+        <li>✓ Our team will review your selected products</li>
+        <li>✓ We'll call/message you with the best pricing</li>
+        <li>✓ Confirm to proceed and pay on delivery</li>
+    </ul>
+</div>
+{% elif order.status == 'Price Shared' %}
+<div class="content-block">
+    <p>Great news! We've reviewed your enquiry and shared the pricing details.</p>
+    {% if order.pricing_confirmed and order.grand_total %}
+    <div style="background: #e8f5e9; padding: 15px; border-radius: 8px; margin: 15px 0; text-align: center;">
+        <h3 style="color: #2e7d32; margin: 0 0 10px 0;">Your Quote</h3>
+        <p style="font-size: 24px; color: #1b5e20; margin: 0; font-weight: bold;">₹{{ order.grand_total }}</p>
+        <p style="color: #4caf50; margin: 5px 0 0 0; font-size: 14px;">Including delivery charges</p>
+    </div>
+    {% endif %}
+    <p>To proceed with your order, please confirm with our team or contact us.</p>
+</div>
+{% elif order.status == 'Pending' %}
 <div class="content-block">
     <p>Your order has been received and is currently being processed. We'll notify you once it's confirmed by our team.
     </p>
+    <p><strong>What happens next?</strong></p>
+    <ul style="line-height: 2;">
+        <li>✓ Our team will review your order</li>
+        <li>✓ We'll verify product availability</li>
+        <li>✓ You'll receive a confirmation email shortly</li>
+    </ul>
 </div>
 {% elif order.status == 'Confirmed' %}
 <div class="content-block">
     <p>Great news! Your order has been confirmed and will be prepared for delivery soon.</p>
-    <p><strong>Estimated Delivery:</strong> We aim to deliver within 2-3 business days.</p>
+    <p><strong>What happens next?</strong></p>
+    <ul style="line-height: 2;">
+        <li>✓ Your order is being prepared</li>
+        <li>✓ Estimated delivery: 2-3 business days</li>
+        <li>✓ You'll receive an OTP when out for delivery</li>
+    </ul>
 </div>
 {% elif order.status == 'Out for Delivery' %}
 <div class="content-block">
     <p>Your order is out for delivery! Our delivery partner will reach you soon.</p>
-    <p><strong>Note:</strong> You will receive a separate email with your delivery OTP. Please keep it ready for
-        verification.</p>
-</div>
-{% elif order.status == 'Delivered' %}
-<div class="content-block">
-    <p>Your order has been successfully delivered! We hope you're satisfied with your purchase.</p>
-</div>
-
-<div style="text-align: center;">
-    <a href="{{ business.website }}/orders/{{ order.id }}/review/" class="btn">
-        Rate Your Products
-    </a>
+    <div class="alert-box" style="background-color: #e3f2fd; border-left: 4px solid #2196f3; color: #1565c0;">
+        <strong>📋 Important:</strong> You will receive a separate email with your delivery OTP. Please keep it ready
+        for verification when your order arrives.
+    </div>
 </div>
 {% elif order.status == 'Cancelled' %}
-<div class="alert-box">
-    <strong>Order Cancelled</strong><br>
-    {% if order.cancellation_reason %}
-    Reason: {{ order.cancellation_reason }}
-    {% endif %}
-</div>
 <div class="content-block">
-    <p>If you have any questions about this cancellation, please feel free to contact us.</p>
+    {% if order.cancellation_reason %}
+    <p><strong>Cancellation Reason:</strong> {{ order.cancellation_reason }}</p>
+    {% endif %}
+    <p>If you have any questions about this cancellation or would like to place a new order, please feel free to contact
+        us.</p>
 </div>
 {% endif %}
 
+<!-- Order Details Table -->
 <div class="info-box">
     <h3>Order Summary</h3>
-    <table class="item-table">
+    <table class="item-table" style="width: 100%; border-collapse: collapse;">
         <thead>
-            <tr>
-                <th>Product</th>
-                <th>Qty</th>
-                <th>Price</th>
+            <tr style="background-color: #f7fafc;">
+                <th style="padding: 12px; text-align: left; border-bottom: 2px solid #e2e8f0; color: #4a5568;">Product
+                </th>
+                <th style="padding: 12px; text-align: center; border-bottom: 2px solid #e2e8f0; color: #4a5568;">Qty
+                </th>
+                <th style="padding: 12px; text-align: right; border-bottom: 2px solid #e2e8f0; color: #4a5568;">Price
+                </th>
             </tr>
         </thead>
         <tbody>
             {% for item in items %}
             <tr>
-                <td>{{ item.product.name }}</td>
-                <td>{{ item.quantity }}</td>
-                <td>₹{{ item.price }}</td>
+                <td style="padding: 12px; border-bottom: 1px solid #e2e8f0;">{{ item.product.name }}</td>
+                <td style="padding: 12px; text-align: center; border-bottom: 1px solid #e2e8f0;">{{ item.quantity }}
+                </td>
+                <td style="padding: 12px; text-align: right; border-bottom: 1px solid #e2e8f0;">₹{{ item.price }}</td>
             </tr>
             {% endfor %}
         </tbody>
     </table>
 
-    <div class="info-row">
-        <span class="info-label">Subtotal:</span>
-        <span class="info-value">₹{{ order.total_price }}</span>
-    </div>
-    <div class="info-row">
-        <span class="info-label">Delivery Charge:</span>
-        <span class="info-value">
-            {% if order.free_delivery_applied %}
-            <span style="text-decoration: line-through; color: #999;">₹{{ order.delivery_charge }}</span>
-            <span style="color: #27ae60; font-weight: bold;"> FREE</span>
-            {% else %}
-            ₹{{ order.delivery_charge }}
-            {% endif %}
-        </span>
-    </div>
-    <div class="info-row" style="font-size: 18px; font-weight: bold;">
-        <span class="info-label">Grand Total:</span>
-        <span class="info-value">₹{{ order.grand_total }}</span>
+    <div style="margin-top: 15px; padding-top: 15px; border-top: 2px solid #e2e8f0;">
+        <div class="info-row">
+            <span class="info-label">Subtotal:</span>
+            <span class="info-value">₹{{ order.total_price }}</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Delivery Charge:</span>
+            <span class="info-value">
+                {% if order.free_delivery_applied %}
+                <span style="text-decoration: line-through; color: #999;">₹{{ order.delivery_charge }}</span>
+                <span style="color: #27ae60; font-weight: bold;"> FREE</span>
+                {% else %}
+                ₹{{ order.delivery_charge }}
+                {% endif %}
+            </span>
+        </div>
+        <div class="info-row"
+            style="font-size: 18px; font-weight: bold; margin-top: 10px; padding-top: 10px; border-top: 1px dashed #e2e8f0;">
+            <span class="info-label">Grand Total:</span>
+            <span class="info-value" style="color: #667eea;">₹{{ order.grand_total }}</span>
+        </div>
     </div>
 </div>
 
+<!-- Delivery Address -->
 <div class="content-block">
-    <p><strong>Delivery Address:</strong><br>
-        {{ order.address }}</p>
+    <div style="background-color: #f7fafc; padding: 15px; border-radius: 8px;">
+        <h4 style="margin: 0 0 10px 0; color: #4a5568;">📍 Delivery Address</h4>
+        <p style="margin: 0; line-height: 1.6;">{{ order.address }}</p>
+    </div>
 </div>
 
-<div class="content-block">
-    <p>If you have any questions or concerns about your order, please don't hesitate to contact us.</p>
+<!-- Contact Information -->
+<div class="content-block"
+    style="background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%); padding: 20px; border-radius: 8px; text-align: center;">
+    <h4 style="margin: 0 0 15px 0; color: #4a5568;">Need Help?</h4>
+    <p style="margin: 0 0 10px 0;">If you have any questions or concerns about your order, we're here to help!</p>
+    <p style="margin: 0;">
+        📞 <strong>+91 9993149226</strong> &nbsp; | &nbsp;
+        ✉️ <strong>shivshaktielectrical1430@gmail.com</strong>
+    </p>
+</div>
+
+<div class="content-block" style="text-align: center; margin-top: 20px;">
+    <p style="color: #718096;">Thank you for shopping with {{ business.name }}!</p>
 </div>
 {% endblock %}

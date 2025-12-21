@@ -70,12 +70,18 @@
 
                 {% if product.is_in_stock %}
                 <div class="d-flex gap-2 mb-2">
-                    <a href="{% url 'add_to_cart' product.id %}" class="btn btn-primary btn-lg flex-grow-1">
+                    <button type="button" class="btn btn-outline-primary btn-lg flex-grow-1 add-to-cart-btn"
+                        data-product-id="{{ product.id }}" data-product-name="{{ product.name }}">
                         <i class="fas fa-shopping-cart me-2"></i>Add to Cart
-                    </a>
+                    </button>
                     <a href="{% url 'add_to_wishlist' product.id %}" class="btn btn-outline-danger btn-lg"
                         title="Add to Wishlist">
                         <i class="far fa-heart"></i>
+                    </a>
+                </div>
+                <div class="d-grid mb-2">
+                    <a href="{% url 'buy_now' product.id %}" class="btn btn-success btn-lg">
+                        <i class="fas fa-bolt me-2"></i>Enquire Now
                     </a>
                 </div>
                 {% else %}
@@ -88,9 +94,14 @@
                 </div>
                 {% endif %}
 
-                <div class="alert alert-light border mt-3">
-                    <h6 class="alert-heading"><i class="fas fa-info-circle me-1"></i> Purchasing Options</h6>
-                    <p class="mb-0 small">You can buy this product by visiting our shop or enquire online.</p>
+                <div
+                    style="background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 8px; padding: 15px; margin-top: 1rem;">
+                    <h6 style="color: #212529; margin-bottom: 8px;">
+                        <i class="fas fa-info-circle me-1" style="color: #0d6efd;"></i> Purchasing Options
+                    </h6>
+                    <p style="color: #495057; margin-bottom: 0; font-size: 0.875rem;">
+                        You can buy this product by visiting our shop or enquire online.
+                    </p>
                 </div>
 
                 <div class="d-grid gap-2 mt-3">
@@ -218,7 +229,8 @@
                 <div class="border-bottom pb-3 mb-3">
                     <div class="d-flex justify-content-between align-items-center mb-2">
                         <div>
-                            <strong>{% if review.user.first_name %}{{ review.user.first_name }} {{ review.user.last_name }}
+                            <strong>{% if review.user.first_name %}{{ review.user.first_name }} {{ review.user.last_name
+                                }}
                                 {% else %}{{ review.user.username }}{% endif %}</strong>
                             {% if review.order %}
                             <span class="badge bg-success badge-sm ms-2" title="Verified Purchase">✓ Verified
@@ -251,4 +263,97 @@
         </div>
     </div>
 </div>
+
+<!-- Toast Container for Add to Cart Notifications -->
+<div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 1100;">
+    <div id="cartToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true"
+        style="background-color: #ffffff; border: 1px solid rgba(0,0,0,0.1); box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.15);">
+        <div class="toast-header" style="background-color: #198754; color: #ffffff; border-bottom: none;">
+            <i class="fas fa-check-circle me-2"></i>
+            <strong class="me-auto">Added to Cart</strong>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast"></button>
+        </div>
+        <div class="toast-body" style="background-color: #ffffff; color: #212529; padding: 15px;">
+            <span id="toastMessage" style="color: #212529; font-weight: 500;">Product added to cart successfully!</span>
+            <div class="mt-2 d-flex gap-2">
+                <a href="{% url 'view_cart' %}" class="btn btn-sm btn-success">View Cart</a>
+                <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="toast">Continue
+                    Shopping</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // Get all Add to Cart buttons
+        const addToCartBtns = document.querySelectorAll('.add-to-cart-btn');
+
+        addToCartBtns.forEach(btn => {
+            btn.addEventListener('click', function () {
+                const productId = this.dataset.productId;
+                const productName = this.dataset.productName;
+                const originalHTML = this.innerHTML;
+
+                // Show loading state
+                this.disabled = true;
+                this.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Adding...';
+
+                // Send AJAX request
+                fetch('/api/cart/add/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    },
+                    body: JSON.stringify({ product_id: productId })
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        // Reset button
+                        this.disabled = false;
+                        this.innerHTML = originalHTML;
+
+                        if (data.success) {
+                            // Update cart count in navbar
+                            const cartBadge = document.querySelector('.cart-count, #cart-count');
+                            if (cartBadge) {
+                                cartBadge.textContent = data.cart_count;
+                            }
+
+                            // Show toast notification
+                            document.getElementById('toastMessage').textContent = `"${productName}" added to cart!`;
+                            const toast = new bootstrap.Toast(document.getElementById('cartToast'));
+                            toast.show();
+                        } else {
+                            // Show error alert
+                            alert(data.message || 'Failed to add product to cart');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        this.disabled = false;
+                        this.innerHTML = originalHTML;
+                        alert('An error occurred. Please try again.');
+                    });
+            });
+        });
+
+        // Helper function to get CSRF token
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+    });
+</script>
 {% endblock %}

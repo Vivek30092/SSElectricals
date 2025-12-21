@@ -883,49 +883,14 @@ def admin_appointment_update(request, pk):
         # Send Email Notification if status changed
         if old_status != appointment.status and appointment.email:
             try:
-                subject = f"Appointment Update: {appointment.service_type} - {appointment.status}"
+                from .email_utils import send_appointment_status_email, send_appointment_complete_email
                 
-                # Interactive HTML Email
-                html_message = f"""
-                <!DOCTYPE html>
-                <html>
-                <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-                    <div style="max-width: 600px; margin: 0 auto; border: 1px solid #ddd; border-radius: 8px; overflow: hidden;">
-                        <div style="background-color: #0d6efd; color: white; padding: 20px; text-align: center;">
-                            <h2 style="margin: 0;">Shiv Shakti Electrical</h2>
-                            <p style="margin: 5px 0 0;">Service Update</p>
-                        </div>
-                        <div style="padding: 20px;">
-                            <p>Dear {appointment.customer_name},</p>
-                            <p>The status of your appointment for <strong>{appointment.service_type}</strong> has been updated.</p>
-                            
-                            <div style="background-color: #f8f9fa; padding: 15px; border-left: 4px solid #0d6efd; margin: 20px 0;">
-                                <p style="margin: 0;"><strong>New Status:</strong> <span style="color: #0d6efd; font-size: 18px; font-weight: bold;">{appointment.status}</span></p>
-                                <p style="margin: 10px 0 0;"><strong>Date:</strong> {appointment.date} at {appointment.time}</p>
-                                <p style="margin: 5px 0 0;"><strong>Total Charge:</strong> ₹{appointment.total_charge}</p>
-                            </div>
-                            
-                            <p>If you have any questions, please contact us.</p>
-                            <div style="text-align: center; margin-top: 30px;">
-                                <a href="http://127.0.0.1:8000/contact/" style="background-color: #0d6efd; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold;">Contact Support</a>
-                            </div>
-                        </div>
-                        <div style="background-color: #eee; padding: 15px; text-align: center; font-size: 12px; color: #777;">
-                            &copy; {timezone.now().year} Shiv Shakti Electrical. All rights reserved.
-                        </div>
-                    </div>
-                </body>
-                </html>
-                """
-                
-                send_mail(
-                    subject=subject,
-                    message=strip_tags(html_message), # Fallback text
-                    from_email=settings.DEFAULT_FROM_EMAIL,
-                    recipient_list=[appointment.email],
-                    html_message=html_message,
-                    fail_silently=True
-                )
+                if appointment.status == 'Completed':
+                    # Send completion email with review request
+                    send_appointment_complete_email(appointment)
+                else:
+                    # Send status update email
+                    send_appointment_status_email(appointment)
             except Exception as e:
                 print(f"Error sending appointment email: {e}")
 
@@ -1230,24 +1195,93 @@ def admin_order_detail(request, pk):
     order = get_object_or_404(Order, pk=pk)
     
     if request.method == 'POST':
+        # Handle Update Item Prices (for enquiry-based orders)
+        if 'update_item_prices' in request.POST:
+            from decimal import Decimal
+            
+            # Update individual item prices
+            subtotal = Decimal('0.00')
+            for item in order.items.all():
+                price_key = f'item_price_{item.id}'
+                if price_key in request.POST:
+                    try:
+                        new_price = Decimal(request.POST.get(price_key, '0'))
+                        item.price = new_price
+                        item.save()
+                        subtotal += new_price * item.quantity
+                    except:
+                        pass
+            
+            # Update delivery charge
+            delivery_charge = request.POST.get('delivery_charge', '0')
+            try:
+                order.delivery_charge = Decimal(delivery_charge)
+            except:
+                pass
+            
+            # Update total price
+            order.total_price = subtotal
+            order.save()
+            
+            messages.success(request, "Item prices and delivery charge updated successfully.")
+            return redirect('admin_order_detail', pk=pk)
+        
         # Update Status
         if 'update_status' in request.POST:
+            from decimal import Decimal
+            
             new_status = request.POST.get('status')
+            confirm_pricing = request.POST.get('confirm_pricing') == '1'
             
             # Capture old status to detect change
             old_status = order.status
             
+            # Handle pricing confirmation (for enquiry orders)
+            if confirm_pricing and order.order_type == 'enquiry' and not order.pricing_confirmed:
+                # Mark pricing as confirmed
+                order.pricing_confirmed = True
+                
+                # Calculate final price
+                subtotal = sum(item.price * item.quantity for item in order.items.all())
+                order.total_price = subtotal
+                order.final_price = subtotal + order.delivery_charge
+                order.delivery_charge_status = 'CONFIRMED'
+                
+                # NOW deduct stock (was deferred until pricing confirmed)
+                for item in order.items.all():
+                    if item.product.stock_quantity >= item.quantity:
+                        item.product.stock_quantity -= item.quantity
+                        item.product.save()
+                    else:
+                        messages.warning(request, f"Insufficient stock for {item.product.name}. Available: {item.product.stock_quantity}")
+                
+                # Check free delivery eligibility
+                if order.user.free_delivery_used_count == 0 and order.distance_km and order.distance_km <= 3:
+                    order.free_delivery_applied = True
+                    order.delivery_charge = Decimal('0.00')
+                    order.final_price = order.total_price
+                    order.user.free_delivery_used_count += 1
+                    order.user.save()
+                    messages.info(request, "Free delivery applied (first order within 3 KM).")
+                
+                messages.success(request, "Pricing confirmed! Stock has been deducted.")
+            
             order.status = new_status
             
-            # If confirmed, maybe generate OTP? Or admin manually does it.
-            # Requirement says: "Admin contacts user and finalizes price."
+            # Handle status-specific actions
             if new_status == 'Confirmed':
                 final_price = request.POST.get('final_price')
-                delivery_charge = request.POST.get('delivery_charge')
+                delivery_charge = request.POST.get('delivery_charge_status')
                 if final_price:
-                    order.final_price = final_price
+                    try:
+                        order.final_price = Decimal(final_price)
+                    except:
+                        pass
                 if delivery_charge:
-                    order.delivery_charge = delivery_charge
+                    try:
+                        order.delivery_charge = Decimal(delivery_charge)
+                    except:
+                        pass
                 
                 # Generate receipt number when order is confirmed
                 if not order.receipt_number:
@@ -1273,7 +1307,7 @@ def admin_order_detail(request, pk):
                 
                 messages.info(request, f"Delivery OTP generated and sent: {otp}")
             
-            # Send status update email for ALL status changes (including Confirmed, Out for Delivery, etc)
+            # Send status update email for status changes
             if new_status != old_status:
                 from .email_utils import send_order_status_email, send_order_delivered_email
                 
@@ -1287,7 +1321,10 @@ def admin_order_detail(request, pk):
                 elif new_status == 'Out for Delivery':
                     # Already sent OTP email above
                     pass
-                else:
+                elif new_status == 'Cancelled':
+                    send_order_status_email(order)
+                elif new_status in ['Confirmed', 'Price Shared']:
+                    # Send confirmation/price email
                     send_order_status_email(order)
 
             order.save()
@@ -2196,3 +2233,466 @@ def admin_bulk_create_prices(request):
         )
     
     return redirect('admin_service_prices')
+
+
+# ------------------------------------------------------------------
+# Service Type Management (Dynamic Services)
+# ------------------------------------------------------------------
+
+@staff_member_required
+def admin_service_types(request):
+    """List and manage service types with distance-based pricing."""
+    from .models import ServiceType
+    
+    service_types = ServiceType.objects.all().order_by('display_order', 'name')
+    
+    context = {
+        'service_types': service_types,
+        'total_active': service_types.filter(is_active=True).count(),
+        'total_inactive': service_types.filter(is_active=False).count(),
+        'total_fixed': service_types.filter(pricing_mode='fixed').count(),
+        'total_confirm': service_types.filter(pricing_mode='confirm').count(),
+    }
+    return render(request, 'admin/admin_service_types.html', context)
+
+
+@staff_member_required
+def admin_service_type_save(request):
+    """Add or update a service type with distance-based pricing."""
+    from .models import ServiceType
+    from decimal import Decimal
+    
+    if request.method == 'POST':
+        service_id = request.POST.get('id')
+        name = request.POST.get('name', '').strip()
+        description = request.POST.get('description', '').strip()
+        icon = request.POST.get('icon', 'fa-tools').strip()
+        display_order = int(request.POST.get('display_order', 0))
+        is_active = request.POST.get('is_active') == 'on'
+        pricing_mode = request.POST.get('pricing_mode', 'fixed')
+        
+        # Parse pricing fields
+        default_charge = Decimal(request.POST.get('default_charge', '300'))
+        
+        def parse_decimal(value):
+            if value and value.strip():
+                return Decimal(value.strip())
+            return None
+        
+        charge_within_500m = parse_decimal(request.POST.get('charge_within_500m'))
+        charge_within_1km = parse_decimal(request.POST.get('charge_within_1km'))
+        charge_within_3km = parse_decimal(request.POST.get('charge_within_3km'))
+        charge_within_5km = parse_decimal(request.POST.get('charge_within_5km'))
+        charge_within_7km = parse_decimal(request.POST.get('charge_within_7km'))
+        
+        if not name:
+            messages.error(request, 'Service name is required.')
+            return redirect('admin_service_types')
+        
+        try:
+            if service_id:
+                # Update existing
+                service = ServiceType.objects.get(id=service_id)
+                service.name = name
+                service.description = description
+                service.icon = icon
+                service.display_order = display_order
+                service.is_active = is_active
+                service.pricing_mode = pricing_mode
+                service.default_charge = default_charge
+                service.charge_within_500m = charge_within_500m
+                service.charge_within_1km = charge_within_1km
+                service.charge_within_3km = charge_within_3km
+                service.charge_within_5km = charge_within_5km
+                service.charge_within_7km = charge_within_7km
+                service.save()
+                messages.success(request, f'Service "{name}" updated successfully.')
+            else:
+                # Create new
+                ServiceType.objects.create(
+                    name=name,
+                    description=description,
+                    icon=icon,
+                    display_order=display_order,
+                    is_active=is_active,
+                    pricing_mode=pricing_mode,
+                    default_charge=default_charge,
+                    charge_within_500m=charge_within_500m,
+                    charge_within_1km=charge_within_1km,
+                    charge_within_3km=charge_within_3km,
+                    charge_within_5km=charge_within_5km,
+                    charge_within_7km=charge_within_7km,
+                )
+                messages.success(request, f'Service "{name}" created successfully.')
+        except Exception as e:
+            messages.error(request, f'Error: {str(e)}')
+    
+    return redirect('admin_service_types')
+
+
+@staff_member_required
+def admin_service_type_delete(request, pk):
+    """Delete a service type."""
+    from .models import ServiceType
+    
+    try:
+        service = ServiceType.objects.get(id=pk)
+        name = service.name
+        service.delete()
+        messages.success(request, f'Service "{name}" deleted successfully.')
+    except ServiceType.DoesNotExist:
+        messages.error(request, 'Service type not found.')
+    
+    return redirect('admin_service_types')
+
+
+# ------------------------------------------------------------------
+# Distance Zone Management (Distance-Based Pricing)
+# ------------------------------------------------------------------
+
+@staff_member_required
+def admin_distance_zones(request):
+    """List and manage distance zones for pricing."""
+    from .models import DistanceZone
+    
+    zones = DistanceZone.objects.all().order_by('min_distance_km')
+    zone_choices = DistanceZone.ZONE_CODES
+    
+    context = {
+        'zones': zones,
+        'zone_choices': zone_choices,
+    }
+    return render(request, 'admin/admin_distance_zones.html', context)
+
+
+@staff_member_required
+def admin_distance_zone_save(request):
+    """Add or update a distance zone."""
+    from .models import DistanceZone
+    
+    if request.method == 'POST':
+        zone_id = request.POST.get('id')
+        code = request.POST.get('code', '').strip()
+        min_distance = request.POST.get('min_distance_km', 0)
+        max_distance = request.POST.get('max_distance_km', 999)
+        base_charge = request.POST.get('base_charge', 200)
+        is_active = request.POST.get('is_active') == 'on'
+        requires_confirmation = request.POST.get('requires_confirmation') == 'on'
+        notes = request.POST.get('notes', '').strip()
+        
+        try:
+            if zone_id:
+                # Update existing
+                zone = DistanceZone.objects.get(id=zone_id)
+                zone.code = code
+                zone.min_distance_km = min_distance
+                zone.max_distance_km = max_distance
+                zone.base_charge = base_charge
+                zone.is_active = is_active
+                zone.requires_confirmation = requires_confirmation
+                zone.notes = notes
+                zone.save()
+                messages.success(request, f'Distance zone updated successfully.')
+            else:
+                # Create new
+                DistanceZone.objects.create(
+                    code=code,
+                    min_distance_km=min_distance,
+                    max_distance_km=max_distance,
+                    base_charge=base_charge,
+                    is_active=is_active,
+                    requires_confirmation=requires_confirmation,
+                    notes=notes
+                )
+                messages.success(request, f'Distance zone created successfully.')
+        except Exception as e:
+            messages.error(request, f'Error: {str(e)}')
+    
+    return redirect('admin_distance_zones')
+
+
+@staff_member_required
+def admin_distance_zone_delete(request, pk):
+    """Delete a distance zone."""
+    from .models import DistanceZone
+    
+    try:
+        zone = DistanceZone.objects.get(id=pk)
+        zone.delete()
+        messages.success(request, 'Distance zone deleted successfully.')
+    except DistanceZone.DoesNotExist:
+        messages.error(request, 'Distance zone not found.')
+    
+    return redirect('admin_distance_zones')
+
+
+@staff_member_required
+def admin_setup_default_distance_zones(request):
+    """Create default distance zones."""
+    from .models import DistanceZone
+    
+    if request.method == 'POST':
+        default_zones = [
+            {'code': 'VERY_NEAR', 'min': 0, 'max': 0.5, 'charge': 150, 'confirm': False, 'notes': ''},
+            {'code': 'NEAR', 'min': 0.5, 'max': 3, 'charge': 200, 'confirm': False, 'notes': ''},
+            {'code': 'MEDIUM', 'min': 3, 'max': 5, 'charge': 250, 'confirm': False, 'notes': ''},
+            {'code': 'FAR', 'min': 5, 'max': 7, 'charge': 300, 'confirm': False, 'notes': ''},
+            {'code': 'VERY_FAR', 'min': 7, 'max': 999, 'charge': 0, 'confirm': True, 'notes': 'Price will be confirmed by staff'},
+        ]
+        
+        created_count = 0
+        for zone_data in default_zones:
+            _, created = DistanceZone.objects.get_or_create(
+                code=zone_data['code'],
+                defaults={
+                    'min_distance_km': zone_data['min'],
+                    'max_distance_km': zone_data['max'],
+                    'base_charge': zone_data['charge'],
+                    'requires_confirmation': zone_data['confirm'],
+                    'notes': zone_data['notes'],
+                    'is_active': True,
+                }
+            )
+            if created:
+                created_count += 1
+        
+        messages.success(request, f'Created {created_count} default distance zones.')
+    
+    return redirect('admin_distance_zones')
+
+
+# ------------------------------------------------------------------
+# Area Region Management (Cities in Regions)
+# ------------------------------------------------------------------
+
+@staff_member_required
+def admin_area_regions(request):
+    """List and manage area regions."""
+    from .models import AreaRegion
+    
+    areas = AreaRegion.objects.all().order_by('region', 'area_name')
+    
+    # Group by region
+    areas_by_region = {}
+    for area in areas:
+        region_display = area.get_region_display()
+        if region_display not in areas_by_region:
+            areas_by_region[region_display] = []
+        areas_by_region[region_display].append(area)
+    
+    context = {
+        'areas': areas,
+        'areas_by_region': areas_by_region,
+        'region_choices': AreaRegion.REGION_CHOICES,
+        'total_areas': areas.count(),
+    }
+    return render(request, 'admin/admin_area_regions.html', context)
+
+
+@staff_member_required
+def admin_area_region_save(request):
+    """Add or update an area region."""
+    from .models import AreaRegion
+    
+    if request.method == 'POST':
+        area_id = request.POST.get('id')
+        area_name = request.POST.get('area_name', '').strip()
+        region = request.POST.get('region', '').strip()
+        pincode = request.POST.get('pincode', '').strip()
+        is_active = request.POST.get('is_active') == 'on'
+        
+        if not area_name or not region:
+            messages.error(request, 'Area name and region are required.')
+            return redirect('admin_area_regions')
+        
+        try:
+            if area_id:
+                # Update existing
+                area = AreaRegion.objects.get(id=area_id)
+                area.area_name = area_name
+                area.region = region
+                area.pincode = pincode
+                area.is_active = is_active
+                area.save()
+                messages.success(request, f'Area "{area_name}" updated successfully.')
+            else:
+                # Create new
+                AreaRegion.objects.create(
+                    area_name=area_name,
+                    region=region,
+                    pincode=pincode,
+                    is_active=is_active
+                )
+                messages.success(request, f'Area "{area_name}" added successfully.')
+        except Exception as e:
+            messages.error(request, f'Error: {str(e)}')
+    
+    return redirect('admin_area_regions')
+
+
+@staff_member_required
+def admin_area_region_delete(request, pk):
+    """Delete an area region."""
+    from .models import AreaRegion
+    
+    try:
+        area = AreaRegion.objects.get(id=pk)
+        name = area.area_name
+        area.delete()
+        messages.success(request, f'Area "{name}" deleted successfully.')
+    except AreaRegion.DoesNotExist:
+        messages.error(request, 'Area not found.')
+    
+    return redirect('admin_area_regions')
+
+
+# ------------------------------------------------------------------
+# Site Announcements Management
+# ------------------------------------------------------------------
+
+@staff_member_required
+def admin_announcements_list(request):
+    """List all site announcements."""
+    from .models import SiteAnnouncement
+    
+    announcements = SiteAnnouncement.objects.all().order_by('-created_at')
+    
+    # Count active announcements
+    active_count = announcements.filter(is_active=True).count()
+    
+    return render(request, 'admin/admin_announcements_list.html', {
+        'announcements': announcements,
+        'active_count': active_count
+    })
+
+
+@staff_member_required
+def admin_announcement_create(request):
+    """Create a new site announcement."""
+    from .models import SiteAnnouncement
+    
+    if request.method == 'POST':
+        title = request.POST.get('title')
+        message = request.POST.get('message')
+        position = request.POST.get('position', 'bottom_right')
+        style = request.POST.get('style', 'info')
+        target_audience = request.POST.get('target_audience', 'all')
+        is_active = request.POST.get('is_active') == 'on'
+        is_dismissible = request.POST.get('is_dismissible') == 'on'
+        show_once_per_session = request.POST.get('show_once_per_session') == 'on'
+        button_text = request.POST.get('button_text') or None
+        button_url = request.POST.get('button_url') or None
+        start_date = request.POST.get('start_date') or None
+        end_date = request.POST.get('end_date') or None
+        
+        announcement = SiteAnnouncement.objects.create(
+            title=title,
+            message=message,
+            position=position,
+            style=style,
+            target_audience=target_audience,
+            is_active=is_active,
+            is_dismissible=is_dismissible,
+            show_once_per_session=show_once_per_session,
+            button_text=button_text,
+            button_url=button_url,
+            start_date=start_date,
+            end_date=end_date,
+            created_by=request.user
+        )
+        
+        AdminActivityLog.objects.create(
+            admin=request.user,
+            action='CREATE',
+            module='ANNOUNCEMENT',
+            description=f"Created announcement: {title}",
+            ip_address=request.META.get('REMOTE_ADDR')
+        )
+        
+        messages.success(request, f'Announcement "{title}" created successfully!')
+        return redirect('admin_announcements_list')
+    
+    return render(request, 'admin/admin_announcement_form.html', {
+        'mode': 'create',
+        'position_choices': SiteAnnouncement.POSITION_CHOICES,
+        'style_choices': SiteAnnouncement.STYLE_CHOICES,
+        'target_choices': SiteAnnouncement.TARGET_CHOICES,
+    })
+
+
+@staff_member_required
+def admin_announcement_edit(request, pk):
+    """Edit an existing site announcement."""
+    from .models import SiteAnnouncement
+    
+    announcement = get_object_or_404(SiteAnnouncement, pk=pk)
+    
+    if request.method == 'POST':
+        announcement.title = request.POST.get('title')
+        announcement.message = request.POST.get('message')
+        announcement.position = request.POST.get('position', 'bottom_right')
+        announcement.style = request.POST.get('style', 'info')
+        announcement.target_audience = request.POST.get('target_audience', 'all')
+        announcement.is_active = request.POST.get('is_active') == 'on'
+        announcement.is_dismissible = request.POST.get('is_dismissible') == 'on'
+        announcement.show_once_per_session = request.POST.get('show_once_per_session') == 'on'
+        announcement.button_text = request.POST.get('button_text') or None
+        announcement.button_url = request.POST.get('button_url') or None
+        announcement.start_date = request.POST.get('start_date') or None
+        announcement.end_date = request.POST.get('end_date') or None
+        announcement.save()
+        
+        AdminActivityLog.objects.create(
+            admin=request.user,
+            action='UPDATE',
+            module='ANNOUNCEMENT',
+            description=f"Updated announcement: {announcement.title}",
+            ip_address=request.META.get('REMOTE_ADDR')
+        )
+        
+        messages.success(request, f'Announcement "{announcement.title}" updated successfully!')
+        return redirect('admin_announcements_list')
+    
+    return render(request, 'admin/admin_announcement_form.html', {
+        'mode': 'edit',
+        'announcement': announcement,
+        'position_choices': SiteAnnouncement.POSITION_CHOICES,
+        'style_choices': SiteAnnouncement.STYLE_CHOICES,
+        'target_choices': SiteAnnouncement.TARGET_CHOICES,
+    })
+
+
+@staff_member_required
+def admin_announcement_delete(request, pk):
+    """Delete a site announcement."""
+    from .models import SiteAnnouncement
+    
+    announcement = get_object_or_404(SiteAnnouncement, pk=pk)
+    title = announcement.title
+    announcement.delete()
+    
+    AdminActivityLog.objects.create(
+        admin=request.user,
+        action='DELETE',
+        module='ANNOUNCEMENT',
+        description=f"Deleted announcement: {title}",
+        ip_address=request.META.get('REMOTE_ADDR')
+    )
+    
+    messages.success(request, f'Announcement "{title}" deleted successfully!')
+    return redirect('admin_announcements_list')
+
+
+@staff_member_required
+def admin_announcement_toggle(request, pk):
+    """Toggle announcement active status."""
+    from .models import SiteAnnouncement
+    
+    announcement = get_object_or_404(SiteAnnouncement, pk=pk)
+    announcement.is_active = not announcement.is_active
+    announcement.save()
+    
+    status = "activated" if announcement.is_active else "deactivated"
+    messages.success(request, f'Announcement "{announcement.title}" {status}!')
+    
+    return redirect('admin_announcements_list')

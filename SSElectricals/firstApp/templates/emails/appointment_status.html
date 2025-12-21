@@ -11,99 +11,180 @@
     <p>We're writing to update you about your service appointment.</p>
 </div>
 
+<!-- Status Display with Icon -->
+{% if appointment.status == 'Pending' %}
+<div
+    style="background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%); padding: 20px; border-radius: 8px; text-align: center; margin: 20px 0;">
+    <h2 style="color: #ffffff; margin: 0;">⏳ Appointment Received</h2>
+    <p style="color: #ffffff; opacity: 0.95; margin: 10px 0 0 0;">Your service request is being reviewed by our team.
+    </p>
+</div>
+{% elif appointment.status == 'Approved' %}
+<div
+    style="background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%); padding: 20px; border-radius: 8px; text-align: center; margin: 20px 0;">
+    <h2 style="color: #ffffff; margin: 0;">✓ Appointment Confirmed!</h2>
+    <p style="color: #ffffff; opacity: 0.95; margin: 10px 0 0 0;">Your service appointment has been approved.</p>
+</div>
+{% elif appointment.status == 'Completed' %}
+<div
+    style="background: linear-gradient(135deg, #3498db 0%, #2980b9 100%); padding: 20px; border-radius: 8px; text-align: center; margin: 20px 0;">
+    <h2 style="color: #ffffff; margin: 0;">🎉 Service Completed!</h2>
+    <p style="color: #ffffff; opacity: 0.95; margin: 10px 0 0 0;">Your service has been successfully completed.</p>
+</div>
+{% elif appointment.status == 'Cancelled' %}
+<div
+    style="background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%); padding: 20px; border-radius: 8px; text-align: center; margin: 20px 0;">
+    <h2 style="color: #ffffff; margin: 0;">✕ Appointment Cancelled</h2>
+    <p style="color: #ffffff; opacity: 0.95; margin: 10px 0 0 0;">Your service appointment has been cancelled.</p>
+</div>
+{% endif %}
+
+<!-- Appointment Details Table -->
 <div class="info-box">
     <h3>Appointment Details</h3>
-    <div class="info-row">
-        <span class="info-label">Appointment ID:</span>
-        <span class="info-value">#{{ appointment.id }}</span>
-    </div>
-    <div class="info-row">
-        <span class="info-label">Service Type:</span>
-        <span class="info-value">{{ appointment.get_service_type_display }}</span>
-    </div>
-    <div class="info-row">
-        <span class="info-label">Scheduled Date:</span>
-        <span class="info-value">{{ appointment.date|date:"F d, Y" }}</span>
-    </div>
-    <div class="info-row">
-        <span class="info-label">Scheduled Time:</span>
-        <span class="info-value">{{ appointment.time|time:"h:i A" }}</span>
-    </div>
-    <div class="info-row">
-        <span class="info-label">Current Status:</span>
-        <span class="info-value">
-            <span class="status-badge status-{{ appointment.status|lower }}">
-                {{ status }}
-            </span>
-        </span>
-    </div>
+    <table style="width: 100%; border-collapse: collapse;">
+        <tr style="border-bottom: 1px solid #e2e8f0;">
+            <td style="padding: 12px 0; font-weight: 600; color: #4a5568; width: 40%;">Appointment ID:</td>
+            <td style="padding: 12px 0; color: #2d3748;"><strong>#{{ appointment.id }}</strong></td>
+        </tr>
+        <tr style="border-bottom: 1px solid #e2e8f0;">
+            <td style="padding: 12px 0; font-weight: 600; color: #4a5568;">Service Type:</td>
+            <td style="padding: 12px 0; color: #2d3748;">{{ appointment.service_name }}</td>
+        </tr>
+        <tr style="border-bottom: 1px solid #e2e8f0;">
+            <td style="padding: 12px 0; font-weight: 600; color: #4a5568;">Scheduled Date:</td>
+            <td style="padding: 12px 0; color: #2d3748;">{{ appointment.date|date:"F d, Y" }}</td>
+        </tr>
+        <tr style="border-bottom: 1px solid #e2e8f0;">
+            <td style="padding: 12px 0; font-weight: 600; color: #4a5568;">Scheduled Time:</td>
+            <td style="padding: 12px 0; color: #2d3748;">{{ appointment.time|time:"h:i A" }}</td>
+        </tr>
+        <tr>
+            <td style="padding: 12px 0; font-weight: 600; color: #4a5568;">Current Status:</td>
+            <td style="padding: 12px 0;">
+                <span class="status-badge status-{{ appointment.status|lower }}">
+                    {{ status }}
+                </span>
+            </td>
+        </tr>
+    </table>
 </div>
 
 {% if appointment.status == 'Pending' %}
 <div class="content-block">
     <p>Your service request has been received and is currently being reviewed by our team.</p>
-    <p>We'll contact you shortly to confirm the appointment details.</p>
+    <p><strong>What happens next?</strong></p>
+    <ul style="line-height: 2;">
+        <li>✓ Our team will review your service request</li>
+        <li>✓ We'll verify technician availability</li>
+        <li>✓ You'll receive a confirmation shortly</li>
+    </ul>
 </div>
 {% elif appointment.status == 'Approved' %}
 <div class="content-block">
     <p>Great news! Your service appointment has been confirmed.</p>
-    <p><strong>Our technician will visit you on {{ appointment.date|date:"F d, Y" }} at {{ appointment.time|time:"h:i A"
-            }}</strong></p>
+    <div
+        style="background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%); padding: 20px; border-radius: 8px; margin: 15px 0; text-align: center;">
+        <h3 style="margin: 0 0 10px 0; color: #2e7d32;">📅 Visit Schedule</h3>
+        <p style="margin: 0; font-size: 18px; color: #1b5e20;">
+            <strong>{{ appointment.date|date:"F d, Y" }}</strong> at <strong>{{ appointment.time|time:"h:i A"
+                }}</strong>
+        </p>
+    </div>
 </div>
 
-<div class="alert-box">
-    <strong>Please Note:</strong><br>
-    • Ensure someone is available at the scheduled time<br>
-    • Keep the service area accessible<br>
-    • Our technician will carry a valid ID card
+<div
+    style="background-color: #fff3cd; border-left: 4px solid #ffc107; padding: 20px; margin: 20px 0; border-radius: 4px;">
+    <strong style="color: #856404; font-size: 16px;">📋 Please Note:</strong>
+    <ul style="margin: 15px 0 0 0; padding-left: 20px; line-height: 2; color: #856404;">
+        <li>Ensure someone is available at the scheduled time</li>
+        <li>Keep the service area accessible</li>
+        <li>Our technician will carry a valid ID card</li>
+    </ul>
 </div>
 {% elif appointment.status == 'Completed' %}
 <div class="content-block">
     <p>Your service has been successfully completed! We hope you're satisfied with our work.</p>
 </div>
-{% elif appointment.status == 'Cancelled' %}
-<div class="alert-box">
-    <strong>Appointment Cancelled</strong><br>
-    {% if appointment.cancellation_reason %}
-    Reason: {{ appointment.cancellation_reason }}
-    {% endif %}
+
+<!-- Review Request Section -->
+<div
+    style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 35px; border-radius: 12px; text-align: center; margin: 30px 0;">
+    <h2 style="color: #ffffff; margin: 0 0 10px 0; font-size: 24px;">⭐ How Was Our Service?</h2>
+    <p style="color: #ffffff; opacity: 0.95; font-size: 16px; margin: 0 0 25px 0;">
+        Your feedback is invaluable to us. Please take a moment to share your experience.
+    </p>
+    <a href="https://g.page/r/CbW4kNefqzm0EBM/review"
+        style="display: inline-block; background-color: #ffffff; color: #667eea; padding: 16px 40px; text-decoration: none; border-radius: 8px; font-weight: 700; font-size: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
+        ⭐ Leave a Google Review
+    </a>
 </div>
+{% elif appointment.status == 'Cancelled' %}
 <div class="content-block">
+    {% if appointment.cancellation_reason %}
+    <p><strong>Cancellation Reason:</strong> {{ appointment.cancellation_reason }}</p>
+    {% endif %}
     <p>If you'd like to reschedule, please feel free to book another appointment or contact us.</p>
+    <div style="text-align: center; margin-top: 20px;">
+        <a href="{{ business.website }}/book-appointment"
+            style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #ffffff; padding: 14px 32px; text-decoration: none; border-radius: 6px; font-weight: 600;">
+            📅 Book New Appointment
+        </a>
+    </div>
 </div>
 {% endif %}
 
 {% if appointment.visiting_charge or appointment.extra_charge %}
+<!-- Service Charges Table -->
 <div class="info-box">
-    <h3>Service Charges</h3>
-    {% if appointment.visiting_charge %}
-    <div class="info-row">
-        <span class="info-label">Visiting Charge:</span>
-        <span class="info-value">₹{{ appointment.visiting_charge }}</span>
-    </div>
-    {% endif %}
-    {% if appointment.extra_charge %}
-    <div class="info-row">
-        <span class="info-label">Additional Charge:</span>
-        <span class="info-value">₹{{ appointment.extra_charge }}</span>
-    </div>
-    {% endif %}
-    <div class="info-row" style="font-size: 18px; font-weight: bold;">
-        <span class="info-label">Total Charge:</span>
-        <span class="info-value">₹{{ appointment.total_charge }}</span>
-    </div>
+    <h3>💰 Service Charges</h3>
+    <table style="width: 100%; border-collapse: collapse;">
+        {% if appointment.visiting_charge %}
+        <tr style="border-bottom: 1px solid #e2e8f0;">
+            <td style="padding: 12px 0; font-weight: 600; color: #4a5568;">Visiting Charge:</td>
+            <td style="padding: 12px 0; text-align: right; color: #2d3748;">₹{{ appointment.visiting_charge }}</td>
+        </tr>
+        {% endif %}
+        {% if appointment.extra_charge %}
+        <tr style="border-bottom: 1px solid #e2e8f0;">
+            <td style="padding: 12px 0; font-weight: 600; color: #4a5568;">Additional Charge:</td>
+            <td style="padding: 12px 0; text-align: right; color: #2d3748;">₹{{ appointment.extra_charge }}</td>
+        </tr>
+        {% endif %}
+        <tr style="background-color: #f7fafc;">
+            <td style="padding: 15px 0; font-weight: 700; color: #2d3748; font-size: 18px;">Total Charge:</td>
+            <td style="padding: 15px 0; text-align: right; font-weight: 700; color: #27ae60; font-size: 20px;">₹{{
+                appointment.total_charge }}</td>
+        </tr>
+    </table>
 </div>
 {% endif %}
 
+<!-- Service Address -->
 <div class="content-block">
-    <p><strong>Service Address:</strong><br>
-        {{ appointment.house_number }}, {{ appointment.address_line1 }}<br>
-        {% if appointment.address_line2 %}{{ appointment.address_line2 }}<br>{% endif %}
-        {% if appointment.landmark %}Near {{ appointment.landmark }}<br>{% endif %}
-        {{ appointment.city }} - {{ appointment.pincode }}</p>
+    <div style="background-color: #f7fafc; padding: 15px; border-radius: 8px;">
+        <h4 style="margin: 0 0 10px 0; color: #4a5568;">📍 Service Address</h4>
+        <p style="margin: 0; line-height: 1.6;">
+            {{ appointment.house_number }}, {{ appointment.address_line1 }}<br>
+            {% if appointment.address_line2 %}{{ appointment.address_line2 }}<br>{% endif %}
+            {% if appointment.landmark %}Near {{ appointment.landmark }}<br>{% endif %}
+            {{ appointment.city }} - {{ appointment.pincode }}
+        </p>
+    </div>
 </div>
 
-<div class="content-block">
-    <p>If you have any questions or need to make changes, please contact us at {{ business.phone }}.</p>
+<!-- Contact Information -->
+<div class="content-block"
+    style="background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%); padding: 20px; border-radius: 8px; text-align: center;">
+    <h4 style="margin: 0 0 15px 0; color: #4a5568;">Need Help?</h4>
+    <p style="margin: 0 0 10px 0;">If you have any questions or need to make changes, we're here to help!</p>
+    <p style="margin: 0;">
+        📞 <strong>+91 9993149226</strong> &nbsp; | &nbsp;
+        ✉️ <strong>shivshaktielectrical1430@gmail.com</strong>
+    </p>
+</div>
+
+<div class="content-block" style="text-align: center; margin-top: 20px;">
+    <p style="color: #718096;">Thank you for choosing {{ business.name }} for your electrical needs!</p>
 </div>
 {% endblock %}

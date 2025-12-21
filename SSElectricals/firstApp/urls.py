@@ -41,6 +41,7 @@ urlpatterns = [
     path('remove-from-cart/<int:item_id>/', views.remove_from_cart, name='remove_from_cart'),
     
     path('checkout/', views.checkout, name='checkout'),
+    path('buy-now/<int:product_id>/', views.buy_now, name='buy_now'),
     path('orders/', views.order_history, name='order_history'),
     path('orders/cancel/<int:order_id>/', views.cancel_order, name='cancel_order'),
     
@@ -127,6 +128,25 @@ urlpatterns = [
     path('shop-admin/service-prices/save/', admin_views.admin_service_price_save, name='admin_service_price_save'),
     path('shop-admin/service-prices/delete/<int:pk>/', admin_views.admin_service_price_delete, name='admin_service_price_delete'),
     path('shop-admin/service-prices/bulk-create/', admin_views.admin_bulk_create_prices, name='admin_bulk_create_prices'),
+    
+    # Admin Service Types Management (Dynamic Services)
+    path('shop-admin/service-types/', admin_views.admin_service_types, name='admin_service_types'),
+    path('shop-admin/service-types/save/', admin_views.admin_service_type_save, name='admin_service_type_save'),
+    path('shop-admin/service-types/delete/<int:pk>/', admin_views.admin_service_type_delete, name='admin_service_type_delete'),
+    
+    # Admin Distance Zones Management (Distance-Based Pricing)
+    path('shop-admin/distance-zones/', admin_views.admin_distance_zones, name='admin_distance_zones'),
+    path('shop-admin/distance-zones/save/', admin_views.admin_distance_zone_save, name='admin_distance_zone_save'),
+    path('shop-admin/distance-zones/delete/<int:pk>/', admin_views.admin_distance_zone_delete, name='admin_distance_zone_delete'),
+    path('shop-admin/distance-zones/setup-defaults/', admin_views.admin_setup_default_distance_zones, name='admin_setup_default_distance_zones'),
+    
+    
+    # Admin Area Regions Management - DEPRECATED (now using distance-based pricing)
+    # Removed from sidebar but URLs kept for backward compatibility
+    path('shop-admin/area-regions/', admin_views.admin_area_regions, name='admin_area_regions'),
+    path('shop-admin/area-regions/save/', admin_views.admin_area_region_save, name='admin_area_region_save'),
+    path('shop-admin/area-regions/delete/<int:pk>/', admin_views.admin_area_region_delete, name='admin_area_region_delete'),
+
 
     # Admin Analytics URLs
     path('shop-admin/analytics/', admin_views.admin_analytics_new, name='admin_analytics'),
@@ -166,4 +186,11 @@ urlpatterns = [
     path('notifications/', views.user_notifications, name='user_notifications'),
     path('notifications/\u003cint:pk\u003e/read/', views.mark_notification_read, name='mark_notification_read'),
     path('notifications/<int:pk>/delete/', views.delete_notification, name='delete_notification'),
+    
+    # Site Announcements (Admin)
+    path('shop-admin/announcements/', admin_views.admin_announcements_list, name='admin_announcements_list'),
+    path('shop-admin/announcements/create/', admin_views.admin_announcement_create, name='admin_announcement_create'),
+    path('shop-admin/announcements/<int:pk>/edit/', admin_views.admin_announcement_edit, name='admin_announcement_edit'),
+    path('shop-admin/announcements/<int:pk>/delete/', admin_views.admin_announcement_delete, name='admin_announcement_delete'),
+    path('shop-admin/announcements/<int:pk>/toggle/', admin_views.admin_announcement_toggle, name='admin_announcement_toggle'),
 ]

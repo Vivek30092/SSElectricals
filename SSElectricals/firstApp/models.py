@@ -181,28 +181,49 @@ class CartItem(models.Model):
         return self.product.final_price * self.quantity
 
 class Order(models.Model):
+    # Enquiry-based purchase flow status choices
     STATUS_CHOICES = [
-        ('Pending', 'Pending'),
-        ('Confirmed', 'Confirmed'),
+        ('Pending Enquiry', 'Pending Enquiry'),  # User submitted enquiry (default)
+        ('Price Shared', 'Price Shared'),        # Admin has shared pricing with user
+        ('Confirmed', 'Confirmed'),              # User/Admin confirmed order
         ('Out for Delivery', 'Out for Delivery'),
         ('Delivered', 'Delivered'),
         ('Cancelled', 'Cancelled'),
     ]
     
+    # Order type to distinguish enquiry-based vs direct (legacy)
+    ORDER_TYPE_CHOICES = [
+        ('enquiry', 'Enquiry-Based Order'),
+        ('direct', 'Direct Order (Legacy)'),
+    ]
+    
     PAYMENT_CHOICES = [
         ('COD', 'Cash on Delivery'),
+        ('ONLINE_DELIVERY', 'Online (Pay at Delivery using QR code)'),
     ]
+
 
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='orders')
     address = models.TextField()
     latitude = models.FloatField(blank=True, null=True)
     longitude = models.FloatField(blank=True, null=True)
     
-    # Pricing
-    total_price = models.DecimalField(max_digits=10, decimal_places=2, help_text="Sum of product prices")
+    # Order Type
+    order_type = models.CharField(max_length=20, choices=ORDER_TYPE_CHOICES, default='enquiry')
+    
+    # Pricing (Admin-controlled for enquiry-based orders)
+    total_price = models.DecimalField(max_digits=10, decimal_places=2, default=0.00, 
+                                       help_text="Admin-entered product price (hidden until confirmed)")
     delivery_charge = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
-    final_price = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True, help_text="Final price confirmed by admin")
+    final_price = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True, 
+                                       help_text="Final price confirmed by admin")
+    pricing_confirmed = models.BooleanField(default=False, 
+                                             help_text="True when admin has entered and confirmed pricing")
     cancellation_reason = models.TextField(blank=True, null=True)
+    
+    # User notes/requirements for enquiry
+    user_notes = models.TextField(blank=True, null=True, 
+                                   help_text="Special requirements or notes from user")
     
     # Delivery Info
     distance_km = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
@@ -210,9 +231,10 @@ class Order(models.Model):
     free_delivery_applied = models.BooleanField(default=False, help_text="Whether free delivery was applied to this order")
     delivery_charge_status = models.CharField(max_length=20, default='ESTIMATED', choices=[('ESTIMATED', 'Estimated'), ('CONFIRMED', 'Confirmed')])
     
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Pending')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Pending Enquiry')
     payment_method = models.CharField(max_length=20, choices=PAYMENT_CHOICES, default='COD')
     created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
     
     # Receipt Fields (FY-based numbering for online orders)
     receipt_number = models.CharField(max_length=50, unique=True, blank=True, null=True, db_index=True)
@@ -224,13 +246,35 @@ class Order(models.Model):
 
     @property
     def grand_total(self):
-        # Heuristic: If final_price was saved as just total_price (omitting delivery),
-        # but there is a delivery charge, return the sum instead.
+        """
+        Returns the grand total for the order.
+        For enquiry orders without confirmed pricing, returns None.
+        """
+        # Enquiry orders without pricing confirmation - return None
+        if self.order_type == 'enquiry' and not self.pricing_confirmed:
+            return None
+        
+        # Use final price if available
         if self.final_price:
             if self.final_price == self.total_price and self.delivery_charge > 0:
                  return self.total_price + self.delivery_charge
             return self.final_price
         return self.total_price + self.delivery_charge
+    
+    @property
+    def is_enquiry_pending(self):
+        """Returns True if this is an enquiry order awaiting price confirmation."""
+        return self.order_type == 'enquiry' and not self.pricing_confirmed
+    
+    @property
+    def price_display_status(self):
+        """Returns status message for price display."""
+        if self.order_type == 'enquiry':
+            if not self.pricing_confirmed:
+                return "Price confirmation pending"
+            elif self.status == 'Price Shared':
+                return "Awaiting your approval"
+        return "Confirmed"
 
     def __str__(self):
         return f"Order #{self.id} by {self.user.username}"
@@ -403,8 +447,173 @@ class EmailOTP(models.Model):
             self.save()
             return False, f"Invalid OTP. {self.max_retries - self.retry_count} attempts remaining"
 
+# 6a. Dynamic Service Types (Admin can add/remove) with Distance-Based Pricing
+class ServiceType(models.Model):
+    """
+    Dynamic service types that admin can add/remove.
+    Includes distance-based pricing configuration.
+    """
+    PRICING_MODE_CHOICES = [
+        ('fixed', 'Fixed Price (Auto-applied)'),
+        ('confirm', 'Confirm Later (Admin will confirm)'),
+    ]
+    
+    # Basic Info
+    name = models.CharField(max_length=100, unique=True)
+    description = models.TextField(blank=True)
+    icon = models.CharField(max_length=50, default='fa-tools', help_text="Font Awesome icon class")
+    is_active = models.BooleanField(default=True)
+    display_order = models.IntegerField(default=0, help_text="Order in dropdown (lower = first)")
+    
+    # Pricing Mode
+    pricing_mode = models.CharField(max_length=20, choices=PRICING_MODE_CHOICES, default='fixed',
+                                     help_text="Fixed: Show price. Confirm: Admin confirms price after booking.")
+    
+    # Distance-Based Pricing (in Rupees)
+    default_charge = models.DecimalField(max_digits=10, decimal_places=2, default=300.00,
+                                          help_text="Fallback/default charge if distance not matched")
+    charge_within_500m = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True,
+                                              help_text="Charge for within 500 meters (optional)")
+    charge_within_1km = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True,
+                                             help_text="Charge for within 1 KM (optional)")
+    charge_within_3km = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True,
+                                             help_text="Charge for within 3 KM (optional)")
+    charge_within_5km = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True,
+                                             help_text="Charge for within 5 KM (optional)")
+    charge_within_7km = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True,
+                                             help_text="Charge for within 7 KM (optional)")
+    
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['display_order', 'name']
+        verbose_name = 'Service Type'
+        verbose_name_plural = 'Service Types'
+    
+    def __str__(self):
+        return self.name
+    
+    @classmethod
+    def get_choices(cls):
+        """Get active service types as choices for forms."""
+        return [(s.id, s.name) for s in cls.objects.filter(is_active=True).order_by('display_order', 'name')]
+    
+    @classmethod
+    def get_active_services(cls):
+        """Get all active services for booking page."""
+        return cls.objects.filter(is_active=True).order_by('display_order', 'name')
+    
+    def get_charge_for_distance(self, distance_km):
+        """
+        Get the appropriate charge based on distance.
+        Returns (charge, is_confirmed) tuple.
+        """
+        if self.pricing_mode == 'confirm':
+            return (None, False)  # Price to be confirmed
+        
+        # Check distance ranges (smallest to largest)
+        if distance_km is not None:
+            if distance_km <= 0.5 and self.charge_within_500m:
+                return (float(self.charge_within_500m), True)
+            elif distance_km <= 1 and self.charge_within_1km:
+                return (float(self.charge_within_1km), True)
+            elif distance_km <= 3 and self.charge_within_3km:
+                return (float(self.charge_within_3km), True)
+            elif distance_km <= 5 and self.charge_within_5km:
+                return (float(self.charge_within_5km), True)
+            elif distance_km <= 7 and self.charge_within_7km:
+                return (float(self.charge_within_7km), True)
+        
+        # Fallback to default charge
+        return (float(self.default_charge), True)
 
-# 6a. Service Pricing System
+
+# 6b. Distance-Based Pricing Zones
+class DistanceZone(models.Model):
+    """
+    Distance ranges from shop for pricing.
+    Admin can configure charges for each distance range.
+    """
+    ZONE_CODES = [
+        ('VERY_NEAR', 'Very Near (0-500m)'),
+        ('NEAR', 'Near (0-3 KM)'),
+        ('MEDIUM', 'Medium (3-5 KM)'),
+        ('FAR', 'Far (5-7 KM)'),
+        ('VERY_FAR', 'Very Far (7+ KM)'),
+    ]
+    
+    code = models.CharField(max_length=20, choices=ZONE_CODES, unique=True)
+    min_distance_km = models.DecimalField(max_digits=5, decimal_places=2, help_text="Minimum distance in KM")
+    max_distance_km = models.DecimalField(max_digits=5, decimal_places=2, help_text="Maximum distance in KM (use 999 for unlimited)")
+    base_charge = models.DecimalField(max_digits=10, decimal_places=2, default=200.00,
+                                       help_text="Base visiting/inspection charge for this distance")
+    is_active = models.BooleanField(default=True)
+    requires_confirmation = models.BooleanField(default=False, 
+                                                 help_text="If true, staff will confirm pricing manually")
+    notes = models.CharField(max_length=200, blank=True, help_text="Notes shown to user (e.g., 'Contact for quote')")
+    
+    class Meta:
+        ordering = ['min_distance_km']
+        verbose_name = 'Distance Zone'
+        verbose_name_plural = 'Distance Zones'
+    
+    def __str__(self):
+        return f"{self.get_code_display()} - ₹{self.base_charge}"
+    
+    @classmethod
+    def get_zone_for_distance(cls, distance_km):
+        """Get the appropriate zone for a given distance."""
+        try:
+            return cls.objects.filter(
+                min_distance_km__lte=distance_km,
+                max_distance_km__gt=distance_km,
+                is_active=True
+            ).first()
+        except cls.DoesNotExist:
+            return None
+
+
+# 6c. Area to Region Mapping (for showing cities in regions)
+class AreaRegion(models.Model):
+    """
+    Maps specific areas/localities to regions.
+    Helps show users which areas are covered.
+    """
+    REGION_CHOICES = [
+        ('CENTRAL', 'Central Indore'),
+        ('EAST', 'East Indore'),
+        ('WEST', 'West Indore'),
+        ('NORTH', 'North Indore'),
+        ('SOUTH', 'South Indore'),
+        ('RESIDENTIAL', 'Residential Colonies'),
+    ]
+    
+    area_name = models.CharField(max_length=100, unique=True)
+    region = models.CharField(max_length=20, choices=REGION_CHOICES)
+    pincode = models.CharField(max_length=10, blank=True)
+    is_active = models.BooleanField(default=True)
+    
+    class Meta:
+        ordering = ['region', 'area_name']
+        verbose_name = 'Area Region'
+        verbose_name_plural = 'Area Regions'
+    
+    def __str__(self):
+        return f"{self.area_name} ({self.get_region_display()})"
+    
+    @classmethod
+    def get_areas_by_region(cls):
+        """Get areas grouped by region."""
+        from collections import defaultdict
+        areas_by_region = defaultdict(list)
+        for area in cls.objects.filter(is_active=True):
+            areas_by_region[area.get_region_display()].append(area.area_name)
+        return dict(areas_by_region)
+
+
+# 6d. Service Pricing System (Updated)
 class ServicePrice(models.Model):
     """
     Stores service pricing based on service type and area zone.
@@ -609,24 +818,49 @@ class Appointment(models.Model):
     city = models.CharField(max_length=50, choices=CITY_CHOICES, default='Indore')
     area = models.CharField(max_length=50, default='Other')
     
-    service_type = models.CharField(max_length=100, choices=SERVICE_CHOICES)
+    # New: Link to dynamic ServiceType (for new bookings)
+    service = models.ForeignKey('ServiceType', on_delete=models.SET_NULL, null=True, blank=True,
+                                 related_name='appointments', help_text="Selected service from admin-managed list")
+    # Legacy: Keep service_type for backward compatibility with existing data
+    service_type = models.CharField(max_length=100, choices=SERVICE_CHOICES, blank=True, null=True)
+    
     date = models.DateField()
     time = models.TimeField()
     problem_description = models.TextField()
+
     
+    # Pricing (distance-based from ServiceType)
+    distance_km = models.DecimalField(max_digits=6, decimal_places=2, null=True, blank=True,
+                                       help_text="Distance from shop in KM")
     visiting_charge = models.DecimalField(max_digits=10, decimal_places=2, default=200.00)
     extra_charge = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    pricing_confirmed = models.BooleanField(default=False, 
+                                             help_text="True if price is confirmed by admin")
     
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Pending')
     cancellation_reason = models.CharField(max_length=255, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"{self.customer_name} - {self.service_type} ({self.date})"
+        service_name = self.service_type or (self.service.name if self.service else 'Unknown')
+        return f"{self.customer_name} - {service_name} ({self.date})"
 
     @property
     def total_charge(self):
         return self.visiting_charge + self.extra_charge
+    
+    @property
+    def service_name(self):
+        """Get service name from either the ForeignKey or the legacy CharField."""
+        if self.service:
+            return self.service.name
+        return self.service_type or 'Unknown'
+    
+    def get_calculated_charge(self):
+        """Get charge based on service and distance."""
+        if self.service and self.distance_km:
+            return self.service.get_charge_for_distance(float(self.distance_km))
+        return (float(self.visiting_charge), True)
 
 # 7. Product Review System
 class Review(models.Model):
@@ -1351,5 +1585,109 @@ class UserNotification(models.Model):
             self.is_read = True
             self.read_at = timezone.now()
             self.save()
+
+
+class SiteAnnouncement(models.Model):
+    """
+    Site-wide announcements that appear as popups/toasts when users visit.
+    Admin can control position, styling, and target audience.
+    """
+    POSITION_CHOICES = [
+        ('center', 'Center Modal'),
+        ('bottom_right', 'Bottom Right Toast'),
+        ('both', 'Both Positions'),
+    ]
+    
+    STYLE_CHOICES = [
+        ('info', 'Info (Blue)'),
+        ('success', 'Success (Green)'),
+        ('warning', 'Warning (Yellow)'),
+        ('danger', 'Danger (Red)'),
+        ('primary', 'Primary (Brand)'),
+    ]
+    
+    TARGET_CHOICES = [
+        ('all', 'All Visitors'),
+        ('logged_in', 'Logged In Users Only'),
+        ('guests', 'Guests Only'),
+    ]
+    
+    title = models.CharField(max_length=200)
+    message = models.TextField(help_text="Main announcement message. HTML allowed.")
+    position = models.CharField(max_length=20, choices=POSITION_CHOICES, default='bottom_right')
+    style = models.CharField(max_length=20, choices=STYLE_CHOICES, default='info')
+    target_audience = models.CharField(max_length=20, choices=TARGET_CHOICES, default='all')
+    
+    # Display options
+    is_active = models.BooleanField(default=True)
+    is_dismissible = models.BooleanField(default=True, help_text="Can users dismiss this announcement?")
+    show_once_per_session = models.BooleanField(default=True, 
+                                                  help_text="Only show once per browser session")
+    
+    # Button options
+    button_text = models.CharField(max_length=50, blank=True, null=True, 
+                                    help_text="Optional action button text")
+    button_url = models.URLField(blank=True, null=True, 
+                                  help_text="URL for the action button")
+    
+    # Scheduling
+    start_date = models.DateTimeField(null=True, blank=True, 
+                                       help_text="When to start showing (leave blank for immediately)")
+    end_date = models.DateTimeField(null=True, blank=True, 
+                                     help_text="When to stop showing (leave blank for indefinitely)")
+    
+    # Tracking
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, 
+                                    null=True, related_name='created_announcements')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    view_count = models.PositiveIntegerField(default=0)
+    
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = "Site Announcement"
+        verbose_name_plural = "Site Announcements"
+    
+    def __str__(self):
+        status = "Active" if self.is_active else "Inactive"
+        return f"{self.title} ({status})"
+    
+    @property
+    def is_currently_active(self):
+        """Check if announcement should be shown now based on schedule"""
+        if not self.is_active:
+            return False
+        
+        now = timezone.now()
+        
+        if self.start_date and now < self.start_date:
+            return False
+        
+        if self.end_date and now > self.end_date:
+            return False
+        
+        return True
+    
+    @classmethod
+    def get_active_announcements(cls, user=None):
+        """Get all currently active announcements for a user"""
+        now = timezone.now()
+        
+        # Base queryset: active and within date range
+        qs = cls.objects.filter(is_active=True)
+        qs = qs.filter(
+            models.Q(start_date__isnull=True) | models.Q(start_date__lte=now)
+        )
+        qs = qs.filter(
+            models.Q(end_date__isnull=True) | models.Q(end_date__gte=now)
+        )
+        
+        # Filter by target audience
+        if user and user.is_authenticated:
+            qs = qs.exclude(target_audience='guests')
+        else:
+            qs = qs.exclude(target_audience='logged_in')
+        
+        return qs
 
 # End of models.py

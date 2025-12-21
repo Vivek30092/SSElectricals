@@ -2,6 +2,80 @@
 {% load static %}
 
 {% block content %}
+
+<!-- Welcome Popup Modal for New Users -->
+{% if request.session.show_welcome_popup %}
+<div class="modal fade" id="welcomePopupModal" tabindex="-1" aria-labelledby="welcomePopupModalLabel"
+    aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+            <div class="modal-header bg-warning text-dark border-0">
+                <h4 class="modal-title fw-bold" id="welcomePopupModalLabel">
+                    <i class="fas fa-bolt me-2"></i>Welcome to Shiv Shakti Electrical! 🎉
+                </h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <!-- Testing Phase Notice -->
+                <div class="alert alert-warning border-start border-warning border-4 mb-4">
+                    <h5 class="fw-bold mb-2">
+                        <i class="fas fa-exclamation-triangle me-2"></i>Testing Phase Notice
+                    </h5>
+                    <p class="mb-0">
+                        Our web app is currently running in <strong>testing phase</strong>. If you face any glitch,
+                        error, or bug, please reach out to us at:
+                        <br><a href="mailto:vivekkumar934@gmail.com" class="fw-bold text-dark">
+                            <i class="fas fa-envelope me-1"></i>vivekkumar934@gmail.com
+                        </a>
+                    </p>
+                </div>
+
+                <!-- Free Delivery Offer -->
+                <div class="alert alert-success border-start border-success border-4 mb-4">
+                    <h5 class="fw-bold mb-2">
+                        <i class="fas fa-truck me-2"></i>🚚 Free Delivery Offer!
+                    </h5>
+                    <p class="mb-0">
+                        Great news! If you are <strong>within 2 KM range</strong> of our shop, you get <strong>FREE
+                            DELIVERY</strong> on your first order!
+                    </p>
+                </div>
+
+                <!-- Shop Info -->
+                <div class="bg-light rounded-3 p-3">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p class="mb-1"><i class="fas fa-map-marker-alt text-warning me-2"></i><strong>Our
+                                    Location:</strong></p>
+                            <p class="text-muted mb-0">B-115, Abhinandan Nagar, Indore (M.P.)</p>
+                        </div>
+                        <div class="col-md-6">
+                            <p class="mb-1"><i class="fas fa-phone-alt text-warning me-2"></i><strong>Contact:</strong>
+                            </p>
+                            <p class="text-muted mb-0">+91-9993149226</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer bg-light border-0">
+                <button type="button" class="btn btn-warning fw-bold px-4 rounded-pill" data-bs-dismiss="modal">
+                    <i class="fas fa-check me-1"></i>Got It, Let's Shop!
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Auto-show welcome popup when page loads
+    document.addEventListener('DOMContentLoaded', function () {
+        var welcomeModal = new bootstrap.Modal(document.getElementById('welcomePopupModal'));
+        welcomeModal.show();
+    });
+</script>
+{% endif %}
+
+
 <!-- Hero Section -->
 <div class="position-relative overflow-hidden p-3 p-md-5 m-md-3 text-center bg-dark text-white rounded-4 shadow-lg animate__animated animate__fadeIn"
     style="background: linear-gradient(135deg, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.5) 100%), url('https://images.unsplash.com/photo-1555664424-778a1e5e1b48?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80'); background-size: cover; background-position: center; min-height: 500px; display: flex; align-items: center; justify-content: center;">

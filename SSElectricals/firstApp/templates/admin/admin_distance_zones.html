@@ -1,0 +1,255 @@
+{% extends 'admin/base_admin.html' %}
+
+{% block title %}Distance-Based Pricing - Admin{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1"><i class="fas fa-map-marker-alt text-primary me-2"></i>Distance-Based Pricing</h2>
+            <p class="text-muted mb-0">Set visiting charges based on customer distance from shop</p>
+        </div>
+        <div>
+            <form method="POST" action="{% url 'admin_setup_default_distance_zones' %}" class="d-inline">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-success me-2"
+                    onclick="return confirm('Create default distance zones?')">
+                    <i class="fas fa-magic me-1"></i> Setup Defaults
+                </button>
+            </form>
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addZoneModal">
+                <i class="fas fa-plus me-1"></i> Add Zone
+            </button>
+        </div>
+    </div>
+
+    <!-- Info Card -->
+    <div class="alert alert-info mb-4">
+        <i class="fas fa-info-circle me-2"></i>
+        <strong>How it works:</strong> Distance zones define the visiting charge based on how far a customer is from
+        your shop.
+        Prices are applied automatically when customers enter their address.
+    </div>
+
+    <!-- Distance Zones -->
+    {% if zones %}
+    <div class="row">
+        {% for zone in zones %}
+        <div class="col-md-6 col-lg-4 mb-4">
+            <div
+                class="card h-100 {% if zone.requires_confirmation %}border-warning{% elif not zone.is_active %}border-secondary{% else %}border-success{% endif %}">
+                <div
+                    class="card-header {% if zone.requires_confirmation %}bg-warning text-dark{% elif not zone.is_active %}bg-secondary text-white{% else %}bg-success text-white{% endif %}">
+                    <h5 class="mb-0">
+                        <i class="fas fa-map-marker-alt me-2"></i>{{ zone.get_code_display }}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <span class="badge bg-primary fs-6 mb-2">
+                            {{ zone.min_distance_km }} - {{ zone.max_distance_km|floatformat:1 }} KM
+                        </span>
+                    </div>
+
+                    {% if zone.requires_confirmation %}
+                    <div class="text-warning mb-2">
+                        <i class="fas fa-exclamation-triangle me-1"></i>
+                        <strong>Requires Staff Confirmation</strong>
+                    </div>
+                    {% else %}
+                    <div class="d-flex align-items-baseline mb-2">
+                        <span class="text-muted me-2">Visiting Charge:</span>
+                        <span class="fs-3 fw-bold text-success">₹{{ zone.base_charge }}</span>
+                    </div>
+                    {% endif %}
+
+                    {% if zone.notes %}
+                    <p class="text-muted small mb-2">
+                        <i class="fas fa-sticky-note me-1"></i> {{ zone.notes }}
+                    </p>
+                    {% endif %}
+
+                    <div class="mt-3">
+                        {% if zone.is_active %}
+                        <span class="badge bg-success"><i class="fas fa-check me-1"></i>Active</span>
+                        {% else %}
+                        <span class="badge bg-secondary"><i class="fas fa-times me-1"></i>Inactive</span>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="card-footer bg-transparent">
+                    <button class="btn btn-sm btn-outline-primary edit-zone-btn" data-id="{{ zone.id }}"
+                        data-code="{{ zone.code }}" data-min="{{ zone.min_distance_km }}"
+                        data-max="{{ zone.max_distance_km }}" data-charge="{{ zone.base_charge }}"
+                        data-active="{{ zone.is_active }}" data-confirm="{{ zone.requires_confirmation }}"
+                        data-notes="{{ zone.notes }}">
+                        <i class="fas fa-edit me-1"></i> Edit
+                    </button>
+                    <a href="{% url 'admin_distance_zone_delete' zone.id %}" class="btn btn-sm btn-outline-danger"
+                        onclick="return confirm('Delete this distance zone?')">
+                        <i class="fas fa-trash me-1"></i> Delete
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="alert alert-info text-center py-5">
+        <i class="fas fa-map-marker-alt fa-3x mb-3"></i>
+        <h4>No Distance Zones Configured</h4>
+        <p>Click "Setup Defaults" to create the recommended distance zones, or add them manually.</p>
+    </div>
+    {% endif %}
+
+    <!-- Pricing Guide -->
+    <div class="card mt-4">
+        <div class="card-header bg-light">
+            <h5 class="mb-0"><i class="fas fa-info-circle text-info me-2"></i>Recommended Distance Zones</h5>
+        </div>
+        <div class="card-body">
+            <table class="table table-bordered mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Zone</th>
+                        <th>Distance Range</th>
+                        <th>Suggested Charge</th>
+                        <th>Notes</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><span class="badge bg-success">Very Near</span></td>
+                        <td>0 - 500 meters</td>
+                        <td>₹150</td>
+                        <td>Walking distance customers</td>
+                    </tr>
+                    <tr>
+                        <td><span class="badge bg-primary">Near</span></td>
+                        <td>500m - 3 KM</td>
+                        <td>₹200</td>
+                        <td>Standard local area</td>
+                    </tr>
+                    <tr>
+                        <td><span class="badge bg-info">Medium</span></td>
+                        <td>3 - 5 KM</td>
+                        <td>₹250</td>
+                        <td>Extended local area</td>
+                    </tr>
+                    <tr>
+                        <td><span class="badge bg-warning text-dark">Far</span></td>
+                        <td>5 - 7 KM</td>
+                        <td>₹300</td>
+                        <td>Outer city areas</td>
+                    </tr>
+                    <tr>
+                        <td><span class="badge bg-danger">Very Far</span></td>
+                        <td>7+ KM</td>
+                        <td>Contact Staff</td>
+                        <td>Requires confirmation for pricing</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Add/Edit Zone Modal -->
+<div class="modal fade" id="addZoneModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="POST" action="{% url 'admin_distance_zone_save' %}">
+                {% csrf_token %}
+                <input type="hidden" name="id" id="modal_id">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title"><i class="fas fa-map-marker-alt me-2"></i>Add/Edit Distance Zone</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Zone Type <span class="text-danger">*</span></label>
+                        <select name="code" id="modal_code" class="form-select" required>
+                            {% for code, label in zone_choices %}
+                            <option value="{{ code }}">{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Min Distance (KM)</label>
+                            <input type="number" name="min_distance_km" id="modal_min" class="form-control" value="0"
+                                min="0" step="0.1" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Max Distance (KM)</label>
+                            <input type="number" name="max_distance_km" id="modal_max" class="form-control" value="3"
+                                min="0" step="0.1" required>
+                            <small class="text-muted">Use 999 for unlimited</small>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Base Charge (₹)</label>
+                        <input type="number" name="base_charge" id="modal_charge" class="form-control" value="200"
+                            min="0" step="10" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Notes (shown to user)</label>
+                        <input type="text" name="notes" id="modal_notes" class="form-control"
+                            placeholder="e.g., Price will be confirmed by staff">
+                    </div>
+                    <div class="form-check mb-2">
+                        <input type="checkbox" name="is_active" id="modal_active" class="form-check-input" checked>
+                        <label class="form-check-label" for="modal_active">Active</label>
+                    </div>
+                    <div class="form-check mb-3">
+                        <input type="checkbox" name="requires_confirmation" id="modal_confirm" class="form-check-input">
+                        <label class="form-check-label" for="modal_confirm">
+                            Requires Staff Confirmation
+                            <small class="text-muted d-block">Enable for zones where staff should manually confirm
+                                pricing</small>
+                        </label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Zone</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // Edit button handler
+        document.querySelectorAll('.edit-zone-btn').forEach(btn => {
+            btn.addEventListener('click', function () {
+                document.getElementById('modal_id').value = this.dataset.id;
+                document.getElementById('modal_code').value = this.dataset.code;
+                document.getElementById('modal_min').value = this.dataset.min;
+                document.getElementById('modal_max').value = this.dataset.max;
+                document.getElementById('modal_charge').value = this.dataset.charge;
+                document.getElementById('modal_active').checked = this.dataset.active === 'True';
+                document.getElementById('modal_confirm').checked = this.dataset.confirm === 'True';
+                document.getElementById('modal_notes').value = this.dataset.notes;
+
+                var modal = new bootstrap.Modal(document.getElementById('addZoneModal'));
+                modal.show();
+            });
+        });
+
+        // Clear form when modal is closed
+        document.getElementById('addZoneModal').addEventListener('hidden.bs.modal', function () {
+            document.getElementById('modal_id').value = '';
+            document.getElementById('modal_code').value = '';
+            document.getElementById('modal_min').value = '0';
+            document.getElementById('modal_max').value = '3';
+            document.getElementById('modal_charge').value = '200';
+            document.getElementById('modal_active').checked = true;
+            document.getElementById('modal_confirm').checked = false;
+            document.getElementById('modal_notes').value = '';
+        });
+    });
+</script>
+{% endblock %}

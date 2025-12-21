@@ -7,80 +7,116 @@
     Hello {{ user.first_name|default:user.username }},
 </div>
 
-<div class="content-block">
-    <h2 style="color: #27ae60;">✓ Delivery Confirmed!</h2>
-    <p>We're happy to confirm that your order has been successfully delivered.</p>
+<!-- Delivery Success Banner -->
+<div
+    style="background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%); padding: 30px; border-radius: 8px; text-align: center; margin: 20px 0;">
+    <h1 style="color: #ffffff; margin: 0; font-size: 28px;">✓ Delivery Confirmed!</h1>
+    <p style="color: #ffffff; opacity: 0.95; margin: 10px 0 0 0; font-size: 16px;">We're happy to confirm that your
+        order has been successfully delivered.</p>
 </div>
 
+<!-- Order Summary Box -->
 <div class="info-box">
     <h3>Order Summary</h3>
     <div class="info-row">
         <span class="info-label">Order ID:</span>
-        <span class="info-value">#{{ order.id }}</span>
+        <span class="info-value"><strong>#{{ order.id }}</strong></span>
     </div>
     <div class="info-row">
         <span class="info-label">Delivered On:</span>
         <span class="info-value">{{ order.updated_at|date:"F d, Y h:i A" }}</span>
     </div>
-    <div class="info-row">
+    <div class="info-row" style="font-size: 18px; font-weight: bold;">
         <span class="info-label">Total Amount:</span>
-        <span class="info-value">₹{{ order.grand_total }}</span>
+        <span class="info-value" style="color: #27ae60;">₹{{ order.grand_total }}</span>
     </div>
 </div>
 
+<!-- Delivered Products Table -->
 <div class="content-block">
-    <h3>Delivered Products:</h3>
-    <table class="item-table">
+    <h3 style="margin-bottom: 15px; color: #2d3748;">📦 Delivered Products</h3>
+    <table
+        style="width: 100%; border-collapse: collapse; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
         <thead>
-            <tr>
-                <th>Product</th>
-                <th>Qty</th>
-                <th>Price</th>
-                <th>Review</th>
+            <tr style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                <th style="padding: 14px 12px; text-align: left; color: #ffffff; font-weight: 600;">Product</th>
+                <th style="padding: 14px 12px; text-align: center; color: #ffffff; font-weight: 600;">Qty</th>
+                <th style="padding: 14px 12px; text-align: right; color: #ffffff; font-weight: 600;">Price</th>
+                <th style="padding: 14px 12px; text-align: center; color: #ffffff; font-weight: 600;">Review</th>
             </tr>
         </thead>
         <tbody>
             {% for item in items %}
-            <tr>
-                <td>{{ item.product.name }}</td>
-                <td>{{ item.quantity }}</td>
-                <td>₹{{ item.price }}</td>
-                <td><a href="{{ site_url }}/product/{{ item.product.id }}#review"
-                        style="color: #667eea; text-decoration: none; font-weight: bold;">Write Review</a></td>
+            <tr style="{% if forloop.counter|divisibleby:2 %}background-color: #f7fafc;{% endif %}">
+                <td style="padding: 14px 12px; border-bottom: 1px solid #e2e8f0;">{{ item.product.name }}</td>
+                <td style="padding: 14px 12px; text-align: center; border-bottom: 1px solid #e2e8f0;">{{ item.quantity
+                    }}</td>
+                <td style="padding: 14px 12px; text-align: right; border-bottom: 1px solid #e2e8f0;">₹{{ item.price }}
+                </td>
+                <td style="padding: 14px 12px; text-align: center; border-bottom: 1px solid #e2e8f0;">
+                    <a href="{{ site_url }}/product/{{ item.product.id }}#review"
+                        style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #ffffff; padding: 6px 14px; text-decoration: none; font-weight: 600; border-radius: 20px; font-size: 12px;">Write
+                        Review</a>
+                </td>
             </tr>
             {% endfor %}
         </tbody>
     </table>
 </div>
 
+<!-- Review Request Section -->
 <div
-    style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; border-radius: 8px; text-align: center; margin: 30px 0;">
-    <h2 style="color: #ffffff; margin-top: 0;">We'd Love Your Feedback!</h2>
-    <p style="color: #ffffff; opacity: 0.95; font-size: 16px;">
+    style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 35px; border-radius: 12px; text-align: center; margin: 30px 0;">
+    <h2 style="color: #ffffff; margin: 0 0 10px 0; font-size: 24px;">⭐ We'd Love Your Feedback!</h2>
+    <p style="color: #ffffff; opacity: 0.95; font-size: 16px; margin: 0 0 25px 0;">
         Your opinion matters to us. Please take a moment to rate the products you've received.
     </p>
     <a href="{{ review_url }}"
-        style="display: inline-block; background-color: #ffffff; color: #667eea; padding: 14px 32px; text-decoration: none; border-radius: 6px; font-weight: 600; margin-top: 15px;">
+        style="display: inline-block; background-color: #ffffff; color: #667eea; padding: 16px 40px; text-decoration: none; border-radius: 8px; font-weight: 700; font-size: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
         ⭐ Rate Your Products
     </a>
 </div>
 
-<div class="content-block">
-    <h3>Why Your Review Matters:</h3>
-    <ul style="line-height: 2;">
-        <li>✓ Helps other customers make informed decisions</li>
-        <li>✓ Helps us improve our products and services</li>
-        <li>✓ Takes less than 2 minutes</li>
-        <li>✓ Your honest feedback is valuable to us</li>
+<!-- Why Review Matters -->
+<div class="content-block" style="background-color: #f7fafc; padding: 25px; border-radius: 8px;">
+    <h3 style="margin: 0 0 15px 0; color: #2d3748;">Why Your Review Matters:</h3>
+    <ul style="line-height: 2.2; padding-left: 20px; margin: 0;">
+        <li style="color: #4a5568;"><span style="color: #27ae60; font-weight: bold;">✓</span> Helps other customers make
+            informed decisions</li>
+        <li style="color: #4a5568;"><span style="color: #27ae60; font-weight: bold;">✓</span> Helps us improve our
+            products and services</li>
+        <li style="color: #4a5568;"><span style="color: #27ae60; font-weight: bold;">✓</span> Takes less than 2 minutes
+        </li>
+        <li style="color: #4a5568;"><span style="color: #27ae60; font-weight: bold;">✓</span> Your honest feedback is
+            valuable to us</li>
     </ul>
 </div>
 
-<div class="content-block">
-    <p><strong>Need Support?</strong></p>
-    <p>If you have any issues with your order or products, please contact us immediately. We're here to help!</p>
+<!-- Support Section -->
+<div class="content-block" style="text-align: center; margin-top: 30px;">
+    <div
+        style="background-color: #fff3cd; border-left: 4px solid #ffc107; padding: 15px 20px; border-radius: 4px; text-align: left;">
+        <strong style="color: #856404;">📞 Need Support?</strong>
+        <p style="margin: 10px 0 0 0; color: #856404;">If you have any issues with your order or products, please
+            contact us immediately. We're here to help!</p>
+    </div>
 </div>
 
-<div class="content-block">
-    <p>Thank you for shopping with {{ business.name }}. We look forward to serving you again!</p>
+<!-- Contact Information -->
+<div class="content-block"
+    style="background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%); padding: 20px; border-radius: 8px; text-align: center; margin-top: 20px;">
+    <p style="margin: 0;">
+        📞 <strong>+91 9993149226</strong> &nbsp; | &nbsp;
+        ✉️ <strong>shivshaktielectrical1430@gmail.com</strong>
+    </p>
+</div>
+
+<!-- Thank You Message -->
+<div class="content-block"
+    style="text-align: center; margin-top: 25px; padding: 20px; background-color: #e8f5e9; border-radius: 8px;">
+    <p style="margin: 0; color: #2e7d32; font-size: 16px;">
+        🙏 Thank you for shopping with <strong>{{ business.name }}</strong>!<br>
+        <span style="font-size: 14px; color: #4caf50;">We look forward to serving you again.</span>
+    </p>
 </div>
 {% endblock %}

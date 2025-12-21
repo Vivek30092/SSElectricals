@@ -16,6 +16,7 @@
                         <th>Customer</th>
                         <th>Items</th>
                         <th>Total</th>
+                        <th>Payment</th>
                         <th>Status</th>
                         <th>Action</th>
                     </tr>
@@ -34,25 +35,51 @@
                         </td>
                         <td>{{ order.items.count }} Items</td>
                         <td>
+                            {% if order.order_type == 'enquiry' and not order.pricing_confirmed %}
+                            <span class="text-muted fst-italic">Pending</span>
+                            {% else %}
                             ₹{{ order.final_price|default:order.total_price }}
+                            {% endif %}
                         </td>
                         <td>
                             <span
-                                class="badge bg-{% if order.status == 'Delivered' %}success{% elif order.status == 'Pending' %}warning{% elif order.status == 'Confirmed' %}info{% elif order.status == 'Out for Delivery' %}primary{% else %}danger{% endif %}">
-                                {{ order.status }}
+                                class="badge bg-{% if order.payment_method == 'COD' %}secondary{% else %}info{% endif %}">
+                                {% if order.payment_method == 'COD' %}💵 COD{% else %}💳 Online{% endif %}
                             </span>
                         </td>
                         <td>
+                            <!-- Status Badge with Enquiry Support -->
+                            <span class="badge 
+                                {% if order.status == 'Delivered' %}bg-success
+                                {% elif order.status == 'Pending Enquiry' %}bg-warning text-dark
+                                {% elif order.status == 'Price Shared' %}bg-info text-dark
+                                {% elif order.status == 'Confirmed' %}bg-primary
+                                {% elif order.status == 'Out for Delivery' %}bg-info
+                                {% elif order.status == 'Pending' %}bg-warning text-dark
+                                {% elif order.status == 'Cancelled' %}bg-danger
+                                {% else %}bg-secondary{% endif %}">
+                                {{ order.status }}
+                            </span>
+                            {% if order.order_type == 'enquiry' and not order.pricing_confirmed %}
+                            <br><small class="text-muted"><i class="fas fa-question-circle"></i> Enquiry</small>
+                            {% endif %}
+                        </td>
+                        <td>
                             <a href="{% url 'admin_order_detail' order.pk %}" class="btn btn-sm btn-primary">
+                                {% if order.status == 'Pending Enquiry' %}
+                                <i class="fas fa-hand-pointer me-1"></i>Process
+                                {% else %}
                                 View Details
+                                {% endif %}
                             </a>
                         </td>
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="7" class="text-center py-4">No orders found.</td>
+                        <td colspan="8" class="text-center py-4">No orders found.</td>
                     </tr>
                     {% endfor %}
+
                 </tbody>
             </table>
         </div>

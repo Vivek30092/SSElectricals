@@ -339,16 +339,9 @@ def log_order_save(sender, instance, created, **kwargs):
         )
 
     # --- EMAIL NOTIFICATION LOGIC ---
-    if not created:
-         old_status = _order_original_status.get(instance.pk)
-         # Send email if status changed OR if delivery charge/final price was updated effectively confirming it
-         # But mostly status changes trigger useful emails.
-         
-         # Note: _order_original_status is cleaned up above potentially, but we already grabbed old_status
-         
-         if old_status and old_status != instance.status:
-             from .utils import send_order_status_email
-             send_order_status_email(instance)
+    # NOTE: Email notifications are now handled ONLY in admin_views.py using email_utils module
+    # This prevents duplicate emails from being sent to users.
+    # The email_utils module provides professional HTML templates with logging and retry logic.
 
 
 # Unified CSV Storage Signals
