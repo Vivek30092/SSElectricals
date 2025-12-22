@@ -341,20 +341,8 @@ def checkout(request):
     if request.method == 'POST':
         form = CheckoutForm(request.POST)
         if form.is_valid():
-            # Construct address from parts
-            house_number = form.cleaned_data['house_number']
-            address_line1 = form.cleaned_data['address_line1']
-            address_line2 = form.cleaned_data.get('address_line2', '')
-            area = form.cleaned_data.get('area', '')
-            landmark = form.cleaned_data.get('landmark', '')
-            pincode = form.cleaned_data['pincode']
-            city = 'Indore'
-            
-            # Full address for usage
-            full_address = f"{house_number}, {address_line1}, {address_line2}, {area}, Near {landmark}, {city}, {pincode}"
-            search_address = f"{house_number} {address_line1} {area} {city} {pincode}" 
-
-            payment_method = 'COD' 
+            # Get fulfillment type
+            fulfillment_type = form.cleaned_data.get('fulfillment_type', 'DELIVERY')
             
             # Check stock availability
             for item in cart.items.all():
@@ -362,48 +350,74 @@ def checkout(request):
                     messages.error(request, f"{item.product.name} is out of stock.")
                     return redirect('view_cart')
             
-            # Calculate Delivery Charge
-            lat_post = request.POST.get('latitude')
-            lng_post = request.POST.get('longitude')
-            dist_post = request.POST.get('distance_km')
-
+            # Initialize variables
+            full_address = ""
+            search_address = ""
             dist_km = 0
-            delivery_charge = 0
-            error_msg = None
+            delivery_charge = Decimal('0.00')
             lat = None
             lng = None
-
-            if lat_post and lng_post and dist_post:
-                # Use GPS data from client
-                try:
-                    lat = float(lat_post)
-                    lng = float(lng_post)
-                    dist_km = float(dist_post)
-                    print(f"Using Client GPS Data: {dist_km} KM")
-                except ValueError:
-                    dist_km, _, error_msg, lat, lng = calculate_distance_and_price(search_address)
-            else:
-                dist_km, _, error_msg, lat, lng = calculate_distance_and_price(search_address)
-
-            # Apply New Delivery Charge Rules
-            # 0-3 KM: 50, 3-5 KM: 70, 5-7 KM: 80, >7 or Fail: 0 (Pending)
-            if dist_km > 0:
-                if dist_km <= 3.0:
-                    delivery_charge = 50
-                elif dist_km <= 5.0:
-                    delivery_charge = 70
-                elif dist_km <= 7.0:
-                    delivery_charge = 80
-                else:
-                    delivery_charge = 0 # Out of range, admin to confirm
-            
-            delivery_charge = Decimal(str(delivery_charge))
-
-            # Free Delivery Logic: If user hasn't used free delivery yet AND within 3 KM
             is_free_delivery = False
-            if request.user.free_delivery_used_count == 0 and dist_km <= 3.0:
+            
+            # Handle PICKUP orders - no address/delivery required
+            if fulfillment_type == 'PICKUP':
+                full_address = "Pick from Store - Shiv Shakti Electricals"
+                dist_km = 0
                 delivery_charge = Decimal('0.00')
-                is_free_delivery = True
+                # No GPS data needed for pickup
+                lat = None
+                lng = None
+            else:
+                # DELIVERY flow - requires address
+                house_number = form.cleaned_data.get('house_number', '')
+                address_line1 = form.cleaned_data.get('address_line1', '')
+                address_line2 = form.cleaned_data.get('address_line2', '')
+                area = form.cleaned_data.get('area', '')
+                landmark = form.cleaned_data.get('landmark', '')
+                pincode = form.cleaned_data.get('pincode', '')
+                city = 'Indore'
+                
+                # Full address for usage
+                full_address = f"{house_number}, {address_line1}, {address_line2}, {area}, Near {landmark}, {city}, {pincode}"
+                search_address = f"{house_number} {address_line1} {area} {city} {pincode}" 
+                
+                # Calculate Delivery Charge
+                lat_post = request.POST.get('latitude')
+                lng_post = request.POST.get('longitude')
+                dist_post = request.POST.get('distance_km')
+
+                error_msg = None
+
+                if lat_post and lng_post and dist_post:
+                    # Use GPS data from client
+                    try:
+                        lat = float(lat_post)
+                        lng = float(lng_post)
+                        dist_km = float(dist_post)
+                        print(f"Using Client GPS Data: {dist_km} KM")
+                    except ValueError:
+                        dist_km, _, error_msg, lat, lng = calculate_distance_and_price(search_address)
+                else:
+                    dist_km, _, error_msg, lat, lng = calculate_distance_and_price(search_address)
+
+                # Apply New Delivery Charge Rules
+                # 0-3 KM: 50, 3-5 KM: 70, 5-7 KM: 80, >7 or Fail: 0 (Pending)
+                if dist_km > 0:
+                    if dist_km <= 3.0:
+                        delivery_charge = 50
+                    elif dist_km <= 5.0:
+                        delivery_charge = 70
+                    elif dist_km <= 7.0:
+                        delivery_charge = 80
+                    else:
+                        delivery_charge = 0 # Out of range, admin to confirm
+                
+                delivery_charge = Decimal(str(delivery_charge))
+
+                # Free Delivery Logic: If user hasn't used free delivery yet AND within 3 KM
+                if request.user.free_delivery_used_count == 0 and dist_km <= 3.0:
+                    delivery_charge = Decimal('0.00')
+                    is_free_delivery = True
             
             total_amount = cart.total_price + delivery_charge
             
@@ -416,9 +430,11 @@ def checkout(request):
                 address=full_address,
                 latitude=lat,
                 longitude=lng,
+                # Fulfillment Type - PICKUP or DELIVERY
+                fulfillment_type=fulfillment_type,
                 # Enquiry-based: prices are 0 until admin confirms
                 total_price=Decimal('0.00'),  # Admin will set this
-                delivery_charge=Decimal('0.00'),  # Admin will set this
+                delivery_charge=Decimal('0.00'),  # Admin will set this (0 for pickup)
                 distance_km=dist_km,
                 final_price=None,
                 # Enquiry-based order status
@@ -428,7 +444,7 @@ def checkout(request):
                 user_notes=user_notes,
                 payment_method='COD',  # Default to COD
                 free_delivery_applied=False,
-                delivery_charge_status='ESTIMATED'
+                delivery_charge_status='ESTIMATED' if fulfillment_type == 'DELIVERY' else 'CONFIRMED'
             )
             
             # Create Order Items (without prices - admin will set them)
@@ -447,8 +463,12 @@ def checkout(request):
 
             # Clear Cart
             cart.items.all().delete()
-                 
-            messages.success(request, f"Enquiry submitted successfully! Our team will contact you shortly with pricing details.")
+            
+            # Success message based on fulfillment type
+            if fulfillment_type == 'PICKUP':
+                messages.success(request, f"Pickup enquiry submitted! We'll notify you when your order is ready for collection at our shop.")
+            else:
+                messages.success(request, f"Enquiry submitted successfully! Our team will contact you shortly with pricing details.")
             return redirect('order_history')
         else:
             print(f"Checkout Form Errors: {form.errors}")
@@ -459,7 +479,8 @@ def checkout(request):
             'house_number': request.user.house_number,
             'address_line1': request.user.address_line1,
             'pincode': request.user.pincode,
-            'city': 'Indore'
+            'city': 'Indore',
+            'fulfillment_type': 'DELIVERY'  # Default to delivery
         }
         # Fallback if fields are empty but old single address field has data
         if not initial_data['address_line1'] and request.user.address:

@@ -84,13 +84,26 @@ class CustomUserUpdateForm(forms.ModelForm):
         }
 
 class CheckoutForm(forms.Form):
+    # Fulfillment Type - Pick from Store or Online Delivery
+    fulfillment_type = forms.ChoiceField(
+        choices=[
+            ('DELIVERY', 'Online Delivery'),
+            ('PICKUP', 'Pick from Store'),
+        ],
+        widget=forms.RadioSelect(attrs={'class': 'fulfillment-type-radio', 'id': 'id_fulfillment_type'}),
+        initial='DELIVERY',
+        label='How would you like to receive your order?'
+    )
+    
     house_number = forms.CharField(
         widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'House Number', 'id': 'id_house_number'}),
-        label='House Number'
+        label='House Number',
+        required=False  # Optional for pickup orders
     )
     address_line1 = forms.CharField(
         widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Address Line 1 (Street/Road)', 'id': 'id_address_line1'}),
-        label='Address Line 1'
+        label='Address Line 1',
+        required=False  # Optional for pickup orders
     )
     address_line2 = forms.CharField(
         required=False,
@@ -100,7 +113,8 @@ class CheckoutForm(forms.Form):
     pincode = forms.CharField(
         widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Pincode', 'id': 'id_pincode'}),
         validators=[validate_pincode],
-        label='Pincode'
+        label='Pincode',
+        required=False  # Optional for pickup orders
     )
     city = forms.CharField(
         initial='Indore',
@@ -110,7 +124,8 @@ class CheckoutForm(forms.Form):
     area = forms.ChoiceField(
         choices=Appointment.AREA_CHOICES,
         widget=forms.Select(attrs={'class': 'form-select', 'id': 'id_area', 'onchange': 'toggleOtherArea(this)'}),
-        label='Area'
+        label='Area',
+        required=False  # Optional for pickup orders
     )
     other_area = forms.CharField(
         required=False,
@@ -147,16 +162,34 @@ class CheckoutForm(forms.Form):
         cleaned_data = super().clean()
         payment_method = cleaned_data.get('payment_method')
         upi_id = cleaned_data.get('upi_id')
+        fulfillment_type = cleaned_data.get('fulfillment_type')
         
-        area = cleaned_data.get('area')
-        other_area = cleaned_data.get('other_area')
+        # For DELIVERY orders, validate address fields
+        if fulfillment_type == 'DELIVERY':
+            house_number = cleaned_data.get('house_number')
+            address_line1 = cleaned_data.get('address_line1')
+            pincode = cleaned_data.get('pincode')
+            
+            if not house_number:
+                self.add_error('house_number', 'House number is required for delivery orders.')
+            if not address_line1:
+                self.add_error('address_line1', 'Address is required for delivery orders.')
+            if not pincode:
+                self.add_error('pincode', 'Pincode is required for delivery orders.')
+            
+            # Handle "Other" area
+            area = cleaned_data.get('area')
+            other_area = cleaned_data.get('other_area')
 
-        if area == 'Other':
-            if not other_area:
-                self.add_error('other_area', 'Please specify your area.')
-            else:
-                cleaned_data['area'] = other_area
-
+            if area == 'Other':
+                if not other_area:
+                    self.add_error('other_area', 'Please specify your area.')
+                else:
+                    cleaned_data['area'] = other_area
+        
+        # For PICKUP orders, address is not required
+        # Just pass through without validation
+        
         # Validate UPI ID if UPI payment is selected
         if payment_method == 'UPI':
             if not upi_id:
@@ -447,25 +480,28 @@ class DailySalesForm(forms.ModelForm):
         widgets = {
             'date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
             'total_sales': forms.NumberInput(attrs={
-                'class': 'form-control smart-default-field',
+                'class': 'form-control',
                 'placeholder': '0',
                 'step': '0.01',
                 'min': '0',
-                'data-default': '0'
+                'id': 'id_total_sales'
             }),
             'online_received': forms.NumberInput(attrs={
-                'class': 'form-control smart-default-field',
+                'class': 'form-control',
                 'placeholder': '0',
                 'step': '0.01',
                 'min': '0',
-                'data-default': '0'
+                'id': 'id_online_received'
             }),
+            # Cash is READ-ONLY - Auto-calculated as Total Sales - Online
             'cash_received': forms.NumberInput(attrs={
-                'class': 'form-control smart-default-field',
+                'class': 'form-control',
                 'placeholder': '0',
                 'step': '0.01',
                 'min': '0',
-                'data-default': '0'
+                'id': 'id_cash_received',
+                'readonly': 'readonly',
+                'style': 'background-color: #e9ecef; cursor: not-allowed;'
             }),
             'labor_charge': forms.NumberInput(attrs={
                 'class': 'form-control smart-default-field', 
@@ -481,20 +517,26 @@ class DailySalesForm(forms.ModelForm):
                 'min': '0',
                 'data-default': '0'
             }),
+            # Subtotal is READ-ONLY - Auto-calculated as Total Sales
             'subtotal': forms.NumberInput(attrs={
-                'class': 'form-control smart-default-field',
+                'class': 'form-control',
                 'placeholder': '0',
                 'step': '0.01',
                 'min': '0',
-                'data-default': '0'
+                'id': 'id_subtotal',
+                'readonly': 'readonly',
+                'style': 'background-color: #e9ecef; cursor: not-allowed;'
             }),
             'remark': forms.Select(attrs={'class': 'form-select', 'onchange': 'if(this.value=="Other"){document.getElementById("id_other_remark").parentElement.style.display="block";}else{document.getElementById("id_other_remark").parentElement.style.display="none";}'}),
             'other_remark': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
         }
         help_texts = {
+            'total_sales': 'Enter the total sales amount for the day',
+            'online_received': 'Enter online payment received (default: 0)',
+            'cash_received': 'Auto-calculated: Total Sales − Online Received',
             'labor_charge': 'Optional – enter only if applicable',
             'delivery_charge': 'Optional – enter only if applicable',
-            'subtotal': 'Leave empty to auto-calculate (Online + Cash)',
+            'subtotal': 'Auto-calculated: equals Total Sales',
         }
     
     def clean_date(self):
@@ -515,33 +557,24 @@ class DailySalesForm(forms.ModelForm):
         cleaned_data = super().clean()
         total_sales = cleaned_data.get('total_sales')
         online_received = cleaned_data.get('online_received')
-        cash_received = cleaned_data.get('cash_received')
-        subtotal = cleaned_data.get('subtotal')
         
         # Convert None to 0 for calculation
         total_sales = total_sales or 0
         online_received = online_received or 0
-        cash_received = cash_received or 0
-        subtotal = subtotal or 0
         
-        # Calculate expected subtotal
-        expected_subtotal = online_received + cash_received
-        
-        # Rule 1: Subtotal should equal Online + Cash
-        if subtotal != expected_subtotal:
+        # VALIDATION: Online received cannot exceed Total Sales
+        if online_received > total_sales:
             raise forms.ValidationError(
-                f"⚠️ Subtotal Mismatch: Subtotal (₹{subtotal}) must equal "
-                f"Online + Cash (₹{online_received} + ₹{cash_received} = ₹{expected_subtotal}). "
-                f"Please correct the values."
+                f"⚠️ Invalid Amount: Online Received (₹{online_received}) cannot exceed "
+                f"Total Sales (₹{total_sales}). Please correct the values."
             )
         
-        # Rule 2: Total Sales should equal Subtotal
-        if total_sales != subtotal:
-            raise forms.ValidationError(
-                f"⚠️ Total Sales Mismatch: Total Sales (₹{total_sales}) must equal "
-                f"Subtotal (₹{subtotal}). "
-                f"Please ensure Total Sales matches the Subtotal amount."
-            )
+        # AUTO-CALCULATE: Cash Received = Total Sales - Online Received
+        calculated_cash = total_sales - online_received
+        cleaned_data['cash_received'] = calculated_cash
+        
+        # AUTO-CALCULATE: Subtotal = Total Sales (Online + Cash)
+        cleaned_data['subtotal'] = total_sales
         
         return cleaned_data
 

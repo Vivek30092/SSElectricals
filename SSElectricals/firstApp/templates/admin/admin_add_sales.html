@@ -28,7 +28,13 @@
                 </div>
                 {% endif %}
 
-                <form method="post">
+                <!-- Inline Validation Error Display -->
+                <div id="onlineValidationError" class="alert alert-danger" style="display: none;">
+                    <i class="fas fa-exclamation-circle me-2"></i>
+                    <span id="validationErrorText">Online amount cannot exceed Total Sales</span>
+                </div>
+
+                <form method="post" id="salesForm">
                     {% csrf_token %}
 
                     <div class="row mb-3">
@@ -39,18 +45,31 @@
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label">Total Sales (₹)</label>
+                        <label class="form-label">
+                            Total Sales (₹) <span class="text-danger">*</span>
+                        </label>
                         {{ form.total_sales }}
+                        <div class="form-text">Enter the total sales amount for the day</div>
                     </div>
 
                     <div class="row mb-3">
                         <div class="col-md-6">
-                            <label class="form-label">Online Money Received (₹)</label>
+                            <label class="form-label">
+                                Online Money Received (₹)
+                                <span class="badge bg-info badge-sm ms-1">Default: 0</span>
+                            </label>
                             {{ form.online_received }}
+                            <div class="form-text">Enter online payment amount (can be changed anytime)</div>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label">Cash Received (₹)</label>
+                            <label class="form-label">
+                                Cash Received (₹)
+                                <span class="badge bg-secondary badge-sm ms-1">Auto-Calculated</span>
+                            </label>
                             {{ form.cash_received }}
+                            <div class="form-text text-muted">
+                                <i class="fas fa-calculator me-1"></i>Cash = Total Sales − Online Received
+                            </div>
                         </div>
                     </div>
 
@@ -75,9 +94,14 @@
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label">Subtotal (₹)</label>
+                        <label class="form-label">
+                            Subtotal (₹)
+                            <span class="badge bg-secondary badge-sm ms-1">Auto-Calculated</span>
+                        </label>
                         {{ form.subtotal }}
-                        <div class="form-text">Leave blank to auto-calculate (Online + Cash)</div>
+                        <div class="form-text text-muted">
+                            <i class="fas fa-info-circle me-1"></i>Subtotal equals Total Sales
+                        </div>
                     </div>
 
                     <div class="mb-3">
@@ -91,7 +115,7 @@
                     </div>
 
                     <div class="d-grid gap-2">
-                        <button type="submit" class="btn btn-primary">Save Record</button>
+                        <button type="submit" class="btn btn-primary" id="saveBtn">Save Record</button>
                         <a href="{% url 'admin_daily_sales' %}" class="btn btn-secondary">Cancel</a>
                     </div>
                 </form>
@@ -102,13 +126,67 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', function () {
-        // Handle 'Other' remark visibility
+        // Get DOM elements
+        const totalSalesInput = document.getElementById('id_total_sales');
+        const onlineReceivedInput = document.getElementById('id_online_received');
+        const cashReceivedInput = document.getElementById('id_cash_received');
+        const subtotalInput = document.getElementById('id_subtotal');
+        const validationError = document.getElementById('onlineValidationError');
+        const validationErrorText = document.getElementById('validationErrorText');
+        const saveBtn = document.getElementById('saveBtn');
         const remarkSelect = document.querySelector('select[name="remark"]');
         const otherRemarkDiv = document.querySelector('textarea[name="other_remark"]').closest('div');
 
+        // Initialize defaults
+        if (!onlineReceivedInput.value || onlineReceivedInput.value === '') {
+            onlineReceivedInput.value = '0';
+        }
+
+        // Handle 'Other' remark visibility
         if (remarkSelect.value === 'Other') {
             otherRemarkDiv.style.display = 'block';
         }
+
+        // Auto-calculation function
+        function calculateCash() {
+            const totalSales = parseFloat(totalSalesInput.value) || 0;
+            const onlineReceived = parseFloat(onlineReceivedInput.value) || 0;
+
+            // Validation: Online cannot exceed Total Sales
+            if (onlineReceived > totalSales) {
+                validationError.style.display = 'block';
+                validationErrorText.textContent = `⚠️ Online amount (₹${onlineReceived}) cannot exceed Total Sales (₹${totalSales})`;
+                saveBtn.disabled = true;
+                cashReceivedInput.classList.add('is-invalid');
+                return;
+            } else {
+                validationError.style.display = 'none';
+                saveBtn.disabled = false;
+                cashReceivedInput.classList.remove('is-invalid');
+            }
+
+            // Calculate Cash = Total Sales - Online
+            const cashReceived = totalSales - onlineReceived;
+
+            // Prevent negative cash (extra safety)
+            if (cashReceived < 0) {
+                validationError.style.display = 'block';
+                validationErrorText.textContent = `⚠️ Cash cannot be negative. Please reduce Online amount.`;
+                saveBtn.disabled = true;
+                return;
+            }
+
+            // Update read-only fields
+            cashReceivedInput.value = cashReceived.toFixed(2);
+            subtotalInput.value = totalSales.toFixed(2);
+        }
+
+        // Event listeners for real-time calculation
+        totalSalesInput.addEventListener('input', calculateCash);
+        onlineReceivedInput.addEventListener('input', calculateCash);
+
+        // Run calculation on page load (for edit scenarios)
+        calculateCash();
 
         // Smart Default Behavior for Labor & Delivery Charge Fields
         const smartDefaultFields = document.querySelectorAll('.smart-default-field');
@@ -125,14 +203,6 @@
                 }
             });
 
-            // On blur: if empty and was focused, leave empty (will save as NULL)
-            // If untouched, keep 0 (will save as 0)
-            field.addEventListener('blur', function () {
-                // If it's empty after focus, we leave it empty (NULL)
-                // If never focused and still 0, we keep the 0
-                // No action needed here as empty field will be submitted as empty
-            });
-
             // Prevent negative values
             field.addEventListener('input', function () {
                 if (parseFloat(this.value) < 0) {
@@ -141,7 +211,7 @@
             });
 
             // Set initial value to 0 if field is empty (for new entries)
-            if (this.value === '' || this.value === null) {
+            if (field.value === '' || field.value === null) {
                 field.value = '0';
             }
         });
@@ -153,6 +223,20 @@
                     field.value = '0';
                 }
             });
+        });
+
+        // Prevent form submission if validation fails
+        document.getElementById('salesForm').addEventListener('submit', function (e) {
+            const totalSales = parseFloat(totalSalesInput.value) || 0;
+            const onlineReceived = parseFloat(onlineReceivedInput.value) || 0;
+
+            if (onlineReceived > totalSales) {
+                e.preventDefault();
+                validationError.style.display = 'block';
+                validationErrorText.textContent = `⚠️ Online amount (₹${onlineReceived}) cannot exceed Total Sales (₹${totalSales})`;
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+                return false;
+            }
         });
     });
 </script>

@@ -233,6 +233,34 @@
 
     <!-- Sidebar Info -->
     <div class="col-lg-4">
+        <!-- Fulfillment Type Card - Prominent Display -->
+        <div class="card mb-4 {% if order.fulfillment_type == 'PICKUP' %}border-success{% else %}border-primary{% endif %}"
+            style="border-width: 2px;">
+            <div
+                class="card-header {% if order.fulfillment_type == 'PICKUP' %}bg-success{% else %}bg-primary{% endif %} text-white">
+                <i
+                    class="fas {% if order.fulfillment_type == 'PICKUP' %}fa-store{% else %}fa-truck{% endif %} me-2"></i>
+                Fulfillment Type
+            </div>
+            <div class="card-body text-center py-4">
+                {% if order.fulfillment_type == 'PICKUP' %}
+                <div class="mb-2">
+                    <i class="fas fa-store fa-3x text-success"></i>
+                </div>
+                <h5 class="text-success fw-bold">🏬 Pick from Store</h5>
+                <p class="text-muted mb-0 small">Customer will collect order from shop</p>
+                <span class="badge bg-success mt-2">No Delivery Charge</span>
+                {% else %}
+                <div class="mb-2">
+                    <i class="fas fa-truck fa-3x text-primary"></i>
+                </div>
+                <h5 class="text-primary fw-bold">🚚 Online Delivery</h5>
+                <p class="text-muted mb-0 small">Delivery to customer's address</p>
+                <span class="badge bg-primary mt-2">Delivery Required</span>
+                {% endif %}
+            </div>
+        </div>
+
         <div class="card mb-4">
             <div class="card-header">
                 Customer Details
@@ -246,10 +274,20 @@
                     <a href="mailto:{{ order.user.email }}">{{ order.user.email }}</a>
                 </p>
                 <hr>
+                {% if order.fulfillment_type == 'PICKUP' %}
+                <h6><i class="fas fa-store text-success me-2"></i>Store Pickup</h6>
+                <div class="alert alert-success mb-0 py-2">
+                    <small>
+                        <i class="fas fa-info-circle me-1"></i>
+                        Customer will collect from shop. No address required.
+                    </small>
+                </div>
+                {% else %}
                 <h6>Delivery Address</h6>
                 <p>{{ order.address }}</p>
                 {% if order.distance_km %}
                 <p class="mb-0"><strong>Distance:</strong> {{ order.distance_km }} KM</p>
+                {% endif %}
                 {% endif %}
             </div>
         </div>
@@ -260,6 +298,13 @@
                 Order Information
             </div>
             <div class="card-body">
+                <p><strong>Fulfillment:</strong>
+                    {% if order.fulfillment_type == 'PICKUP' %}
+                    <span class="badge bg-success">Pick from Store</span>
+                    {% else %}
+                    <span class="badge bg-primary">Online Delivery</span>
+                    {% endif %}
+                </p>
                 <p><strong>Order Type:</strong>
                     {% if order.order_type == 'enquiry' %}
                     <span class="badge bg-info">Enquiry-Based</span>

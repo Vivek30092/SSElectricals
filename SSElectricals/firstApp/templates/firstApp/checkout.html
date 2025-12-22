@@ -28,7 +28,77 @@
                         </div>
                         {% endif %}
 
+                        <!-- ORDER TYPE SELECTION -->
                         <div class="bg-white p-4 rounded-3 shadow-sm mb-4">
+                            <h5 class="mb-3 text-primary border-bottom pb-2">
+                                <i class="fas fa-shipping-fast me-2"></i>How would you like to receive your order?
+                            </h5>
+                            <div class="row g-3">
+                                <!-- Pick from Store Option -->
+                                <div class="col-md-6">
+                                    <div class="fulfillment-option" id="option-pickup">
+                                        <input type="radio" name="fulfillment_type" value="PICKUP"
+                                            id="fulfillment_pickup" class="d-none" {% if form.fulfillment_type.value == 'PICKUP' %}
+                                            checked{% endif %}>
+                                        <label for="fulfillment_pickup" class="fulfillment-label w-100 h-100">
+                                            <div class="card h-100 border-2 fulfillment-card p-4 text-center">
+                                                <div class="mb-3">
+                                                  <i class="fas fa-store fa-3x text-success"></i>
+                                                </div>
+                                                <h6 class="fw-bold mb-2">🏬 Pick from Store</h6>
+                                                <p class="small text-muted mb-0">
+                                                    Collect directly from our shop
+                                                </p>
+                                                <span class="badge bg-success mt-2">No Delivery Charge</span>
+                                            </div>
+                                        </label>
+                                    </div>
+                                </div>
+                                <!-- Online Delivery Option -->
+                                <div class="col-md-6">
+                                    <div class="fulfillment-option" id="option-delivery">
+                                        <input type="radio" name="fulfillment_type" value="DELIVERY"
+                                            id="fulfillment_delivery" class="d-none" {% if form.fulfillment_type.value == 'DELIVERY' or not form.fulfillment_type.value %}checked{% endif %}>
+                                        <label for="fulfillment_delivery" class="fulfillment-label w-100 h-100">
+                                            <div class="card h-100 border-2 fulfillment-card p-4 text-center">
+                                                <div class="mb-3">
+                                                    <i class="fas fa-truck fa-3x text-primary"></i>
+                                                </div>
+                                                <h6 class="fw-bold mb-2">🚚 Online Delivery</h6>
+                                                <p class="small text-muted mb-0">
+                                                    Get it delivered to your doorstep
+                                                </p>
+                                                <span class="badge bg-primary mt-2">Distance-based Charges</span>
+                                            </div>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- PICKUP MESSAGE (shown when Pick from Store is selected) -->
+                        <div id="pickupMessage" class="bg-white p-4 rounded-3 shadow-sm mb-4" style="display: none;">
+                            <div class="text-center py-4">
+                                <i class="fas fa-map-marker-alt fa-4x text-success mb-3"></i>
+                                <h5 class="text-success fw-bold">You can collect your order from our shop</h5>
+                                <p class="text-muted mb-3">
+                                    Visit us during business hours to pick up your order.
+                                </p>
+                                <div class="bg-light p-3 rounded-3 d-inline-block">
+                                    <p class="mb-1"><strong><i class="fas fa-store me-2"></i>Shiv Shakti
+                                            Electricals</strong></p>
+                                    <p class="mb-1 small text-muted">B-155, Abhinandan Nagar, Main Road, Indore, Madhya Pradesh</p>
+                                    <p class="mb-0 small"><i class="fas fa-phone me-1"></i>+91 99931 49226</p>
+                                </div>
+                                <div class="alert alert-info mt-3 mb-0 d-inline-block p-2 small">
+                                    <i class="fas fa-info-circle me-1"></i>
+                                    We'll notify you when your order is ready for pickup.
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- DELIVERY ADDRESS SECTION (shown when Online Delivery is selected) -->
+                        <div id="deliverySection" class="bg-white p-4 rounded-3 shadow-sm mb-4">
                             <h5 class="mb-3 text-primary border-bottom pb-2"><i
                                     class="fas fa-map-marker-alt me-2"></i>Delivery Address</h5>
 
@@ -272,6 +342,74 @@
         transform: translateY(-2px);
         box-shadow: 0 .5rem 1rem rgba(0, 0, 0, .15) !important;
     }
+
+    /* Fulfillment Type Card Styles */
+    .fulfillment-option {
+        cursor: pointer;
+    }
+
+    .fulfillment-card {
+        transition: all 0.3s ease;
+        border-color: var(--bs-border-color, #dee2e6) !important;
+        background: var(--bs-body-bg, #fff);
+    }
+
+    .fulfillment-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+        border-color: var(--bs-primary, #0d6efd) !important;
+    }
+
+    /* Selected state for Pickup */
+    #fulfillment_pickup:checked+.fulfillment-label .fulfillment-card {
+        border-color: #198754 !important;
+        background: linear-gradient(135deg, rgba(25, 135, 84, 0.15) 0%, rgba(25, 135, 84, 0.25) 100%);
+        box-shadow: 0 0 0 3px rgba(25, 135, 84, 0.25);
+    }
+
+    /* Selected state for Delivery */
+    #fulfillment_delivery:checked+.fulfillment-label .fulfillment-card {
+        border-color: #0d6efd !important;
+        background: linear-gradient(135deg, rgba(13, 110, 253, 0.15) 0%, rgba(13, 110, 253, 0.25) 100%);
+        box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.25);
+    }
+
+    .fulfillment-label {
+        cursor: pointer;
+        display: block;
+    }
+
+    /* Animation for section transitions */
+    #pickupMessage,
+    #deliverySection {
+        transition: all 0.3s ease-out;
+    }
+
+    /* Dark Theme Overrides */
+    [data-bs-theme="dark"] .fulfillment-card {
+        background: var(--bs-dark, #212529);
+        border-color: #495057 !important;
+    }
+
+    [data-bs-theme="dark"] .fulfillment-card:hover {
+        border-color: #6c757d !important;
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+    }
+
+    [data-bs-theme="dark"] #fulfillment_pickup:checked+.fulfillment-label .fulfillment-card {
+        background: linear-gradient(135deg, rgba(25, 135, 84, 0.2) 0%, rgba(25, 135, 84, 0.35) 100%);
+        border-color: #198754 !important;
+    }
+
+    [data-bs-theme="dark"] #fulfillment_delivery:checked+.fulfillment-label .fulfillment-card {
+        background: linear-gradient(135deg, rgba(13, 110, 253, 0.2) 0%, rgba(13, 110, 253, 0.35) 100%);
+        border-color: #0d6efd !important;
+    }
+
+    [data-bs-theme="dark"] .fulfillment-card h6,
+    [data-bs-theme="dark"] .fulfillment-card p {
+        color: var(--bs-body-color, #dee2e6);
+    }
 </style>
 
 <script
@@ -279,7 +417,7 @@
     async defer></script>
 
 <script>
-    const isFirstOrder = {{ is_first_order| yesno:"true,false"}};
+    const isFirstOrder = {{ is_first_order| yesno:"true,false" }};
     const cartTotal = {{ cart.total_price }};
     const SHOP_LAT = 22.7624113;
     const SHOP_LNG = 75.8692938;
@@ -292,6 +430,44 @@
     let accuracyCircle = null;
     let currentGpsAccuracy = null;
     let distanceMatrixService = null;
+
+    // ================================
+    // FULFILLMENT TYPE TOGGLE LOGIC
+    // ================================
+    function initFulfillmentToggle() {
+        const pickupRadio = document.getElementById('fulfillment_pickup');
+        const deliveryRadio = document.getElementById('fulfillment_delivery');
+        const pickupMessage = document.getElementById('pickupMessage');
+        const deliverySection = document.getElementById('deliverySection');
+
+        function toggleFulfillmentUI() {
+            if (pickupRadio.checked) {
+                // Show pickup message, hide delivery section
+                pickupMessage.style.display = 'block';
+                deliverySection.style.display = 'none';
+                // Clear GPS data for pickup orders
+                document.getElementById('id_latitude').value = '';
+                document.getElementById('id_longitude').value = '';
+                document.getElementById('id_distance_km').value = '0';
+            } else {
+                // Show delivery section, hide pickup message
+                pickupMessage.style.display = 'none';
+                deliverySection.style.display = 'block';
+            }
+        }
+
+        // Add event listeners
+        if (pickupRadio && deliveryRadio) {
+            pickupRadio.addEventListener('change', toggleFulfillmentUI);
+            deliveryRadio.addEventListener('change', toggleFulfillmentUI);
+
+            // Initialize on page load
+            toggleFulfillmentUI();
+        }
+    }
+
+    // Run on DOM ready
+    document.addEventListener('DOMContentLoaded', initFulfillmentToggle);
 
     // Initialize Google Places Autocomplete
     function initAutocomplete() {
@@ -881,6 +1057,15 @@
 
     // Form validation before submission
     document.getElementById('checkoutForm').addEventListener('submit', function (e) {
+        const fulfillmentPickup = document.getElementById('fulfillment_pickup');
+
+        // Skip GPS validation for pickup orders
+        if (fulfillmentPickup && fulfillmentPickup.checked) {
+            // Pickup order - no address validation needed
+            return true;
+        }
+
+        // Delivery order - requires GPS location
         const lat = document.getElementById('id_latitude').value;
         const lng = document.getElementById('id_longitude').value;
 

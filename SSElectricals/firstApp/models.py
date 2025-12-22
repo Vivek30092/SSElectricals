@@ -186,6 +186,7 @@ class Order(models.Model):
         ('Pending Enquiry', 'Pending Enquiry'),  # User submitted enquiry (default)
         ('Price Shared', 'Price Shared'),        # Admin has shared pricing with user
         ('Confirmed', 'Confirmed'),              # User/Admin confirmed order
+        ('Ready for Pickup', 'Ready for Pickup'), # For pickup orders - ready at shop
         ('Out for Delivery', 'Out for Delivery'),
         ('Delivered', 'Delivered'),
         ('Cancelled', 'Cancelled'),
@@ -197,6 +198,12 @@ class Order(models.Model):
         ('direct', 'Direct Order (Legacy)'),
     ]
     
+    # Fulfillment type - how customer will receive the order
+    FULFILLMENT_CHOICES = [
+        ('PICKUP', 'Pick from Store'),
+        ('DELIVERY', 'Online Delivery'),
+    ]
+    
     PAYMENT_CHOICES = [
         ('COD', 'Cash on Delivery'),
         ('ONLINE_DELIVERY', 'Online (Pay at Delivery using QR code)'),
@@ -204,9 +211,17 @@ class Order(models.Model):
 
 
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='orders')
-    address = models.TextField()
+    address = models.TextField(blank=True, null=True)  # Optional for pickup orders
     latitude = models.FloatField(blank=True, null=True)
     longitude = models.FloatField(blank=True, null=True)
+    
+    # Fulfillment Type - Pickup from Store OR Online Delivery
+    fulfillment_type = models.CharField(
+        max_length=20, 
+        choices=FULFILLMENT_CHOICES, 
+        default='DELIVERY',
+        help_text="How customer will receive the order"
+    )
     
     # Order Type
     order_type = models.CharField(max_length=20, choices=ORDER_TYPE_CHOICES, default='enquiry')
