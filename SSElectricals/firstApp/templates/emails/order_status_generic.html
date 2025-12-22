@@ -1,0 +1,108 @@
+{% extends 'emails/base.html' %}
+
+{% block title %}Order Update - {{ business.name }}{% endblock %}
+
+{% block content %}
+<div class="greeting">Dear {{ user_name }},</div>
+
+<div class="content-block">
+    <p>We wanted to update you regarding your recent order with <strong>{{ business.name }}</strong>.</p>
+</div>
+
+<!-- Order Status Badge -->
+<div style="text-align: center; margin: 25px 0;">
+    <span class="status-badge 
+        {% if order_status == 'Pending' %}status-pending
+        {% elif order_status == 'Confirmed' or order_status == 'Processing' %}status-confirmed
+        {% elif order_status == 'Delivered' %}status-delivered
+        {% elif order_status == 'Cancelled' %}status-cancelled
+        {% else %}status-confirmed{% endif %}">
+        {{ order_status }}
+    </span>
+</div>
+
+<!-- Order Details -->
+<div class="info-box">
+    <h3>📦 Order Details</h3>
+    <div class="info-row">
+        <span class="info-label">Order ID:</span>
+        <span class="info-value"><strong>#{{ order_id }}</strong></span>
+    </div>
+    <div class="info-row">
+        <span class="info-label">Product:</span>
+        <span class="info-value">{{ product_name }}</span>
+    </div>
+    <div class="info-row">
+        <span class="info-label">Current Status:</span>
+        <span class="info-value" style="font-weight: 600; color: 
+            {% if order_status == 'Pending' %}#f39c12
+            {% elif order_status == 'Confirmed' or order_status == 'Processing' %}#27ae60
+            {% elif order_status == 'Delivered' %}#2196f3
+            {% elif order_status == 'Cancelled' %}#e74c3c
+            {% else %}#27ae60{% endif %};">
+            {{ order_status }}
+        </span>
+    </div>
+</div>
+
+<!-- Admin Message if any -->
+{% if admin_message %}
+<div class="alert-box" style="background-color: #e3f2fd; border-left-color: #2196f3; color: #1565c0;">
+    <h4 style="margin: 0 0 10px 0;">📝 Message from Admin</h4>
+    <p style="margin: 0;">{{ admin_message }}</p>
+</div>
+{% endif %}
+
+<!-- Status Progress -->
+<div style="background: #f7fafc; padding: 20px; border-radius: 8px; margin: 25px 0;">
+    <h4 style="margin: 0 0 15px 0; color: #2d3748;">Order Progress</h4>
+    <div style="display: flex; justify-content: space-between; position: relative;">
+        <div style="text-align: center; flex: 1;">
+            <div
+                style="width: 30px; height: 30px; border-radius: 50%; background: {% if order_status %}#28a745{% else %}#e2e8f0{% endif %}; margin: 0 auto 5px; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 12px;">
+                ✓</div>
+            <small style="color: #666;">Placed</small>
+        </div>
+        <div style="text-align: center; flex: 1;">
+            <div
+                style="width: 30px; height: 30px; border-radius: 50%; background: {% if order_status in 'Confirmed,Processing,Out for Delivery,Delivered' %}#28a745{% else %}#e2e8f0{% endif %}; margin: 0 auto 5px; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 12px;">
+                {% if order_status in 'Confirmed,Processing,Out for Delivery,Delivered' %}✓{% endif %}</div>
+            <small style="color: #666;">Confirmed</small>
+        </div>
+        <div style="text-align: center; flex: 1;">
+            <div
+                style="width: 30px; height: 30px; border-radius: 50%; background: {% if order_status in 'Out for Delivery,Delivered' %}#28a745{% else %}#e2e8f0{% endif %}; margin: 0 auto 5px; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 12px;">
+                {% if order_status in 'Out for Delivery,Delivered' %}✓{% endif %}</div>
+            <small style="color: #666;">Shipped</small>
+        </div>
+        <div style="text-align: center; flex: 1;">
+            <div
+                style="width: 30px; height: 30px; border-radius: 50%; background: {% if order_status == 'Delivered' %}#28a745{% else %}#e2e8f0{% endif %}; margin: 0 auto 5px; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 12px;">
+                {% if order_status == 'Delivered' %}✓{% endif %}</div>
+            <small style="color: #666;">Delivered</small>
+        </div>
+    </div>
+</div>
+
+<div class="content-block">
+    <p>You can track your order from your dashboard anytime.</p>
+</div>
+
+<div style="text-align: center; margin: 25px 0;">
+    <a href="{{ dashboard_link|default:'#' }}" class="btn">
+        📋 View Order Details
+    </a>
+</div>
+
+<div class="content-block" style="margin-top: 30px;">
+    <p>Thank you for shopping with us.</p>
+</div>
+
+<div style="margin-top: 30px;">
+    <p style="margin-bottom: 5px;">Regards,</p>
+    <p style="font-weight: 600; margin-bottom: 5px;">{{ business.name }}</p>
+    <p style="color: #666; font-size: 14px; margin: 0;">
+        📞 {{ business.phone }}
+    </p>
+</div>
+{% endblock %}

@@ -1,0 +1,67 @@
+{% extends 'emails/base.html' %}
+
+{% block title %}Your Order is Out for Delivery - {{ business.name }}{% endblock %}
+
+{% block content %}
+<div class="greeting">Dear {{ user_name }},</div>
+
+<div class="content-block">
+    <p>Good news! Your order is now <strong>out for delivery</strong>. 🚚</p>
+</div>
+
+<!-- Order Info -->
+<div class="info-box">
+    <h3>📦 Order Information</h3>
+    <div class="info-row">
+        <span class="info-label">Order ID:</span>
+        <span class="info-value"><strong>#{{ order_id }}</strong></span>
+    </div>
+    {% if product_name %}
+    <div class="info-row">
+        <span class="info-label">Product:</span>
+        <span class="info-value">{{ product_name }}</span>
+    </div>
+    {% endif %}
+</div>
+
+<!-- OTP Highlight Box -->
+<div class="highlight-box">
+    <div class="small-text">🔐 YOUR DELIVERY OTP</div>
+    <div class="big-text">{{ delivery_otp }}</div>
+    <div class="small-text">Share this code with the delivery person to confirm delivery</div>
+</div>
+
+<!-- Important Instructions -->
+<div class="alert-box" style="background-color: #fff3cd; border-left: 4px solid #ffc107;">
+    <h4 style="margin: 0 0 10px 0; color: #856404;">⚠️ Important</h4>
+    <ul style="margin: 0; padding-left: 20px; color: #333;">
+        <li>Please share OTP <strong>only</strong> with the delivery person upon receiving your order.</li>
+        <li>Do not share this OTP with anyone else.</li>
+        <li>Verify your package before sharing the OTP.</li>
+    </ul>
+</div>
+
+<!-- Delivery Status Banner -->
+<div
+    style="background: linear-gradient(135deg, #17a2b8 0%, #138496 100%); padding: 25px; border-radius: 8px; text-align: center; margin: 25px 0; color: #fff;">
+    <div style="font-size: 40px; margin-bottom: 10px;">🚚</div>
+    <h3 style="margin: 0 0 10px 0;">On the Way!</h3>
+    <p style="margin: 0; opacity: 0.9;">Our delivery partner is bringing your order to you.</p>
+</div>
+
+<div class="content-block">
+    <p>If you have any concerns or the delivery is delayed, feel free to contact us.</p>
+</div>
+
+<div style="margin-top: 30px;">
+    <p style="margin-bottom: 5px;">Thank you for choosing <strong>{{ business.name }}</strong>.</p>
+</div>
+
+<div style="margin-top: 20px;">
+    <p style="margin-bottom: 5px;">Best regards,</p>
+    <p style="font-weight: 600; margin-bottom: 5px;">{{ business.name }}</p>
+    <p style="color: #666; font-size: 14px; margin: 0;">
+        📞 {{ business.phone }}
+    </p>
+</div>
+{% endblock %}

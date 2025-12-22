@@ -85,7 +85,8 @@
                         <div class="d-flex align-items-center gap-3">
                             <span class="theme-label">Light</span>
                             <div class="form-check form-switch" style="transform: scale(1.5); margin: 0 1rem;">
-                                <input class="form-check-input" type="checkbox" role="switch" id="themeSwitch" {% if user.theme_preference == 'dark' %} checked {% endif %}
+                                <input class="form-check-input" type="checkbox" role="switch" id="themeSwitch" {% if
+                                    user.theme_preference=='dark' %} checked {% endif %}
                                     onchange="updateThemeField(this)">
                                 <input type="hidden" name="theme_preference" id="theme_preference_hidden"
                                     value="{{ user.theme_preference }}">
@@ -105,8 +106,11 @@
                             <button type="submit" class="btn btn-primary me-2">Update Profile</button>
                             <a href="{% url 'initiate_profile_password_change' %}"
                                 class="btn btn-outline-warning me-2">Change Password</a>
-                            <a href="{% url 'user_receipts' %}" class="btn btn-outline-info">
+                            <a href="{% url 'user_receipts' %}" class="btn btn-outline-info me-2">
                                 <i class="fas fa-receipt"></i> My Receipts
+                            </a>
+                            <a href="{% url 'user_warranties' %}" class="btn btn-outline-success">
+                                <i class="fas fa-shield-alt"></i> My Warranties
                             </a>
                         </div>
                         <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal"

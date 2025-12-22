@@ -86,6 +86,18 @@
             class="{% if 'announcement' in request.resolver_match.url_name %}active{% endif %}">
             <i class="fas fa-bullhorn me-2"></i> Announcements
         </a>
+        <a href="{% url 'admin_electrician_list' %}"
+            class="{% if 'electrician' in request.resolver_match.url_name %}active{% endif %}">
+            <i class="fas fa-hard-hat me-2"></i> Electricians
+        </a>
+        <a href="{% url 'admin_warranty_list' %}"
+            class="{% if 'warranty' in request.resolver_match.url_name %}active{% endif %}">
+            <i class="fas fa-shield-alt me-2"></i> Warranties
+        </a>
+        <a href="{% url 'admin_appointment_book' %}"
+            class="{% if 'appointment_book' in request.resolver_match.url_name %}active{% endif %}">
+            <i class="fas fa-calendar-plus me-2"></i> Book Appointment
+        </a>
         <a href="{% url 'admin_activity_log' %}"
             class="{% if 'log' in request.resolver_match.url_name %}active{% endif %}">
             <i class="fas fa-history me-2"></i> Logs

@@ -77,6 +77,7 @@ class Product(models.Model):
     vendor = models.CharField(max_length=100, blank=True, null=True)
     purchase_price = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     is_trending = models.BooleanField(default=False, help_text="Mark this product as trending")
+    is_visible_on_website = models.BooleanField(default=False, help_text="Show this product on the website (default: hidden)")
     created_at = models.DateTimeField(auto_now_add=True)
 
     def save(self, *args, **kwargs):
@@ -737,8 +738,8 @@ class ServicePrice(models.Model):
             return {
                 'found': False,
                 'base_price': 200.00,
-                'min_service_charge': 300.00,
-                'max_service_charge': 1500.00,
+                'min_service_charge': 250.00,
+                'max_service_charge': 700.00,
                 'zone': zone,
                 'zone_display': 'Default',
             }
@@ -766,6 +767,8 @@ class Appointment(models.Model):
 
     STATUS_CHOICES = [
         ('Pending', 'Pending'),
+        ('Confirmed', 'Confirmed'),
+        ('In Progress', 'In Progress'),
         ('Approved', 'Approved'),
         ('Completed', 'Completed'),
         ('Cancelled', 'Cancelled'),
@@ -851,6 +854,15 @@ class Appointment(models.Model):
     extra_charge = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     pricing_confirmed = models.BooleanField(default=False, 
                                              help_text="True if price is confirmed by admin")
+    
+    # Assigned Electrician (for admin assignments)
+    assigned_electrician = models.ForeignKey('Electrician', on_delete=models.SET_NULL,
+                                              null=True, blank=True, related_name='appointments',
+                                              help_text="Electrician assigned to this appointment")
+    is_admin_booked = models.BooleanField(default=False, 
+                                           help_text="True if appointment was booked by admin on behalf of customer")
+    admin_notes = models.TextField(blank=True, null=True, 
+                                    help_text="Internal notes for admin (not visible to customer)")
     
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Pending')
     cancellation_reason = models.CharField(max_length=255, blank=True, null=True)
@@ -1706,3 +1718,188 @@ class SiteAnnouncement(models.Model):
         return qs
 
 # End of models.py
+
+
+# 17. Electrician Management System
+class Electrician(models.Model):
+    """
+    Manages electricians who can be assigned to appointments.
+    Admin controls which electricians are visible to users on the home page.
+    """
+    name = models.CharField(max_length=100)
+    phone_number = models.CharField(max_length=20)
+    email = models.EmailField()
+    profile_picture = models.ImageField(upload_to='electrician_pics/', blank=True, null=True)
+    specializations = models.TextField(blank=True, help_text="Comma-separated list of specializations")
+    experience_years = models.PositiveIntegerField(default=0, help_text="Years of experience")
+    
+    # Visibility Control
+    show_on_home_page = models.BooleanField(default=False, 
+        help_text="If checked, electrician will be visible on home page under 'Our Electricians'")
+    is_active = models.BooleanField(default=True, help_text="Is this electrician currently available")
+    
+    # Additional Info
+    address = models.TextField(blank=True, null=True)
+    notes = models.TextField(blank=True, null=True, help_text="Internal notes about this electrician")
+    
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['name']
+        verbose_name = 'Electrician'
+        verbose_name_plural = 'Electricians'
+    
+    def __str__(self):
+        return f"{self.name} ({self.phone_number})"
+    
+    @classmethod
+    def get_visible_electricians(cls):
+        """Get electricians that should appear on home page."""
+        return cls.objects.filter(show_on_home_page=True, is_active=True)
+    
+    @classmethod
+    def get_active_electricians(cls):
+        """Get all active electricians for assignment dropdowns."""
+        return cls.objects.filter(is_active=True)
+    
+    def get_specializations_list(self):
+        """Returns list of specializations."""
+        if self.specializations:
+            return [s.strip() for s in self.specializations.split(',')]
+        return []
+
+
+# 18. Warranty Management System
+class Warranty(models.Model):
+    """
+    Tracks product warranties for customers.
+    Admin can add/manage warranties, users can view their warranties.
+    """
+    STATUS_CHOICES = [
+        ('ACTIVE', 'Active'),
+        ('EXPIRED', 'Expired'),
+        ('VOIDED', 'Voided'),
+    ]
+    
+    DURATION_UNIT_CHOICES = [
+        ('MONTHS', 'Months'),
+        ('YEARS', 'Years'),
+    ]
+    
+    # Customer Info
+    customer = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, 
+                                  null=True, blank=True, related_name='warranties',
+                                  help_text="Link to user account if exists")
+    customer_name = models.CharField(max_length=100)
+    customer_phone = models.CharField(max_length=20)
+    customer_email = models.EmailField()
+    
+    # Product Info
+    product_name = models.CharField(max_length=200)
+    product_serial = models.CharField(max_length=100, blank=True, null=True,
+                                       help_text="Product serial number or identifier")
+    product_brand = models.CharField(max_length=100, blank=True, null=True)
+    product_model = models.CharField(max_length=100, blank=True, null=True)
+    product_image = models.ImageField(upload_to='warranty_products/', blank=True, null=True)
+    
+    # Warranty Period
+    purchase_date = models.DateField()
+    warranty_duration = models.PositiveIntegerField(default=12, help_text="Warranty duration value")
+    warranty_unit = models.CharField(max_length=10, choices=DURATION_UNIT_CHOICES, default='MONTHS')
+    warranty_expiry_date = models.DateField(blank=True, null=True, help_text="Auto-calculated on save")
+    
+    # Status
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='ACTIVE')
+    void_reason = models.TextField(blank=True, null=True, help_text="Reason if warranty was voided")
+    
+    # Additional Info
+    purchase_invoice = models.CharField(max_length=100, blank=True, null=True,
+                                         help_text="Invoice/Bill number")
+    notes = models.TextField(blank=True, null=True)
+    
+    # Admin tracking
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
+                                    null=True, related_name='created_warranties')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['-purchase_date']
+        verbose_name = 'Warranty'
+        verbose_name_plural = 'Warranties'
+        indexes = [
+            models.Index(fields=['customer_email', 'status']),
+            models.Index(fields=['warranty_expiry_date', 'status']),
+        ]
+    
+    def __str__(self):
+        return f"{self.product_name} - {self.customer_name} (Expires: {self.warranty_expiry_date})"
+    
+    def save(self, *args, **kwargs):
+        # Auto-calculate expiry date
+        if self.purchase_date and self.warranty_duration:
+            from dateutil.relativedelta import relativedelta
+            if self.warranty_unit == 'MONTHS':
+                self.warranty_expiry_date = self.purchase_date + relativedelta(months=self.warranty_duration)
+            else:  # YEARS
+                self.warranty_expiry_date = self.purchase_date + relativedelta(years=self.warranty_duration)
+        
+        # Auto-update status based on expiry
+        if self.warranty_expiry_date and self.status != 'VOIDED':
+            from django.utils import timezone
+            if self.warranty_expiry_date < timezone.now().date():
+                self.status = 'EXPIRED'
+            else:
+                self.status = 'ACTIVE'
+        
+        # Try to link to existing user by email
+        if not self.customer and self.customer_email:
+            from django.contrib.auth import get_user_model
+            User = get_user_model()
+            try:
+                self.customer = User.objects.get(email__iexact=self.customer_email)
+            except User.DoesNotExist:
+                pass
+        
+        super().save(*args, **kwargs)
+    
+    @property
+    def days_remaining(self):
+        """Returns days until warranty expires, or negative if expired."""
+        if self.warranty_expiry_date:
+            from django.utils import timezone
+            delta = self.warranty_expiry_date - timezone.now().date()
+            return delta.days
+        return 0
+    
+    @property
+    def is_expired(self):
+        """Check if warranty is expired."""
+        return self.status == 'EXPIRED' or (self.warranty_expiry_date and self.days_remaining < 0)
+    
+    def void_warranty(self, reason, admin_user=None):
+        """Mark warranty as voided."""
+        self.status = 'VOIDED'
+        self.void_reason = reason
+        self.save()
+    
+    @classmethod
+    def get_user_warranties(cls, user):
+        """Get warranties for a specific user (by account or email)."""
+        if user and user.is_authenticated:
+            return cls.objects.filter(
+                models.Q(customer=user) | models.Q(customer_email__iexact=user.email)
+            ).distinct()
+        return cls.objects.none()
+    
+    @classmethod
+    def update_expired_warranties(cls):
+        """Utility method to update status of expired warranties."""
+        from django.utils import timezone
+        today = timezone.now().date()
+        cls.objects.filter(
+            warranty_expiry_date__lt=today,
+            status='ACTIVE'
+        ).update(status='EXPIRED')

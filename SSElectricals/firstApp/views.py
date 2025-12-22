@@ -525,14 +525,23 @@ def confirm_delivery_otp(request):
     return render(request, 'firstApp/delivery_confirmation.html')
 
 def home(request):
+    from .models import Electrician
+    
     categories = Category.objects.all().order_by('name')
-    # Filter Trending Products
-    trending_products = Product.objects.filter(is_trending=True).order_by('-created_at')[:8]
+    # Filter Trending Products - only show visible products
+    trending_products = Product.objects.filter(
+        is_trending=True, 
+        is_visible_on_website=True
+    ).order_by('-created_at')[:8]
+    
+    # Get electricians visible on home page
+    electricians = Electrician.get_visible_electricians()
     
     # Context for template
     context = {
         'categories': categories, 
-        'trending_products': trending_products
+        'trending_products': trending_products,
+        'electricians': electricians,
     }
     
     # Render page
@@ -546,7 +555,9 @@ def home(request):
 
 
 def product_list(request):
-    products = Product.objects.all()
+    # Only show products visible on website for regular users
+    # Admin/staff can see all products in admin panel
+    products = Product.objects.filter(is_visible_on_website=True)
     query = request.GET.get('q')
     category_id = request.GET.get('category')
     sort_by = request.GET.get('sort')
@@ -812,8 +823,10 @@ def order_history(request):
 def cancel_order(request, order_id):
     order = get_object_or_404(Order, id=order_id, user=request.user)
     
-    if order.status != 'Pending':
-        messages.error(request, "You can only cancel pending orders.")
+    # Allow cancellation for pending and enquiry statuses
+    cancellable_statuses = ['Pending', 'Pending Enquiry', 'Price Shared']
+    if order.status not in cancellable_statuses:
+        messages.error(request, "This order cannot be cancelled at this stage.")
         return redirect('order_history')
 
     if request.method == 'POST':
@@ -828,6 +841,48 @@ def cancel_order(request, order_id):
         form = CancelOrderForm()
         
     return render(request, 'firstApp/cancel_order.html', {'order': order, 'form': form})
+
+
+@login_required
+def confirm_price_quote(request, order_id):
+    """
+    View for users to confirm the price quote shared by admin.
+    This converts the enquiry to a confirmed order.
+    """
+    order = get_object_or_404(Order, id=order_id, user=request.user)
+    
+    # Only allow confirmation if status is 'Price Shared'
+    if order.status != 'Price Shared':
+        messages.error(request, "This order is not awaiting price confirmation.")
+        return redirect('order_history')
+    
+    if request.method == 'POST':
+        # Update order status to Confirmed
+        order.status = 'Confirmed'
+        order.pricing_confirmed = True
+        order.save()
+        
+        # Send confirmation email to user
+        try:
+            from .email_utils import send_order_status_update_email
+            send_order_status_update_email(
+                order, 
+                admin_message="Thank you for confirming your order! We will process it shortly."
+            )
+        except Exception as e:
+            print(f"Failed to send confirmation email: {e}")
+        
+        messages.success(
+            request, 
+            f"✅ Order #{order.id} confirmed successfully! "
+            f"Total amount: ₹{order.grand_total}. "
+            f"We will process your order shortly."
+        )
+        return redirect('order_history')
+    
+    # For GET requests, redirect back with error (form requires POST)
+    messages.error(request, "Invalid request method.")
+    return redirect('order_history')
 
 def about(request):
     from .google_reviews_service import get_google_reviews
@@ -1858,3 +1913,23 @@ def delete_notification(request, pk):
     
     messages.success(request, "Notification deleted successfully.")
     return redirect('user_notifications')
+
+
+# ------------------------------------------------------------------
+# WARRANTY MANAGEMENT - User Side
+# ------------------------------------------------------------------
+
+@login_required
+def user_warranties(request):
+    """Display user's warranties"""
+    from .models import Warranty
+    
+    # Update expired warranties first
+    Warranty.update_expired_warranties()
+    
+    # Get warranties for this user (by account or email)
+    warranties = Warranty.get_user_warranties(request.user).order_by('-purchase_date')
+    
+    return render(request, 'firstApp/user_warranties.html', {
+        'warranties': warranties,
+    })

@@ -1,0 +1,97 @@
+{% extends 'emails/base.html' %}
+
+{% block title %}New Appointment Assignment - {{ business.name }}{% endblock %}
+
+{% block content %}
+<div class="greeting">Dear {{ electrician_name }},</div>
+
+<div class="content-block">
+    <p>You have been assigned a new service appointment. Please review the details carefully:</p>
+</div>
+
+<!-- Appointment Details -->
+<div class="info-box" style="border-left-color: #ffc107;">
+    <h3>📅 Appointment Details</h3>
+    <div class="info-row">
+        <span class="info-label">Service:</span>
+        <span class="info-value">{{ service_name }}</span>
+    </div>
+    <div class="info-row">
+        <span class="info-label">Date & Time:</span>
+        <span class="info-value" style="color: #dc3545; font-weight: 600;">{{ appointment_date }} at {{ appointment_time
+            }}</span>
+    </div>
+</div>
+
+<!-- Customer Information -->
+<div class="info-box" style="border-left-color: #17a2b8;">
+    <h3>👤 Customer Information</h3>
+    <div class="info-row">
+        <span class="info-label">Name:</span>
+        <span class="info-value">{{ customer_name }}</span>
+    </div>
+    <div class="info-row">
+        <span class="info-label">Phone:</span>
+        <span class="info-value">
+            <a href="tel:{{ customer_phone }}" style="color: #0d6efd; text-decoration: none; font-weight: 500;">
+                📞 {{ customer_phone }}
+            </a>
+        </span>
+    </div>
+    <div class="info-row">
+        <span class="info-label">Address:</span>
+        <span class="info-value">{{ customer_address }}</span>
+    </div>
+</div>
+
+<!-- Map Link -->
+{% if customer_address %}
+<div style="text-align: center; margin: 20px 0;">
+    <a href="https://www.google.com/maps/search/?api=1&query={{ customer_address|urlencode }}" class="btn"
+        style="background: #0d6efd;">
+        🗺️ Open Location in Maps
+    </a>
+</div>
+{% endif %}
+
+<!-- Charges -->
+<div class="info-box" style="border-left-color: #28a745;">
+    <h3>💰 Charges</h3>
+    <div class="info-row">
+        <span class="info-label">Base Service Charge:</span>
+        <span class="info-value" style="color: #28a745; font-weight: 600;">₹{{ base_charge }}</span>
+    </div>
+    <p style="font-size: 13px; color: #666; margin-top: 10px; margin-bottom: 0;">
+        <em>* Additional material charges may apply if required.</em>
+    </p>
+</div>
+
+<!-- Problem Description if available -->
+{% if problem_description %}
+<div class="alert-box" style="background-color: #fff3cd; border-left: 4px solid #ffc107;">
+    <h4 style="margin: 0 0 10px 0; color: #856404;">⚠️ Problem Description</h4>
+    <p style="margin: 0; color: #333;">{{ problem_description }}</p>
+</div>
+{% endif %}
+
+<!-- Action Required -->
+<div class="highlight-box" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%);">
+    <div class="small-text">✅ ACTION REQUIRED</div>
+    <p style="margin: 10px 0 0 0; font-size: 14px;">
+        Please ensure timely arrival and professional service.<br>
+        Contact the customer to confirm the appointment.
+    </p>
+</div>
+
+<div class="content-block" style="margin-top: 30px;">
+    <p>For any issues, contact the admin team immediately.</p>
+</div>
+
+<div style="margin-top: 30px;">
+    <p style="margin-bottom: 5px;">Regards,</p>
+    <p style="font-weight: 600; margin-bottom: 5px;">{{ business.name }} – Admin Team</p>
+    <p style="color: #666; font-size: 14px; margin: 0;">
+        📞 {{ admin_contact|default:business.phone }}
+    </p>
+</div>
+{% endblock %}

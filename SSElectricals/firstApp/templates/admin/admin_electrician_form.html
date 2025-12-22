@@ -1,0 +1,118 @@
+{% extends 'admin/base_admin.html' %}
+
+{% block title %}{% if mode == 'add' %}Add{% else %}Edit{% endif %} Electrician - Admin{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card shadow-sm">
+                <div class="card-header bg-warning text-dark">
+                    <h4 class="mb-0">
+                        <i class="fas fa-hard-hat me-2"></i>
+                        {% if mode == 'add' %}Add New Electrician{% else %}Edit Electrician{% endif %}
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-bold">Name <span class="text-danger">*</span></label>
+                                <input type="text" name="name" class="form-control" required
+                                    value="{{ electrician.name|default:'' }}" placeholder="Full Name">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-bold">Phone Number <span
+                                        class="text-danger">*</span></label>
+                                <input type="tel" name="phone_number" class="form-control" required
+                                    value="{{ electrician.phone_number|default:'' }}" placeholder="+91-XXXXXXXXXX">
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-bold">Email <span class="text-danger">*</span></label>
+                                <input type="email" name="email" class="form-control" required
+                                    value="{{ electrician.email|default:'' }}" placeholder="email@example.com">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-bold">Experience (Years)</label>
+                                <input type="number" name="experience_years" class="form-control" min="0"
+                                    value="{{ electrician.experience_years|default:'0' }}" placeholder="0">
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Specializations</label>
+                            <input type="text" name="specializations" class="form-control"
+                                value="{{ electrician.specializations|default:'' }}"
+                                placeholder="e.g., Wiring, Appliance Repair, AC Installation (comma-separated)">
+                            <small class="text-muted">Enter specializations separated by commas</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Address</label>
+                            <textarea name="address" class="form-control" rows="2"
+                                placeholder="Full address (optional)">{{ electrician.address|default:'' }}</textarea>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Profile Picture</label>
+                            {% if mode == 'edit' and electrician.profile_picture %}
+                            <div class="mb-2">
+                                <img src="{{ electrician.profile_picture.url }}" alt="Current Photo" class="rounded"
+                                    style="max-width: 150px;">
+                            </div>
+                            {% endif %}
+                            <input type="file" name="profile_picture" class="form-control" accept="image/*">
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Internal Notes</label>
+                            <textarea name="notes" class="form-control" rows="2"
+                                placeholder="Internal notes (not visible to users)">{{ electrician.notes|default:'' }}</textarea>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" name="is_active" id="is_active" {% if mode == 'add' or electrician.is_active %}checked{% endif %}>
+                                    <label class="form-check-label fw-bold" for="is_active">
+                                        <i class="fas fa-toggle-on text-success me-1"></i>Active
+                                    </label>
+                                </div>
+                                <small class="text-muted">Inactive electricians won't be available for
+                                    assignments</small>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" name="show_on_home_page"
+                                        id="show_on_home_page" {% if electrician.show_on_home_page %}checked{% endif %}>
+                                    <label class="form-check-label fw-bold" for="show_on_home_page">
+                                        <i class="fas fa-home text-primary me-1"></i>Show on Home Page
+                                    </label>
+                                </div>
+                                <small class="text-muted">If checked, will appear in "Our Electricians" section</small>
+                            </div>
+                        </div>
+
+                        <hr>
+
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'admin_electrician_list' %}" class="btn btn-outline-secondary">
+                                <i class="fas fa-arrow-left me-1"></i>Cancel
+                            </a>
+                            <button type="submit" class="btn btn-warning">
+                                <i class="fas fa-save me-1"></i>
+                                {% if mode == 'add' %}Add Electrician{% else %}Save Changes{% endif %}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,108 @@
+{% extends 'emails/base_email.html' %}
+{% load static %}
+
+{% block title %}Appointment Confirmed - Shiv Shakti Electricals{% endblock %}
+
+{% block content %}
+<tr>
+    <td style="padding: 40px 30px;">
+        <!-- Success Banner -->
+        <div
+            style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%); padding: 30px; border-radius: 12px; text-align: center; margin-bottom: 30px;">
+            <div
+                style="width: 70px; height: 70px; background: rgba(255,255,255,0.2); border-radius: 50%; margin: 0 auto 15px; display: flex; align-items: center; justify-content: center;">
+                <span style="font-size: 35px; color: white;">✓</span>
+            </div>
+            <h1 style="color: #ffffff; font-size: 28px; margin: 0; font-weight: 700;">Appointment Confirmed!</h1>
+        </div>
+
+        <!-- Greeting -->
+        <p style="color: #333; font-size: 16px; line-height: 1.6; margin-bottom: 20px;">
+            Dear <strong>{{ customer_name }}</strong>,
+        </p>
+
+        <p style="color: #555; font-size: 15px; line-height: 1.8; margin-bottom: 25px;">
+            Your appointment has been successfully booked with Shiv Shakti Electricals. Our team will arrive at your
+            location as scheduled.
+        </p>
+
+        <!-- Appointment Details Card -->
+        <div
+            style="background: #f8f9fa; border-radius: 12px; padding: 25px; margin-bottom: 25px; border-left: 4px solid #ffc107;">
+            <h3 style="color: #333; font-size: 18px; margin: 0 0 20px 0; font-weight: 600;">
+                📅 Appointment Details
+            </h3>
+
+            <table style="width: 100%; border-collapse: collapse;">
+                <tr>
+                    <td style="padding: 10px 0; color: #666; width: 40%;">Service:</td>
+                    <td style="padding: 10px 0; color: #333; font-weight: 500;">
+                        {% if appointment.service %}{{ appointment.service.name }}{% else %}General Service{% endif %}
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding: 10px 0; color: #666;">Date:</td>
+                    <td style="padding: 10px 0; color: #333; font-weight: 500;">{{ appointment.date|date:"l, d F Y" }}
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding: 10px 0; color: #666;">Time:</td>
+                    <td style="padding: 10px 0; color: #333; font-weight: 500;">{{ appointment.time|time:"g:i A" }}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 10px 0; color: #666;">Visiting Charge:</td>
+                    <td style="padding: 10px 0; color: #28a745; font-weight: 600;">₹{{ appointment.visiting_charge }}
+                    </td>
+                </tr>
+            </table>
+        </div>
+
+        <!-- Assigned Electrician (if any) -->
+        {% if electrician %}
+        <div style="background: #fff3cd; border-radius: 12px; padding: 25px; margin-bottom: 25px;">
+            <h3 style="color: #856404; font-size: 18px; margin: 0 0 15px 0; font-weight: 600;">
+                👨‍🔧 Your Assigned Technician
+            </h3>
+            <p style="color: #333; font-size: 16px; margin: 0 0 5px 0; font-weight: 600;">{{ electrician.name }}</p>
+            <p style="color: #666; font-size: 14px; margin: 0;">
+                📞 {{ electrician.phone_number }}
+            </p>
+        </div>
+        {% endif %}
+
+        <!-- Location Info -->
+        <div style="background: #e7f1ff; border-radius: 12px; padding: 25px; margin-bottom: 25px;">
+            <h3 style="color: #0d6efd; font-size: 18px; margin: 0 0 15px 0; font-weight: 600;">
+                📍 Service Location
+            </h3>
+            <p style="color: #333; font-size: 15px; margin: 0; line-height: 1.8;">
+                {{ appointment.house_number }}, {{ appointment.address_line1 }}<br>
+                {% if appointment.address_line2 %}{{ appointment.address_line2 }}<br>{% endif %}
+                {{ appointment.area }}, {{ appointment.city }} - {{ appointment.pincode }}
+            </p>
+        </div>
+
+        <!-- Important Notes -->
+        <div style="background: #f8f9fa; border-radius: 12px; padding: 20px; margin-bottom: 25px;">
+            <h4 style="color: #333; font-size: 16px; margin: 0 0 15px 0;">📝 Important Notes:</h4>
+            <ul style="color: #555; font-size: 14px; line-height: 2; margin: 0; padding-left: 20px;">
+                <li>Please ensure someone is available at the location during the scheduled time.</li>
+                <li>Have the area where work is needed accessible.</li>
+                <li>Keep your phone nearby for any updates from our technician.</li>
+                <li>Additional charges (if any) will be discussed before starting the work.</li>
+            </ul>
+        </div>
+
+        <!-- Contact Info -->
+        <div style="text-align: center; padding: 20px 0;">
+            <p style="color: #666; font-size: 14px; margin: 0 0 10px 0;">Need help? Contact us:</p>
+            <p style="margin: 0;">
+                <a href="tel:+919993149226"
+                    style="color: #ffc107; text-decoration: none; font-weight: 600; font-size: 16px;">
+                    📞 +91-9993149226
+                </a>
+            </p>
+        </div>
+    </td>
+</tr>
+{% endblock %}

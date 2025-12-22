@@ -321,7 +321,7 @@ def calculate_distance_and_price(user_address):
     if "india" not in search_address.lower():
         search_address += ", India"
     
-    print(f"[Distance Calc] Input: '{user_address}' → Search: '{search_address}'")
+    print(f"[Distance Calc] Input: '{user_address}' -> Search: '{search_address}'")
     
     # Try Google APIs if key exists
     if api_key:
@@ -366,13 +366,13 @@ def calculate_distance_and_price(user_address):
                         print(f"[Distance Calc] Element status: {element.get('status', 'Unknown')}")
                         
                         if element['status'] == 'OK':
-                            # Road distance in meters -> km
+                            # Road distance in meters to km
                             distance_value = element['distance']['value']
                             distance_km = round(distance_value / 1000.0, 2)  # Round to 2 decimals
                             
                             # Duration info
                             duration_text = element.get('duration', {}).get('text', 'N/A')
-                            print(f"✓ [Distance Calc] ROAD Distance: {distance_km} KM, ETA: {duration_text}")
+                            print(f"[OK] [Distance Calc] ROAD Distance: {distance_km} KM, ETA: {duration_text}")
                             
                             return _calculate_price(distance_km, user_lat, user_lng)
                         else:
@@ -400,7 +400,7 @@ def calculate_distance_and_price(user_address):
         user_coords = (user_lat, user_lng)
         shop_coords = (SHOP_LAT, SHOP_LNG)
         distance_km = round(geodesic(shop_coords, user_coords).km, 2)  # Round to 2 decimals
-        print(f"⚠ [Distance Calc] Using GEODESIC (straight-line): {distance_km} KM")
+        print(f"[WARN] [Distance Calc] Using GEODESIC (straight-line): {distance_km} KM")
         return _calculate_price(distance_km, user_lat, user_lng)
     
     # Fallback 2: Geopy (Nominatim) for geocoding + geodesic distance
@@ -434,7 +434,7 @@ def calculate_distance_and_price(user_address):
                 print(f"[Distance Calc] WARNING: Geopy distance too far ({distance_km}km)")
                 return 0, 0, f"Address location seems incorrect (calculated: {distance_km} KM). Please verify or use a landmark.", None, None
             
-            print(f"⚠ [Distance Calc] Geopy GEODESIC: {distance_km} KM (straight-line)")
+            print(f"[WARN] [Distance Calc] Geopy GEODESIC: {distance_km} KM (straight-line)")
             return _calculate_price(distance_km, location.latitude, location.longitude)
         else:
             print(f"[Distance Calc] Geopy geocoding failed for: {search_query}")

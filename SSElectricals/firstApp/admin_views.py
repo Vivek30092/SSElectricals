@@ -3,11 +3,12 @@ from django.core.files.storage import FileSystemStorage
 from django.contrib.admin.views.decorators import staff_member_required # Keep for reference or fallback
 from .decorators import admin_required, staff_required
 from django.contrib import messages
-from .models import Appointment, AdminActivityLog, AdminSession, Order, Product, Category, ProductImage, OrderItem, Review, DailySales, DailyExpenditure, PurchaseEntry, CustomUser, Notification, UserNotification, ServicePrice
+from .models import Appointment, AdminActivityLog, AdminSession, Order, Product, Category, ProductImage, OrderItem, Review, DailySales, DailyExpenditure, PurchaseEntry, CustomUser, Notification, UserNotification, ServicePrice, Electrician, Warranty, ServiceType
 import os
 from django.conf import settings
 import pandas as pd
-from django.db.models import Sum, Count, F
+from django.db.models import Sum, Count, F, Q
+from django.db import models
 from django.db.models.functions import TruncDate, TruncMonth
 from django.utils import timezone
 from .forms import ProductForm, ReviewForm, DailySalesForm, DailyExpenditureForm
@@ -2696,3 +2697,546 @@ def admin_announcement_toggle(request, pk):
     messages.success(request, f'Announcement "{announcement.title}" {status}!')
     
     return redirect('admin_announcements_list')
+
+
+# ==============================================================================
+# ELECTRICIAN MANAGEMENT
+# ==============================================================================
+
+@staff_required
+def admin_electrician_list(request):
+    """List all electricians with search and filter options."""
+    electricians = Electrician.objects.all()
+    
+    # Search functionality
+    search = request.GET.get('search', '')
+    if search:
+        electricians = electricians.filter(
+            models.Q(name__icontains=search) |
+            models.Q(phone_number__icontains=search) |
+            models.Q(email__icontains=search)
+        )
+    
+    # Filter by status
+    status_filter = request.GET.get('status', '')
+    if status_filter == 'active':
+        electricians = electricians.filter(is_active=True)
+    elif status_filter == 'inactive':
+        electricians = electricians.filter(is_active=False)
+    elif status_filter == 'visible':
+        electricians = electricians.filter(show_on_home_page=True, is_active=True)
+    
+    # Pagination
+    paginator = Paginator(electricians, 20)
+    page = request.GET.get('page', 1)
+    electricians = paginator.get_page(page)
+    
+    return render(request, 'admin/admin_electrician_list.html', {
+        'electricians': electricians,
+        'search': search,
+        'status_filter': status_filter,
+    })
+
+
+@staff_required
+def admin_electrician_add(request):
+    """Add a new electrician."""
+    if request.method == 'POST':
+        name = request.POST.get('name', '').strip()
+        phone = request.POST.get('phone_number', '').strip()
+        email = request.POST.get('email', '').strip()
+        specializations = request.POST.get('specializations', '').strip()
+        experience = request.POST.get('experience_years', 0)
+        show_on_home = request.POST.get('show_on_home_page') == 'on'
+        is_active = request.POST.get('is_active', 'on') == 'on'
+        address = request.POST.get('address', '').strip()
+        notes = request.POST.get('notes', '').strip()
+        
+        if not name or not phone or not email:
+            messages.error(request, 'Name, Phone, and Email are required.')
+            return redirect('admin_electrician_add')
+        
+        electrician = Electrician.objects.create(
+            name=name,
+            phone_number=phone,
+            email=email,
+            specializations=specializations,
+            experience_years=int(experience) if experience else 0,
+            show_on_home_page=show_on_home,
+            is_active=is_active,
+            address=address,
+            notes=notes,
+        )
+        
+        # Handle profile picture
+        if 'profile_picture' in request.FILES:
+            electrician.profile_picture = request.FILES['profile_picture']
+            electrician.save()
+        
+        AdminActivityLog.objects.create(
+            admin=request.user,
+            action='CREATE',
+            module='ELECTRICIAN',
+            description=f"Added electrician: {name}",
+            ip_address=request.META.get('REMOTE_ADDR')
+        )
+        
+        messages.success(request, f'Electrician "{name}" added successfully!')
+        return redirect('admin_electrician_list')
+    
+    return render(request, 'admin/admin_electrician_form.html', {
+        'mode': 'add',
+    })
+
+
+@staff_required
+def admin_electrician_edit(request, pk):
+    """Edit an existing electrician."""
+    electrician = get_object_or_404(Electrician, pk=pk)
+    
+    if request.method == 'POST':
+        electrician.name = request.POST.get('name', '').strip()
+        electrician.phone_number = request.POST.get('phone_number', '').strip()
+        electrician.email = request.POST.get('email', '').strip()
+        electrician.specializations = request.POST.get('specializations', '').strip()
+        electrician.experience_years = int(request.POST.get('experience_years', 0) or 0)
+        electrician.show_on_home_page = request.POST.get('show_on_home_page') == 'on'
+        electrician.is_active = request.POST.get('is_active', 'on') == 'on'
+        electrician.address = request.POST.get('address', '').strip()
+        electrician.notes = request.POST.get('notes', '').strip()
+        
+        if 'profile_picture' in request.FILES:
+            electrician.profile_picture = request.FILES['profile_picture']
+        
+        electrician.save()
+        
+        AdminActivityLog.objects.create(
+            admin=request.user,
+            action='UPDATE',
+            module='ELECTRICIAN',
+            description=f"Updated electrician: {electrician.name}",
+            ip_address=request.META.get('REMOTE_ADDR')
+        )
+        
+        messages.success(request, f'Electrician "{electrician.name}" updated successfully!')
+        return redirect('admin_electrician_list')
+    
+    return render(request, 'admin/admin_electrician_form.html', {
+        'mode': 'edit',
+        'electrician': electrician,
+    })
+
+
+@staff_required
+def admin_electrician_delete(request, pk):
+    """Delete an electrician."""
+    electrician = get_object_or_404(Electrician, pk=pk)
+    name = electrician.name
+    electrician.delete()
+    
+    AdminActivityLog.objects.create(
+        admin=request.user,
+        action='DELETE',
+        module='ELECTRICIAN',
+        description=f"Deleted electrician: {name}",
+        ip_address=request.META.get('REMOTE_ADDR')
+    )
+    
+    messages.success(request, f'Electrician "{name}" deleted successfully!')
+    return redirect('admin_electrician_list')
+
+
+@staff_required
+def admin_electrician_toggle_visibility(request, pk):
+    """Toggle electrician visibility on home page."""
+    electrician = get_object_or_404(Electrician, pk=pk)
+    electrician.show_on_home_page = not electrician.show_on_home_page
+    electrician.save()
+    
+    status = "visible on home page" if electrician.show_on_home_page else "hidden from home page"
+    messages.success(request, f'Electrician "{electrician.name}" is now {status}.')
+    return redirect('admin_electrician_list')
+
+
+# ==============================================================================
+# WARRANTY MANAGEMENT
+# ==============================================================================
+
+@staff_required
+def admin_warranty_list(request):
+    """List all warranties with search and filter options."""
+    warranties = Warranty.objects.all().select_related('customer', 'created_by')
+    
+    # Update expired warranties
+    Warranty.update_expired_warranties()
+    
+    # Search functionality
+    search = request.GET.get('search', '')
+    if search:
+        warranties = warranties.filter(
+            models.Q(customer_name__icontains=search) |
+            models.Q(customer_email__icontains=search) |
+            models.Q(product_name__icontains=search) |
+            models.Q(product_serial__icontains=search)
+        )
+    
+    # Filter by status
+    status_filter = request.GET.get('status', '')
+    if status_filter:
+        warranties = warranties.filter(status=status_filter)
+    
+    # Pagination
+    paginator = Paginator(warranties, 20)
+    page = request.GET.get('page', 1)
+    warranties = paginator.get_page(page)
+    
+    return render(request, 'admin/admin_warranty_list.html', {
+        'warranties': warranties,
+        'search': search,
+        'status_filter': status_filter,
+        'status_choices': Warranty.STATUS_CHOICES,
+    })
+
+
+@staff_required
+def admin_warranty_add(request):
+    """Add a new warranty."""
+    if request.method == 'POST':
+        customer_name = request.POST.get('customer_name', '').strip()
+        customer_phone = request.POST.get('customer_phone', '').strip()
+        customer_email = request.POST.get('customer_email', '').strip()
+        product_name = request.POST.get('product_name', '').strip()
+        product_serial = request.POST.get('product_serial', '').strip()
+        product_brand = request.POST.get('product_brand', '').strip()
+        product_model = request.POST.get('product_model', '').strip()
+        purchase_date = request.POST.get('purchase_date')
+        warranty_duration = request.POST.get('warranty_duration', 12)
+        warranty_unit = request.POST.get('warranty_unit', 'MONTHS')
+        purchase_invoice = request.POST.get('purchase_invoice', '').strip()
+        notes = request.POST.get('notes', '').strip()
+        
+        if not customer_name or not customer_phone or not customer_email or not product_name or not purchase_date:
+            messages.error(request, 'Customer name, phone, email, product name, and purchase date are required.')
+            return redirect('admin_warranty_add')
+        
+        warranty = Warranty.objects.create(
+            customer_name=customer_name,
+            customer_phone=customer_phone,
+            customer_email=customer_email,
+            product_name=product_name,
+            product_serial=product_serial or None,
+            product_brand=product_brand or None,
+            product_model=product_model or None,
+            purchase_date=purchase_date,
+            warranty_duration=int(warranty_duration),
+            warranty_unit=warranty_unit,
+            purchase_invoice=purchase_invoice or None,
+            notes=notes or None,
+            created_by=request.user,
+        )
+        
+        # Handle product image
+        if 'product_image' in request.FILES:
+            warranty.product_image = request.FILES['product_image']
+            warranty.save()
+        
+        AdminActivityLog.objects.create(
+            admin=request.user,
+            action='CREATE',
+            module='WARRANTY',
+            description=f"Added warranty for {product_name} - {customer_name}",
+            ip_address=request.META.get('REMOTE_ADDR')
+        )
+        
+        messages.success(request, f'Warranty for "{product_name}" added successfully!')
+        return redirect('admin_warranty_list')
+    
+    return render(request, 'admin/admin_warranty_form.html', {
+        'mode': 'add',
+        'unit_choices': Warranty.DURATION_UNIT_CHOICES,
+    })
+
+
+@staff_required
+def admin_warranty_edit(request, pk):
+    """Edit an existing warranty."""
+    warranty = get_object_or_404(Warranty, pk=pk)
+    
+    if request.method == 'POST':
+        warranty.customer_name = request.POST.get('customer_name', '').strip()
+        warranty.customer_phone = request.POST.get('customer_phone', '').strip()
+        warranty.customer_email = request.POST.get('customer_email', '').strip()
+        warranty.product_name = request.POST.get('product_name', '').strip()
+        warranty.product_serial = request.POST.get('product_serial', '').strip() or None
+        warranty.product_brand = request.POST.get('product_brand', '').strip() or None
+        warranty.product_model = request.POST.get('product_model', '').strip() or None
+        warranty.purchase_date = request.POST.get('purchase_date')
+        warranty.warranty_duration = int(request.POST.get('warranty_duration', 12))
+        warranty.warranty_unit = request.POST.get('warranty_unit', 'MONTHS')
+        warranty.purchase_invoice = request.POST.get('purchase_invoice', '').strip() or None
+        warranty.notes = request.POST.get('notes', '').strip() or None
+        
+        if 'product_image' in request.FILES:
+            warranty.product_image = request.FILES['product_image']
+        
+        warranty.save()
+        
+        AdminActivityLog.objects.create(
+            admin=request.user,
+            action='UPDATE',
+            module='WARRANTY',
+            description=f"Updated warranty for {warranty.product_name}",
+            ip_address=request.META.get('REMOTE_ADDR')
+        )
+        
+        messages.success(request, f'Warranty for "{warranty.product_name}" updated successfully!')
+        return redirect('admin_warranty_list')
+    
+    return render(request, 'admin/admin_warranty_form.html', {
+        'mode': 'edit',
+        'warranty': warranty,
+        'unit_choices': Warranty.DURATION_UNIT_CHOICES,
+    })
+
+
+@staff_required
+def admin_warranty_void(request, pk):
+    """Void a warranty."""
+    warranty = get_object_or_404(Warranty, pk=pk)
+    
+    if request.method == 'POST':
+        reason = request.POST.get('void_reason', 'Voided by admin').strip()
+        warranty.void_warranty(reason, request.user)
+        
+        AdminActivityLog.objects.create(
+            admin=request.user,
+            action='UPDATE',
+            module='WARRANTY',
+            description=f"Voided warranty for {warranty.product_name}: {reason}",
+            ip_address=request.META.get('REMOTE_ADDR')
+        )
+        
+        messages.success(request, f'Warranty for "{warranty.product_name}" has been voided.')
+        return redirect('admin_warranty_list')
+    
+    return render(request, 'admin/admin_warranty_void.html', {
+        'warranty': warranty,
+    })
+
+
+@staff_required  
+def admin_warranty_detail(request, pk):
+    """View warranty details."""
+    warranty = get_object_or_404(Warranty, pk=pk)
+    return render(request, 'admin/admin_warranty_detail.html', {
+        'warranty': warranty,
+    })
+
+
+# ==============================================================================
+# ADMIN-BOOKED APPOINTMENTS
+# ==============================================================================
+
+@staff_required
+def admin_appointment_book(request):
+    """Book an appointment on behalf of a customer."""
+    from .email_utils import send_professional_email
+    
+    if request.method == 'POST':
+        customer_name = request.POST.get('customer_name', '').strip()
+        phone = request.POST.get('phone', '').strip()
+        email = request.POST.get('email', '').strip()
+        service_id = request.POST.get('service')
+        electrician_id = request.POST.get('electrician')
+        date = request.POST.get('date')
+        time = request.POST.get('time')
+        visiting_charge = request.POST.get('visiting_charge', 200)
+        notes = request.POST.get('notes', '').strip()
+        
+        # Address fields
+        house_number = request.POST.get('house_number', '').strip()
+        address_line1 = request.POST.get('address_line1', '').strip()
+        address_line2 = request.POST.get('address_line2', '').strip()
+        area = request.POST.get('area', 'Other')
+        pincode = request.POST.get('pincode', '452001').strip()
+        
+        if not customer_name or not phone or not date or not time:
+            messages.error(request, 'Customer name, phone, date, and time are required.')
+            return redirect('admin_appointment_book')
+        
+        # Create appointment
+        appointment = Appointment.objects.create(
+            customer_name=customer_name,
+            phone=phone,
+            email=email or '',
+            house_number=house_number,
+            address_line1=address_line1,
+            address_line2=address_line2,
+            area=area,
+            pincode=pincode,
+            city='Indore',
+            date=date,
+            time=time,
+            visiting_charge=float(visiting_charge) if visiting_charge else 200,
+            problem_description=notes or 'Admin booked appointment',
+            is_admin_booked=True,
+            admin_notes=notes,
+            status='Confirmed',
+        )
+        
+        # Assign service
+        if service_id:
+            try:
+                service = ServiceType.objects.get(pk=service_id)
+                appointment.service = service
+            except ServiceType.DoesNotExist:
+                pass
+        
+        # Assign electrician
+        if electrician_id:
+            try:
+                electrician = Electrician.objects.get(pk=electrician_id)
+                appointment.assigned_electrician = electrician
+            except Electrician.DoesNotExist:
+                pass
+        
+        appointment.save()
+        
+        # Send email to customer if email provided
+        if email:
+            try:
+                context = {
+                    'customer_name': customer_name,
+                    'appointment': appointment,
+                    'electrician': appointment.assigned_electrician,
+                    'business_profile_link': 'https://maps.google.com/?cid=your_business_id',
+                }
+                send_professional_email(
+                    email_type='APPOINTMENT_STATUS',
+                    recipient=email,
+                    subject='Appointment Confirmed - Shiv Shakti Electricals',
+                    template_name='emails/admin_booked_appointment.html',
+                    context=context,
+                    appointment=appointment,
+                )
+            except Exception as e:
+                pass  # Email failed but appointment created
+        
+        # Send email to electrician if assigned
+        if appointment.assigned_electrician and appointment.assigned_electrician.email:
+            try:
+                elec_context = {
+                    'electrician': appointment.assigned_electrician,
+                    'appointment': appointment,
+                    'customer_name': customer_name,
+                    'customer_phone': phone,
+                    'address': f"{house_number}, {address_line1}, {area}, {pincode}",
+                }
+                send_professional_email(
+                    email_type='APPOINTMENT_STATUS',
+                    recipient=appointment.assigned_electrician.email,
+                    subject=f'New Appointment Assignment - {customer_name}',
+                    template_name='emails/electrician_assignment.html',
+                    context=elec_context,
+                    appointment=appointment,
+                )
+            except Exception as e:
+                pass
+        
+        AdminActivityLog.objects.create(
+            admin=request.user,
+            action='CREATE',
+            module='APPOINTMENT',
+            description=f"Admin booked appointment for {customer_name}",
+            ip_address=request.META.get('REMOTE_ADDR')
+        )
+        
+        messages.success(request, f'Appointment for "{customer_name}" booked successfully!')
+        return redirect('admin_appointment_list')
+    
+    services = ServiceType.get_active_services()
+    electricians = Electrician.get_active_electricians()
+    areas = Appointment.AREA_CHOICES
+    
+    return render(request, 'admin/admin_appointment_book.html', {
+        'services': services,
+        'electricians': electricians,
+        'areas': areas,
+    })
+
+
+# ==============================================================================
+# PRODUCT VISIBILITY CONTROLS
+# ==============================================================================
+
+@staff_required
+def admin_product_toggle_visibility(request, pk):
+    """Toggle product visibility on website."""
+    product = get_object_or_404(Product, pk=pk)
+    product.is_visible_on_website = not product.is_visible_on_website
+    product.save()
+    
+    status = "visible on website" if product.is_visible_on_website else "hidden from website"
+    messages.success(request, f'Product "{product.name}" is now {status}.')
+    
+    return redirect('admin_product_list')
+
+
+@staff_required
+def admin_product_list_enhanced(request):
+    """Enhanced product list with search, filters, and visibility controls."""
+    products = Product.objects.all().select_related('category')
+    
+    # Search functionality
+    search = request.GET.get('search', '')
+    if search:
+        products = products.filter(
+            models.Q(name__icontains=search) |
+            models.Q(brand__icontains=search) |
+            models.Q(description__icontains=search)
+        )
+    
+    # Filter by visibility
+    visibility = request.GET.get('visibility', '')
+    if visibility == 'visible':
+        products = products.filter(is_visible_on_website=True)
+    elif visibility == 'hidden':
+        products = products.filter(is_visible_on_website=False)
+    
+    # Filter by stock
+    stock = request.GET.get('stock', '')
+    if stock == 'in_stock':
+        products = products.filter(stock_quantity__gt=0)
+    elif stock == 'out_of_stock':
+        products = products.filter(stock_quantity=0)
+    
+    # Sorting
+    sort = request.GET.get('sort', 'name')
+    if sort == 'price_low':
+        products = products.order_by('price')
+    elif sort == 'price_high':
+        products = products.order_by('-price')
+    elif sort == 'name_az':
+        products = products.order_by('name')
+    elif sort == 'name_za':
+        products = products.order_by('-name')
+    elif sort == 'stock':
+        products = products.order_by('-stock_quantity')
+    else:
+        products = products.order_by('name')
+    
+    # Pagination
+    paginator = Paginator(products, 20)
+    page = request.GET.get('page', 1)
+    products = paginator.get_page(page)
+    
+    categories = Category.objects.all()
+    
+    return render(request, 'admin/admin_product_list.html', {
+        'products': products,
+        'search': search,
+        'visibility': visibility,
+        'stock': stock,
+        'sort': sort,
+        'categories': categories,
+    })

@@ -1,0 +1,71 @@
+{% extends 'emails/base.html' %}
+
+{% block title %}Service Completed - Review Request - {{ business.name }}{% endblock %}
+
+{% block content %}
+<div class="greeting">Dear {{ user_name }},</div>
+
+<div class="content-block">
+    <p>We hope you are satisfied with the service provided by <strong>{{ business.name }}</strong>.</p>
+    <p>Your appointment for <strong>{{ service_name }}</strong> has been successfully completed.</p>
+</div>
+
+<!-- Completion Banner -->
+<div class="highlight-box" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%);">
+    <div style="font-size: 48px; margin-bottom: 10px;">✓</div>
+    <div class="big-text" style="font-size: 24px; letter-spacing: 2px;">SERVICE COMPLETED</div>
+    <div class="small-text">Thank you for trusting us!</div>
+</div>
+
+<!-- Service Summary -->
+<div class="info-box">
+    <h3>🔧 Service Summary</h3>
+    <div class="info-row">
+        <span class="info-label">Service:</span>
+        <span class="info-value">{{ service_name }}</span>
+    </div>
+    <div class="info-row">
+        <span class="info-label">Date:</span>
+        <span class="info-value">{{ appointment_date }}</span>
+    </div>
+    {% if electrician_name %}
+    <div class="info-row">
+        <span class="info-label">Technician:</span>
+        <span class="info-value">{{ electrician_name }}</span>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Review Request -->
+<div
+    style="background: linear-gradient(135deg, #ffc107 0%, #ff9800 100%); padding: 30px; border-radius: 8px; text-align: center; margin: 25px 0;">
+    <h3 style="color: #333; margin: 0 0 15px 0;">⭐ Share Your Experience</h3>
+    <p style="color: #333; margin: 0 0 20px 0;">Your feedback helps us improve and serve you better.</p>
+
+    <div style="margin-bottom: 15px;">
+        <a href="{{ review_link }}" class="btn" style="background: #333; color: #fff !important; margin: 5px;">
+            ⭐ Leave a Review
+        </a>
+    </div>
+
+    {% if business_profile_link %}
+    <div>
+        <a href="{{ business_profile_link }}" style="color: #333; text-decoration: underline; font-weight: 500;">
+            👉 View Our Business Profile
+        </a>
+    </div>
+    {% endif %}
+</div>
+
+<div class="content-block" style="margin-top: 30px;">
+    <p>Thank you for trusting us with your electrical needs.</p>
+</div>
+
+<div style="margin-top: 30px;">
+    <p style="margin-bottom: 5px;">Best regards,</p>
+    <p style="font-weight: 600; margin-bottom: 5px;">{{ business.name }}</p>
+    <p style="color: #666; font-size: 14px; margin: 0;">
+        📞 {{ business.phone }}
+    </p>
+</div>
+{% endblock %}

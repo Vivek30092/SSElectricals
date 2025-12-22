@@ -2,10 +2,55 @@
 
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
-    <h2>Product Management</h2>
+    <h2><i class="fas fa-box text-primary me-2"></i>Product Management</h2>
     <a href="{% url 'admin_product_add' %}" class="btn btn-primary">
         <i class="fas fa-plus"></i> Add New Product
     </a>
+</div>
+
+<!-- Search and Filter Card -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-3">
+                <input type="text" name="search" class="form-control" placeholder="Search products..."
+                    value="{{ search|default:'' }}">
+            </div>
+            <div class="col-md-2">
+                <select name="visibility" class="form-select">
+                    <option value="">All Visibility</option>
+                    <option value="visible" {% if visibility == 'visible' %}selected{% endif %}>Visible on Website
+                    </option>
+                    <option value="hidden" {% if visibility == 'hidden' %}selected{% endif %}>Hidden</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <select name="stock" class="form-select">
+                    <option value="">All Stock</option>
+                    <option value="in_stock" {% if stock == 'in_stock' %}selected{% endif %}>In Stock</option>
+                    <option value="out_of_stock" {% if stock == 'out_of_stock' %}selected{% endif %}>Out of Stock</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <select name="sort" class="form-select">
+                    <option value="name_az" {% if sort == 'name_az' %}selected{% endif %}>Name (A-Z)</option>
+                    <option value="name_za" {% if sort == 'name_za' %}selected{% endif %}>Name (Z-A)</option>
+                    <option value="price_low" {% if sort == 'price_low' %}selected{% endif %}>Price: Low to High</option>
+                    <option value="price_high" {% if sort == 'price_high' %}selected{% endif %}>Price: High to Low
+                    </option>
+                    <option value="stock" {% if sort == 'stock' %}selected{% endif %}>Stock Level</option>
+                </select>
+            </div>
+            <div class="col-md-1">
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="fas fa-search"></i>
+                </button>
+            </div>
+            <div class="col-md-2">
+                <a href="{% url 'admin_product_list' %}" class="btn btn-outline-secondary w-100">Reset</a>
+            </div>
+        </form>
+    </div>
 </div>
 
 <div class="card">
@@ -19,6 +64,7 @@
                         <th>Category</th>
                         <th>Price</th>
                         <th>Stock</th>
+                        <th>Visibility</th>
                         <th>Trending</th>
                         <th>Actions</th>
                     </tr>
@@ -57,6 +103,13 @@
                             {% endif %}
                         </td>
                         <td>
+                            {% if product.is_visible_on_website %}
+                            <span class="badge bg-success"><i class="fas fa-eye me-1"></i>Visible</span>
+                            {% else %}
+                            <span class="badge bg-secondary"><i class="fas fa-eye-slash me-1"></i>Hidden</span>
+                            {% endif %}
+                        </td>
+                        <td>
                             {% if product.is_trending %}
                             <span class="badge bg-primary"><i class="fas fa-star text-warning"></i> Yes</span>
                             {% else %}
@@ -64,24 +117,64 @@
                             {% endif %}
                         </td>
                         <td>
+                            <a href="{% url 'admin_product_toggle_visibility' product.pk %}"
+                                class="btn btn-sm {% if product.is_visible_on_website %}btn-outline-secondary{% else %}btn-outline-success{% endif %} me-1"
+                                title="{% if product.is_visible_on_website %}Hide from Website{% else %}Show on Website{% endif %}">
+                                {% if product.is_visible_on_website %}
+                                <i class="fas fa-eye-slash"></i>
+                                {% else %}
+                                <i class="fas fa-eye"></i>
+                                {% endif %}
+                            </a>
                             <a href="{% url 'admin_product_edit' product.pk %}"
-                                class="btn btn-sm btn-info text-white me-1">
+                                class="btn btn-sm btn-info text-white me-1" title="Edit">
                                 <i class="fas fa-edit"></i>
                             </a>
                             <a href="{% url 'admin_product_delete' product.pk %}" class="btn btn-sm btn-danger"
-                                onclick="return confirm('Are you sure you want to delete this product?');">
+                                onclick="return confirm('Are you sure you want to delete this product?');"
+                                title="Delete">
                                 <i class="fas fa-trash"></i>
                             </a>
                         </td>
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="6" class="text-center py-4">No products found.</td>
+                        <td colspan="8" class="text-center py-4">
+                            <i class="fas fa-box-open fa-3x text-muted mb-3 d-block"></i>
+                            No products found.
+                        </td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
+
+        <!-- Pagination -->
+        {% if products.has_other_pages %}
+        <nav class="mt-4">
+            <ul class="pagination justify-content-center">
+                {% if products.has_previous %}
+                <li class="page-item">
+                    <a class="page-link"
+                        href="?page={{ products.previous_page_number }}&search={{ search }}&visibility={{ visibility }}&stock={{ stock }}&sort={{ sort }}">Previous</a>
+                </li>
+                {% endif %}
+                {% for num in products.paginator.page_range %}
+                <li class="page-item {% if products.number == num %}active{% endif %}">
+                    <a class="page-link"
+                        href="?page={{ num }}&search={{ search }}&visibility={{ visibility }}&stock={{ stock }}&sort={{ sort }}">{{
+                        num }}</a>
+                </li>
+                {% endfor %}
+                {% if products.has_next %}
+                <li class="page-item">
+                    <a class="page-link"
+                        href="?page={{ products.next_page_number }}&search={{ search }}&visibility={{ visibility }}&stock={{ stock }}&sort={{ sort }}">Next</a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
     </div>
 </div>
 {% endblock %}

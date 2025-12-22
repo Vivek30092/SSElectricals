@@ -1,0 +1,101 @@
+{% extends 'emails/base.html' %}
+
+{% block title %}Warranty Registered - {{ business.name }}{% endblock %}
+
+{% block content %}
+<div class="greeting">Dear {{ user_name }},</div>
+
+<div class="content-block">
+    <p>Your product warranty has been successfully registered with <strong>{{ business.name }}</strong>.</p>
+</div>
+
+<!-- Warranty Registered Banner -->
+<div class="highlight-box" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%);">
+    <div style="font-size: 48px; margin-bottom: 10px;">🛡️</div>
+    <div class="big-text" style="font-size: 24px; letter-spacing: 2px;">WARRANTY ACTIVE</div>
+    <div class="small-text">Your product is protected!</div>
+</div>
+
+<!-- Warranty Details -->
+<div class="info-box" style="border-left-color: #28a745;">
+    <h3>🛡️ Warranty Details</h3>
+    <div class="info-row">
+        <span class="info-label">Product:</span>
+        <span class="info-value"><strong>{{ product_name }}</strong></span>
+    </div>
+    {% if product_brand %}
+    <div class="info-row">
+        <span class="info-label">Brand:</span>
+        <span class="info-value">{{ product_brand }}</span>
+    </div>
+    {% endif %}
+    {% if product_serial %}
+    <div class="info-row">
+        <span class="info-label">Serial Number:</span>
+        <span class="info-value"><code
+                style="background: #f7fafc; padding: 2px 8px; border-radius: 4px;">{{ product_serial }}</code></span>
+    </div>
+    {% endif %}
+    <div class="info-row">
+        <span class="info-label">Purchase Date:</span>
+        <span class="info-value">{{ purchase_date }}</span>
+    </div>
+    <div class="info-row">
+        <span class="info-label">Warranty Valid Till:</span>
+        <span class="info-value" style="color: #28a745; font-weight: 600;">{{ warranty_expiry_date }}</span>
+    </div>
+    <div class="info-row">
+        <span class="info-label">Status:</span>
+        <span class="info-value">
+            <span class="status-badge status-confirmed" style="padding: 4px 12px; font-size: 12px;">ACTIVE</span>
+        </span>
+    </div>
+</div>
+
+<!-- Warranty Period Visual -->
+<div style="background: #f7fafc; padding: 20px; border-radius: 8px; margin: 25px 0; text-align: center;">
+    <h4 style="margin: 0 0 15px 0; color: #2d3748;">Warranty Coverage Period</h4>
+    <div style="display: flex; justify-content: space-between; align-items: center; max-width: 400px; margin: 0 auto;">
+        <div style="text-align: center;">
+            <div style="font-size: 24px;">📅</div>
+            <small style="color: #666;">Start Date</small>
+            <div style="font-weight: 600; color: #333;">{{ purchase_date }}</div>
+        </div>
+        <div
+            style="flex: 1; height: 4px; background: linear-gradient(90deg, #28a745, #ffc107); margin: 0 15px; border-radius: 2px;">
+        </div>
+        <div style="text-align: center;">
+            <div style="font-size: 24px;">🏁</div>
+            <small style="color: #666;">Expiry Date</small>
+            <div style="font-weight: 600; color: #dc3545;">{{ warranty_expiry_date }}</div>
+        </div>
+    </div>
+</div>
+
+<!-- Dashboard Link -->
+<div style="text-align: center; margin: 25px 0;">
+    <p>You can view all your warranties in your dashboard.</p>
+    <a href="{{ dashboard_link|default:'#' }}" class="btn">
+        📋 View My Warranties
+    </a>
+</div>
+
+<!-- Tips -->
+<div class="alert-box" style="background-color: #e3f2fd; border-left-color: #2196f3; color: #1565c0;">
+    <h4 style="margin: 0 0 10px 0;">💡 Warranty Tips</h4>
+    <ul style="margin: 0; padding-left: 20px;">
+        <li>Keep your purchase invoice safe for warranty claims.</li>
+        <li>Register products within 30 days of purchase.</li>
+        <li>Contact us immediately if you face any issues with the product.</li>
+    </ul>
+</div>
+
+<div class="content-block" style="margin-top: 30px;">
+    <p>Thank you for choosing us.</p>
+</div>
+
+<div style="margin-top: 30px;">
+    <p style="margin-bottom: 5px;">Regards,</p>
+    <p style="font-weight: 600; margin-bottom: 5px;">{{ business.name }}</p>
+</div>
+{% endblock %}

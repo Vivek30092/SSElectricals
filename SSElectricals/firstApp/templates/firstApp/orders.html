@@ -132,20 +132,61 @@
                 </div>
             </div>
             {% elif order.status == 'Price Shared' %}
-            <div class="alert alert-info mt-3 mb-0 p-3">
-                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
-                    <div>
-                        <h6 class="mb-1"><i class="fas fa-tag me-1"></i> Price Quote Ready</h6>
-                        <p class="mb-0 small">We've shared the pricing with you. Please confirm to proceed with your
-                            order.</p>
-                        {% if order.grand_total %}
-                        <p class="mb-0 mt-2"><strong class="text-primary fs-5">Total: ₹{{ order.grand_total }}</strong>
-                        </p>
-                        {% endif %}
+            <div class="alert alert-info mt-3 mb-0 p-0 overflow-hidden" style="border: 2px solid #0d6efd;">
+                <div class="p-3">
+                    <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+                        <div>
+                            <h5 class="mb-1"><i class="fas fa-tag me-2"></i>Price Quote Ready!</h5>
+                            <p class="mb-2 text-muted">We've shared the pricing with you. Please confirm to proceed with
+                                your order.</p>
+                        </div>
                     </div>
-                    <a href="{% url 'cancel_order' order.id %}" class="btn btn-sm btn-outline-danger">
-                        <i class="fas fa-times me-1"></i>Cancel
-                    </a>
+
+                    <!-- Price Summary Card -->
+                    <div class="bg-white rounded p-3 my-3 shadow-sm">
+                        <table class="table table-sm mb-0">
+                            <tbody>
+                                <tr>
+                                    <td class="border-0">Products Subtotal:</td>
+                                    <td class="border-0 text-end fw-bold">₹{{ order.total_price }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="border-0">Delivery Charge:</td>
+                                    <td class="border-0 text-end fw-bold">
+                                        {% if order.free_delivery_applied %}
+                                        <span class="text-success">FREE</span>
+                                        {% else %}
+                                        ₹{{ order.delivery_charge }}
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                <tr class="border-top">
+                                    <td class="pt-2"><strong>Total Amount:</strong></td>
+                                    <td class="pt-2 text-end">
+                                        <span class="fs-4 fw-bold text-success">₹{{ order.grand_total }}</span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="d-flex gap-2 flex-wrap">
+                        <form method="post" action="{% url 'confirm_price_quote' order.id %}" class="d-inline">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-success btn-lg">
+                                <i class="fas fa-check-circle me-2"></i>Confirm & Proceed to Order
+                            </button>
+                        </form>
+                        <a href="{% url 'cancel_order' order.id %}" class="btn btn-outline-danger btn-lg">
+                            <i class="fas fa-times me-2"></i>Cancel
+                        </a>
+                    </div>
+
+                    <p class="small text-muted mt-2 mb-0">
+                        <i class="fas fa-info-circle me-1"></i>By confirming, you agree to purchase at the quoted price.
+                        Payment will be collected upon delivery/pickup.
+                    </p>
                 </div>
             </div>
             {% elif order.status == 'Confirmed' %}

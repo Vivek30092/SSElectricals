@@ -1,0 +1,151 @@
+{% extends 'admin/base_admin.html' %}
+
+{% block title %}{% if mode == 'add' %}Add{% else %}Edit{% endif %} Warranty - Admin{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <div class="card shadow-sm">
+                <div class="card-header bg-success text-white">
+                    <h4 class="mb-0">
+                        <i class="fas fa-shield-alt me-2"></i>
+                        {% if mode == 'add' %}Add New Warranty{% else %}Edit Warranty{% endif %}
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+
+                        <!-- Customer Information -->
+                        <h5 class="border-bottom pb-2 mb-3">
+                            <i class="fas fa-user text-primary me-2"></i>Customer Information
+                        </h5>
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label fw-bold">Customer Name <span
+                                        class="text-danger">*</span></label>
+                                <input type="text" name="customer_name" class="form-control" required
+                                    value="{{ warranty.customer_name|default:'' }}" placeholder="Full Name">
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label fw-bold">Phone <span class="text-danger">*</span></label>
+                                <input type="tel" name="customer_phone" class="form-control" required
+                                    value="{{ warranty.customer_phone|default:'' }}" placeholder="+91-XXXXXXXXXX">
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label fw-bold">Email <span class="text-danger">*</span></label>
+                                <input type="email" name="customer_email" class="form-control" required
+                                    value="{{ warranty.customer_email|default:'' }}" placeholder="email@example.com">
+                            </div>
+                        </div>
+
+                        <!-- Product Information -->
+                        <h5 class="border-bottom pb-2 mb-3 mt-4">
+                            <i class="fas fa-box text-success me-2"></i>Product Information
+                        </h5>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-bold">Product Name <span
+                                        class="text-danger">*</span></label>
+                                <input type="text" name="product_name" class="form-control" required
+                                    value="{{ warranty.product_name|default:'' }}"
+                                    placeholder="e.g., Ceiling Fan XYZ Model">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-bold">Serial Number</label>
+                                <input type="text" name="product_serial" class="form-control"
+                                    value="{{ warranty.product_serial|default:'' }}"
+                                    placeholder="Product serial number">
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label fw-bold">Brand</label>
+                                <input type="text" name="product_brand" class="form-control"
+                                    value="{{ warranty.product_brand|default:'' }}" placeholder="e.g., Havells">
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label fw-bold">Model</label>
+                                <input type="text" name="product_model" class="form-control"
+                                    value="{{ warranty.product_model|default:'' }}" placeholder="Model number">
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label fw-bold">Product Image</label>
+                                {% if mode == 'edit' and warranty.product_image %}
+                                <div class="mb-2">
+                                    <img src="{{ warranty.product_image.url }}" alt="Product" class="rounded"
+                                        style="max-width: 100px;">
+                                </div>
+                                {% endif %}
+                                <input type="file" name="product_image" class="form-control" accept="image/*">
+                            </div>
+                        </div>
+
+                        <!-- Warranty Details -->
+                        <h5 class="border-bottom pb-2 mb-3 mt-4">
+                            <i class="fas fa-calendar-alt text-warning me-2"></i>Warranty Details
+                        </h5>
+                        <div class="row">
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label fw-bold">Purchase Date <span
+                                        class="text-danger">*</span></label>
+                                <input type="date" name="purchase_date" class="form-control" required
+                                    value="{{ warranty.purchase_date|date:'Y-m-d'|default:'' }}">
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label fw-bold">Warranty Duration</label>
+                                <input type="number" name="warranty_duration" class="form-control" min="1"
+                                    value="{{ warranty.warranty_duration|default:'12' }}" placeholder="12">
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label fw-bold">Duration Unit</label>
+                                <select name="warranty_unit" class="form-select">
+                                    {% for value, label in unit_choices %}
+                                    <option value="{{ value }}" {% if warranty.warranty_unit == value %}selected{% endif %}>{{ label }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label fw-bold">Invoice/Bill No.</label>
+                                <input type="text" name="purchase_invoice" class="form-control"
+                                    value="{{ warranty.purchase_invoice|default:'' }}" placeholder="Invoice number">
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Notes</label>
+                            <textarea name="notes" class="form-control" rows="2"
+                                placeholder="Additional notes about this warranty">{{ warranty.notes|default:'' }}</textarea>
+                        </div>
+
+                        {% if mode == 'edit' and warranty.warranty_expiry_date %}
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            <strong>Warranty Expiry:</strong> {{ warranty.warranty_expiry_date|date:"d F Y" }}
+                            {% if warranty.days_remaining > 0 %}
+                            ({{ warranty.days_remaining }} days remaining)
+                            {% else %}
+                            <span class="text-danger">(Expired)</span>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+
+                        <hr>
+
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'admin_warranty_list' %}" class="btn btn-outline-secondary">
+                                <i class="fas fa-arrow-left me-1"></i>Cancel
+                            </a>
+                            <button type="submit" class="btn btn-success">
+                                <i class="fas fa-save me-1"></i>
+                                {% if mode == 'add' %}Add Warranty{% else %}Save Changes{% endif %}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

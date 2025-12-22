@@ -1,0 +1,88 @@
+{% extends 'emails/base.html' %}
+
+{% block title %}Appointment Confirmed - {{ business.name }}{% endblock %}
+
+{% block content %}
+<div class="greeting">Dear {{ user_name }},</div>
+
+<div class="content-block">
+    <p>Thank you for choosing <strong>{{ business.name }}</strong>.</p>
+    <p>Your service appointment has been successfully confirmed. Please find the details below:</p>
+</div>
+
+<!-- Appointment Details -->
+<div class="info-box">
+    <h3>📅 Appointment Details</h3>
+    <div class="info-row">
+        <span class="info-label">Service:</span>
+        <span class="info-value">{{ service_name }}</span>
+    </div>
+    <div class="info-row">
+        <span class="info-label">Date & Time:</span>
+        <span class="info-value">{{ appointment_date }} at {{ appointment_time }}</span>
+    </div>
+    {% if electrician_name %}
+    <div class="info-row">
+        <span class="info-label">Electrician Assigned:</span>
+        <span class="info-value">{{ electrician_name }}</span>
+    </div>
+    <div class="info-row">
+        <span class="info-label">Electrician Contact:</span>
+        <span class="info-value">{{ electrician_phone }}</span>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Charges -->
+<div class="info-box" style="border-left-color: #28a745;">
+    <h3>💰 Charges</h3>
+    <div class="info-row">
+        <span class="info-label">Base Service Charge:</span>
+        <span class="info-value" style="color: #28a745; font-weight: 600;">₹{{ base_charge }}</span>
+    </div>
+    <p style="font-size: 13px; color: #666; margin-top: 10px; margin-bottom: 0;">
+        <em>* Additional charges may apply if extra materials are required.</em>
+    </p>
+</div>
+
+<!-- Customer Information -->
+<div class="info-box" style="border-left-color: #17a2b8;">
+    <h3>👤 Your Information</h3>
+    <div class="info-row">
+        <span class="info-label">Name:</span>
+        <span class="info-value">{{ user_name }}</span>
+    </div>
+    <div class="info-row">
+        <span class="info-label">Phone:</span>
+        <span class="info-value">{{ user_phone }}</span>
+    </div>
+    <div class="info-row">
+        <span class="info-label">Address:</span>
+        <span class="info-value">{{ user_address }}</span>
+    </div>
+</div>
+
+<!-- Business Profile Link -->
+{% if business_profile_link %}
+<div style="text-align: center; margin: 25px 0;">
+    <p>You can view our business profile here:</p>
+    <a href="{{ business_profile_link }}" class="btn"
+        style="background: linear-gradient(135deg, #ffc107 0%, #ff9800 100%); color: #333 !important;">
+        👉 View Business Profile
+    </a>
+</div>
+{% endif %}
+
+<div class="content-block" style="margin-top: 30px;">
+    <p>If you have any questions or need to reschedule, feel free to contact us.</p>
+</div>
+
+<div style="margin-top: 30px;">
+    <p style="margin-bottom: 5px;">Warm regards,</p>
+    <p style="font-weight: 600; margin-bottom: 5px;">{{ business.name }}</p>
+    <p style="color: #666; font-size: 14px; margin: 0;">
+        📞 {{ business.phone }}<br>
+        📍 {{ business.address }}
+    </p>
+</div>
+{% endblock %}

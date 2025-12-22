@@ -1,0 +1,103 @@
+{% extends 'emails/base.html' %}
+
+{% block title %}Price Confirmed - {{ business.name }}{% endblock %}
+
+{% block content %}
+<div class="greeting">Dear {{ user_name }},</div>
+
+<div class="content-block">
+    <p>Thank you for your enquiry. We're pleased to share the confirmed pricing for your requested product.</p>
+</div>
+
+<!-- Price Confirmation Banner -->
+<div
+    style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 25px; border-radius: 8px; text-align: center; margin: 25px 0; color: #fff;">
+    <div style="font-size: 40px; margin-bottom: 10px;">💰</div>
+    <h3 style="margin: 0;">Price Confirmed!</h3>
+</div>
+
+<!-- Product & Pricing Details -->
+<div class="info-box" style="border-left-color: #28a745;">
+    <h3>📦 Product & Pricing</h3>
+    <div class="info-row">
+        <span class="info-label">Product:</span>
+        <span class="info-value"><strong>{{ product_name }}</strong></span>
+    </div>
+    {% if quantity %}
+    <div class="info-row">
+        <span class="info-label">Quantity:</span>
+        <span class="info-value">{{ quantity }}</span>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Price Breakdown -->
+<div style="background: #f7fafc; padding: 25px; border-radius: 8px; margin: 25px 0;">
+    <h4 style="margin: 0 0 20px 0; color: #2d3748; text-align: center;">💵 Price Breakdown</h4>
+
+    <table style="width: 100%; border-collapse: collapse;">
+        <tr>
+            <td style="padding: 12px 0; border-bottom: 1px solid #e2e8f0; color: #666;">Product Price</td>
+            <td style="padding: 12px 0; border-bottom: 1px solid #e2e8f0; text-align: right; font-weight: 500;">₹{{
+                product_price }}</td>
+        </tr>
+        <tr>
+            <td style="padding: 12px 0; border-bottom: 1px solid #e2e8f0; color: #666;">Delivery Charges</td>
+            <td style="padding: 12px 0; border-bottom: 1px solid #e2e8f0; text-align: right; font-weight: 500;">
+                {% if delivery_charge == 0 or delivery_charge == '0' %}
+                <span style="color: #28a745;">FREE</span>
+                {% else %}
+                ₹{{ delivery_charge }}
+                {% endif %}
+            </td>
+        </tr>
+        {% if discount %}
+        <tr>
+            <td style="padding: 12px 0; border-bottom: 1px solid #e2e8f0; color: #28a745;">Discount</td>
+            <td
+                style="padding: 12px 0; border-bottom: 1px solid #e2e8f0; text-align: right; font-weight: 500; color: #28a745;">
+                - ₹{{ discount }}</td>
+        </tr>
+        {% endif %}
+        <tr style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+            <td style="padding: 15px 12px; color: #fff; font-weight: 600; font-size: 16px;">Total Amount</td>
+            <td style="padding: 15px 12px; text-align: right; color: #fff; font-weight: 700; font-size: 20px;">₹{{
+                total_amount }}</td>
+        </tr>
+    </table>
+</div>
+
+<!-- Call to Action -->
+<div style="text-align: center; margin: 30px 0;">
+    <p style="color: #666; margin-bottom: 20px;">Please reply to this email or confirm from your dashboard to proceed
+        with the order.</p>
+
+    <a href="{{ confirm_link|default:'#' }}" class="btn" style="margin: 5px;">
+        ✅ Confirm Order
+    </a>
+
+    {% if dashboard_link %}
+    <br><br>
+    <a href="{{ dashboard_link }}" style="color: #667eea; text-decoration: underline;">
+        View in Dashboard →
+    </a>
+    {% endif %}
+</div>
+
+<!-- Validity Note -->
+<div class="alert-box" style="background-color: #fff3cd; border-left: 4px solid #ffc107;">
+    <p style="margin: 0; color: #856404;">
+        <strong>⏰ Note:</strong> This price quote is valid for {{ validity_days|default:'7' }} days from the date of
+        this email.
+    </p>
+</div>
+
+<div class="content-block" style="margin-top: 30px;">
+    <p>We look forward to your confirmation.</p>
+</div>
+
+<div style="margin-top: 30px;">
+    <p style="margin-bottom: 5px;">Best regards,</p>
+    <p style="font-weight: 600; margin-bottom: 5px;">{{ business.name }}</p>
+</div>
+{% endblock %}

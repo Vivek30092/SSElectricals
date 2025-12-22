@@ -291,6 +291,60 @@
 </div>
 {% endif %}
 
+<!-- Our Electricians Section -->
+{% if electricians %}
+<div class="container my-5">
+    <div class="text-center mb-4">
+        <h6 class="text-warning fw-bold text-uppercase letter-spacing-1">Expert Team</h6>
+        <h2 class="fw-bold">Our Professional Electricians</h2>
+        <p class="text-muted">Skilled professionals ready to serve you</p>
+    </div>
+
+    <div class="row justify-content-center">
+        {% for electrician in electricians %}
+        <div class="col-lg-3 col-md-4 col-sm-6 mb-4">
+            <div class="card h-100 border-0 shadow-sm hover-lift text-center">
+                <div class="card-body p-4">
+                    {% if electrician.profile_picture %}
+                    <img src="{{ electrician.profile_picture.url }}" alt="{{ electrician.name }}"
+                        class="rounded-circle mb-3" style="width: 120px; height: 120px; object-fit: cover;">
+                    {% else %}
+                    <div class="bg-warning rounded-circle mx-auto mb-3 d-flex align-items-center justify-content-center"
+                        style="width: 120px; height: 120px;">
+                        <i class="fas fa-user-tie fa-3x text-dark"></i>
+                    </div>
+                    {% endif %}
+
+                    <h5 class="card-title mb-1">{{ electrician.name }}</h5>
+                    <p class="text-muted small mb-2">
+                        <i class="fas fa-briefcase me-1"></i>{{ electrician.experience_years }} Years Experience
+                    </p>
+
+                    {% if electrician.specializations %}
+                    <div class="mb-3">
+                        {% for spec in electrician.get_specializations_list|slice:":3" %}
+                        <span class="badge bg-light text-dark me-1 mb-1">{{ spec }}</span>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+
+                    <a href="tel:{{ electrician.phone_number }}" class="btn btn-outline-warning btn-sm">
+                        <i class="fas fa-phone me-1"></i>Contact
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="text-center mt-3">
+        <a href="{% url 'book_appointment' %}" class="btn btn-warning btn-lg px-4">
+            <i class="fas fa-calendar-alt me-2"></i>Book a Service
+        </a>
+    </div>
+</div>
+{% endif %}
+
 <!-- Newsletter/CTA -->
 {% if not user.is_authenticated %}
 <div class="container my-5">

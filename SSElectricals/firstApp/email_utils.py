@@ -260,3 +260,249 @@ def retry_failed_emails(max_retries=3):
         # This would require reconstructing context from order/appointment
         # Implement based on your retry strategy
         logger.info(f"Retrying email: {email_log.id}")
+
+
+# ===================================================================
+# NEW: Professional Email Functions (December 2024)
+# ===================================================================
+
+def send_appointment_confirmed_email(appointment, electrician=None):
+    """
+    Send appointment confirmation email to user
+    Trigger: Appointment booked (by user or admin) and confirmed
+    """
+    from .models import Electrician
+    
+    context = {
+        'user_name': appointment.customer_name,
+        'service_name': appointment.service.name if appointment.service else 'General Service',
+        'appointment_date': appointment.date.strftime('%A, %d %B %Y'),
+        'appointment_time': appointment.time.strftime('%I:%M %p'),
+        'base_charge': float(appointment.visiting_charge),
+        'user_phone': appointment.phone,
+        'user_address': f"{appointment.house_number}, {appointment.address_line1}, {appointment.address_line2 or ''}, {appointment.area}, {appointment.city} - {appointment.pincode}",
+        'business_profile_link': 'https://g.page/r/YOUR_GOOGLE_PROFILE',  # Update with actual link
+    }
+    
+    if electrician:
+        context['electrician_name'] = electrician.name
+        context['electrician_phone'] = electrician.phone_number
+    
+    subject = f"✅ Appointment Confirmed - {context['service_name']} on {context['appointment_date']}"
+    
+    send_email_async(
+        email_type='APPOINTMENT_STATUS',
+        recipient=appointment.email,
+        subject=subject,
+        template_name='appointment_confirmed.html',
+        context=context,
+        appointment=appointment
+    )
+
+
+def send_electrician_assignment_email(appointment, electrician):
+    """
+    Send assignment notification to electrician
+    Trigger: Admin assigns an electrician to an appointment
+    """
+    context = {
+        'electrician_name': electrician.name,
+        'service_name': appointment.service.name if appointment.service else 'General Service',
+        'appointment_date': appointment.date.strftime('%A, %d %B %Y'),
+        'appointment_time': appointment.time.strftime('%I:%M %p'),
+        'customer_name': appointment.customer_name,
+        'customer_phone': appointment.phone,
+        'customer_address': f"{appointment.house_number}, {appointment.address_line1}, {appointment.address_line2 or ''}, {appointment.area}, {appointment.city} - {appointment.pincode}",
+        'base_charge': float(appointment.visiting_charge),
+        'problem_description': appointment.problem_description,
+        'admin_contact': BUSINESS_INFO['phone'],
+    }
+    
+    subject = f"🔧 New Appointment Assigned - {context['appointment_date']} at {context['appointment_time']}"
+    
+    send_email_async(
+        email_type='APPOINTMENT_STATUS',
+        recipient=electrician.email,
+        subject=subject,
+        template_name='electrician_assigned.html',
+        context=context,
+        appointment=appointment
+    )
+
+
+def send_appointment_completed_review_email(appointment, review_link=None):
+    """
+    Send completion email to user with review request
+    Trigger: Appointment status updated to Completed
+    """
+    context = {
+        'user_name': appointment.customer_name,
+        'service_name': appointment.service.name if appointment.service else 'General Service',
+        'appointment_date': appointment.date.strftime('%d %B %Y'),
+        'electrician_name': appointment.assigned_electrician.name if appointment.assigned_electrician else None,
+        'review_link': review_link or 'https://g.page/r/YOUR_GOOGLE_PROFILE/review',  # Update with actual link
+        'business_profile_link': 'https://g.page/r/YOUR_GOOGLE_PROFILE',  # Update with actual link
+    }
+    
+    subject = f"⭐ Service Completed - Share Your Experience with {BUSINESS_INFO['name']}"
+    
+    send_email_async(
+        email_type='APPOINTMENT_COMPLETE',
+        recipient=appointment.email,
+        subject=subject,
+        template_name='appointment_completed_review.html',
+        context=context,
+        appointment=appointment
+    )
+
+
+def send_order_status_update_email(order, admin_message=None):
+    """
+    Send generic order status update email
+    Trigger: Whenever admin updates order status
+    """
+    items = order.items.all()
+    product_names = ', '.join([item.product.name for item in items[:3]])
+    if items.count() > 3:
+        product_names += f' + {items.count() - 3} more'
+    
+    context = {
+        'user_name': order.user.get_full_name() or order.customer_name or order.user.username,
+        'order_id': order.id,
+        'product_name': product_names,
+        'order_status': order.get_status_display(),
+        'admin_message': admin_message,
+        'dashboard_link': f"{SITE_URL}/orders/",
+    }
+    
+    subject = f"📦 Order #{order.id} - Status: {order.get_status_display()}"
+    
+    send_email_async(
+        email_type='ORDER_STATUS',
+        recipient=order.user.email,
+        subject=subject,
+        template_name='order_status_generic.html',
+        context=context,
+        order=order
+    )
+
+
+def send_order_out_for_delivery_email(order, otp):
+    """
+    Send out for delivery email with OTP
+    Trigger: Order status changes to Out for Delivery
+    """
+    items = order.items.all()
+    product_names = ', '.join([item.product.name for item in items[:3]])
+    if items.count() > 3:
+        product_names += f' + {items.count() - 3} more'
+    
+    context = {
+        'user_name': order.user.get_full_name() or order.customer_name or order.user.username,
+        'order_id': order.id,
+        'product_name': product_names,
+        'delivery_otp': otp,
+    }
+    
+    subject = f"🚚 Your Order #{order.id} is Out for Delivery - OTP Inside"
+    
+    return send_professional_email(
+        email_type='DELIVERY_OTP',
+        recipient=order.user.email,
+        subject=subject,
+        template_name='order_out_for_delivery.html',
+        context=context,
+        order=order,
+        high_priority=True  # OTP emails are high priority
+    )
+
+
+def send_order_delivered_review_email(order, product_review_link=None):
+    """
+    Send order delivered email with product review request
+    Trigger: Order status updated to Delivered
+    """
+    items = order.items.all()
+    product_names = ', '.join([item.product.name for item in items[:3]])
+    if items.count() > 3:
+        product_names += f' + {items.count() - 3} more'
+    
+    # Get first product for review link
+    first_item = items.first()
+    
+    context = {
+        'user_name': order.user.get_full_name() or order.customer_name or order.user.username,
+        'order_id': order.id,
+        'product_name': product_names,
+        'delivery_date': timezone.now().strftime('%d %B %Y'),
+        'product_review_link': product_review_link or f"{SITE_URL}/product/{first_item.product.id}/" if first_item else f"{SITE_URL}/products/",
+    }
+    
+    subject = f"✅ Order Delivered - We'd Love Your Feedback!"
+    
+    send_email_async(
+        email_type='ORDER_DELIVERED',
+        recipient=order.user.email,
+        subject=subject,
+        template_name='order_delivered_review.html',
+        context=context,
+        order=order
+    )
+
+
+def send_warranty_registered_email(warranty, dashboard_link=None):
+    """
+    Send warranty registration confirmation email
+    Trigger: Admin registers a product warranty
+    """
+    context = {
+        'user_name': warranty.customer_name,
+        'product_name': warranty.product_name,
+        'product_brand': warranty.product_brand,
+        'product_serial': warranty.product_serial,
+        'purchase_date': warranty.purchase_date.strftime('%d %B %Y'),
+        'warranty_expiry_date': warranty.warranty_expiry_date.strftime('%d %B %Y'),
+        'dashboard_link': dashboard_link or f"{SITE_URL}/my-warranties/",
+    }
+    
+    subject = f"🛡️ Warranty Registered - {warranty.product_name}"
+    
+    send_email_async(
+        email_type='WARRANTY',
+        recipient=warranty.customer_email,
+        subject=subject,
+        template_name='warranty_registered.html',
+        context=context
+    )
+
+
+def send_price_confirmed_email(recipient_email, user_name, product_name, product_price, 
+                               delivery_charge, total_amount, confirm_link=None, 
+                               quantity=1, discount=0, validity_days=7):
+    """
+    Send price confirmation email for order enquiry flow
+    Trigger: Admin confirms product price after enquiry
+    """
+    context = {
+        'user_name': user_name,
+        'product_name': product_name,
+        'product_price': product_price,
+        'delivery_charge': delivery_charge,
+        'total_amount': total_amount,
+        'quantity': quantity,
+        'discount': discount,
+        'confirm_link': confirm_link,
+        'dashboard_link': f"{SITE_URL}/orders/",
+        'validity_days': validity_days,
+    }
+    
+    subject = f"💰 Price Confirmed for {product_name} - Action Required"
+    
+    send_email_async(
+        email_type='ORDER_STATUS',
+        recipient=recipient_email,
+        subject=subject,
+        template_name='price_confirmed.html',
+        context=context
+    )
+

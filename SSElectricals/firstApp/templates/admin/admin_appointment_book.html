@@ -1,0 +1,155 @@
+{% extends 'admin/base_admin.html' %}
+
+{% block title %}Book Appointment - Admin{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <div class="card shadow-sm">
+                <div class="card-header bg-info text-white">
+                    <h4 class="mb-0">
+                        <i class="fas fa-calendar-plus me-2"></i>Book Appointment (Admin)
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Book an appointment on behalf of a customer. An email confirmation will be sent to both the
+                        customer and the assigned electrician.
+                    </div>
+
+                    <form method="post">
+                        {% csrf_token %}
+
+                        <!-- Customer Information -->
+                        <h5 class="border-bottom pb-2 mb-3">
+                            <i class="fas fa-user text-primary me-2"></i>Customer Information
+                        </h5>
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label fw-bold">Customer Name <span
+                                        class="text-danger">*</span></label>
+                                <input type="text" name="customer_name" class="form-control" required
+                                    placeholder="Full Name">
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label fw-bold">Phone <span class="text-danger">*</span></label>
+                                <input type="tel" name="phone" class="form-control" required
+                                    placeholder="+91-XXXXXXXXXX">
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label fw-bold">Email</label>
+                                <input type="email" name="email" class="form-control"
+                                    placeholder="email@example.com (for confirmation)">
+                            </div>
+                        </div>
+
+                        <!-- Address Information -->
+                        <h5 class="border-bottom pb-2 mb-3 mt-4">
+                            <i class="fas fa-map-marker-alt text-danger me-2"></i>Address Information
+                        </h5>
+                        <div class="row">
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label fw-bold">House/Flat No.</label>
+                                <input type="text" name="house_number" class="form-control" placeholder="e.g., B-115">
+                            </div>
+                            <div class="col-md-5 mb-3">
+                                <label class="form-label fw-bold">Address Line 1</label>
+                                <input type="text" name="address_line1" class="form-control"
+                                    placeholder="Street, Colony">
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label fw-bold">Address Line 2</label>
+                                <input type="text" name="address_line2" class="form-control"
+                                    placeholder="Landmark (optional)">
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label fw-bold">Area</label>
+                                <select name="area" class="form-select">
+                                    {% for value, label in areas %}
+                                    <option value="{{ value }}">{{ label }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label fw-bold">Pincode</label>
+                                <input type="text" name="pincode" class="form-control" value="452001"
+                                    placeholder="452001">
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label fw-bold">City</label>
+                                <input type="text" class="form-control" value="Indore" readonly>
+                            </div>
+                        </div>
+
+                        <!-- Service & Electrician -->
+                        <h5 class="border-bottom pb-2 mb-3 mt-4">
+                            <i class="fas fa-tools text-warning me-2"></i>Service & Assignment
+                        </h5>
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label fw-bold">Service Type</label>
+                                <select name="service" class="form-select">
+                                    <option value="">-- Select Service --</option>
+                                    {% for service in services %}
+                                    <option value="{{ service.id }}">{{ service.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label fw-bold">Assign Electrician</label>
+                                <select name="electrician" class="form-select">
+                                    <option value="">-- Select Electrician --</option>
+                                    {% for elec in electricians %}
+                                    <option value="{{ elec.id }}">{{ elec.name }} ({{ elec.phone_number }})</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label fw-bold">Visiting Charge (₹)</label>
+                                <input type="number" name="visiting_charge" class="form-control" value="200" min="0">
+                            </div>
+                        </div>
+
+                        <!-- Date & Time -->
+                        <h5 class="border-bottom pb-2 mb-3 mt-4">
+                            <i class="fas fa-clock text-info me-2"></i>Schedule
+                        </h5>
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label fw-bold">Date <span class="text-danger">*</span></label>
+                                <input type="date" name="date" class="form-control" required>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label fw-bold">Time <span class="text-danger">*</span></label>
+                                <input type="time" name="time" class="form-control" required>
+                            </div>
+                        </div>
+
+                        <!-- Notes -->
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Problem Description / Notes</label>
+                            <textarea name="notes" class="form-control" rows="3"
+                                placeholder="Describe the issue or add any notes..."></textarea>
+                        </div>
+
+                        <hr>
+
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'admin_appointment_list' %}" class="btn btn-outline-secondary">
+                                <i class="fas fa-arrow-left me-1"></i>Cancel
+                            </a>
+                            <button type="submit" class="btn btn-info">
+                                <i class="fas fa-calendar-check me-1"></i>Book Appointment
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

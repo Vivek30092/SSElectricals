@@ -1,0 +1,204 @@
+{% extends 'admin/base_admin.html' %}
+
+{% block title %}Warranty Details - Admin{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <div class="card shadow-sm">
+                <div
+                    class="card-header d-flex justify-content-between align-items-center 
+                    {% if warranty.status == 'ACTIVE' %}bg-success{% elif warranty.status == 'EXPIRED' %}bg-secondary{% else %}bg-danger{% endif %} text-white">
+                    <h4 class="mb-0">
+                        <i class="fas fa-shield-alt me-2"></i>Warranty Details
+                    </h4>
+                    <span class="badge bg-white text-dark fs-6">{{ warranty.get_status_display }}</span>
+                </div>
+                <div class="card-body">
+
+                    <!-- Status Banner -->
+                    {% if warranty.status == 'ACTIVE' %}
+                    <div class="alert alert-success d-flex align-items-center">
+                        <i class="fas fa-check-circle fa-2x me-3"></i>
+                        <div>
+                            <strong>Active Warranty</strong><br>
+                            {% if warranty.days_remaining > 30 %}
+                            {{ warranty.days_remaining }} days remaining until expiry
+                            {% elif warranty.days_remaining > 0 %}
+                            <span class="text-warning"><strong>{{ warranty.days_remaining }} days remaining - expiring
+                                    soon!</strong></span>
+                            {% else %}
+                            <span class="text-danger">Expired</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% elif warranty.status == 'EXPIRED' %}
+                    <div class="alert alert-secondary d-flex align-items-center">
+                        <i class="fas fa-clock fa-2x me-3"></i>
+                        <div>
+                            <strong>Warranty Expired</strong><br>
+                            Expired on {{ warranty.warranty_expiry_date|date:"d F Y" }}
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-danger d-flex align-items-center">
+                        <i class="fas fa-ban fa-2x me-3"></i>
+                        <div>
+                            <strong>Warranty Voided</strong><br>
+                            {{ warranty.void_reason }}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <div class="row">
+                        <!-- Customer Info -->
+                        <div class="col-md-6">
+                            <div class="card h-100">
+                                <div class="card-header bg-primary text-white">
+                                    <i class="fas fa-user me-2"></i>Customer Information
+                                </div>
+                                <div class="card-body">
+                                    <table class="table table-borderless mb-0">
+                                        <tr>
+                                            <td class="fw-bold" width="40%">Name:</td>
+                                            <td>{{ warranty.customer_name }}</td>
+                                        </tr>
+                                        <tr>
+                                            <td class="fw-bold">Phone:</td>
+                                            <td><a href="tel:{{ warranty.customer_phone }}">{{ warranty.customer_phone
+                                                    }}</a></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="fw-bold">Email:</td>
+                                            <td><a href="mailto:{{ warranty.customer_email }}">{{
+                                                    warranty.customer_email }}</a></td>
+                                        </tr>
+                                        {% if warranty.customer %}
+                                        <tr>
+                                            <td class="fw-bold">Linked User:</td>
+                                            <td>
+                                                <span class="badge bg-info">
+                                                    <i class="fas fa-link me-1"></i>{{ warranty.customer.username }}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                        {% endif %}
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Product Info -->
+                        <div class="col-md-6">
+                            <div class="card h-100">
+                                <div class="card-header bg-success text-white">
+                                    <i class="fas fa-box me-2"></i>Product Information
+                                </div>
+                                <div class="card-body">
+                                    {% if warranty.product_image %}
+                                    <div class="text-center mb-3">
+                                        <img src="{{ warranty.product_image.url }}" alt="{{ warranty.product_name }}"
+                                            class="rounded" style="max-height: 150px;">
+                                    </div>
+                                    {% endif %}
+                                    <table class="table table-borderless mb-0">
+                                        <tr>
+                                            <td class="fw-bold" width="40%">Product:</td>
+                                            <td>{{ warranty.product_name }}</td>
+                                        </tr>
+                                        {% if warranty.product_brand %}
+                                        <tr>
+                                            <td class="fw-bold">Brand:</td>
+                                            <td>{{ warranty.product_brand }}</td>
+                                        </tr>
+                                        {% endif %}
+                                        {% if warranty.product_model %}
+                                        <tr>
+                                            <td class="fw-bold">Model:</td>
+                                            <td>{{ warranty.product_model }}</td>
+                                        </tr>
+                                        {% endif %}
+                                        {% if warranty.product_serial %}
+                                        <tr>
+                                            <td class="fw-bold">Serial No:</td>
+                                            <td><code>{{ warranty.product_serial }}</code></td>
+                                        </tr>
+                                        {% endif %}
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Warranty Period -->
+                    <div class="card mt-4">
+                        <div class="card-header bg-warning text-dark">
+                            <i class="fas fa-calendar-alt me-2"></i>Warranty Period
+                        </div>
+                        <div class="card-body">
+                            <div class="row text-center">
+                                <div class="col-md-3">
+                                    <h6 class="text-muted">Purchase Date</h6>
+                                    <h4>{{ warranty.purchase_date|date:"d M Y" }}</h4>
+                                </div>
+                                <div class="col-md-3">
+                                    <h6 class="text-muted">Warranty Period</h6>
+                                    <h4>{{ warranty.warranty_duration }} {{ warranty.get_warranty_unit_display }}</h4>
+                                </div>
+                                <div class="col-md-3">
+                                    <h6 class="text-muted">Expiry Date</h6>
+                                    <h4>{{ warranty.warranty_expiry_date|date:"d M Y" }}</h4>
+                                </div>
+                                <div class="col-md-3">
+                                    <h6 class="text-muted">Invoice No.</h6>
+                                    <h4>{{ warranty.purchase_invoice|default:"-" }}</h4>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {% if warranty.notes %}
+                    <div class="card mt-4">
+                        <div class="card-header">
+                            <i class="fas fa-sticky-note me-2"></i>Notes
+                        </div>
+                        <div class="card-body">
+                            {{ warranty.notes }}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Meta Info -->
+                    <div class="text-muted small mt-4">
+                        <p class="mb-1"><i class="fas fa-clock me-1"></i>Created: {{ warranty.created_at|date:"d M Y
+                            H:i" }}
+                            {% if warranty.created_by %}by {{ warranty.created_by.username }}{% endif %}
+                        </p>
+                        <p class="mb-0"><i class="fas fa-edit me-1"></i>Last Updated: {{ warranty.updated_at|date:"d M Y
+                            H:i" }}</p>
+                    </div>
+
+                    <hr>
+
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'admin_warranty_list' %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-arrow-left me-1"></i>Back to List
+                        </a>
+                        <div>
+                            <a href="{% url 'admin_warranty_edit' warranty.pk %}" class="btn btn-primary">
+                                <i class="fas fa-edit me-1"></i>Edit
+                            </a>
+                            {% if warranty.status == 'ACTIVE' %}
+                            <a href="{% url 'admin_warranty_void' warranty.pk %}" class="btn btn-danger">
+                                <i class="fas fa-ban me-1"></i>Void Warranty
+                            </a>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

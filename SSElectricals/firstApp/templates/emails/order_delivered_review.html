@@ -1,0 +1,71 @@
+{% extends 'emails/base.html' %}
+
+{% block title %}Order Delivered - Review Request - {{ business.name }}{% endblock %}
+
+{% block content %}
+<div class="greeting">Dear {{ user_name }},</div>
+
+<div class="content-block">
+    <p>Your order has been <strong>successfully delivered</strong>. 🎉</p>
+    <p>We hope you're happy with your purchase!</p>
+</div>
+
+<!-- Delivered Banner -->
+<div class="highlight-box" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%);">
+    <div style="font-size: 48px; margin-bottom: 10px;">📦 ✓</div>
+    <div class="big-text" style="font-size: 24px; letter-spacing: 2px;">DELIVERED</div>
+    <div class="small-text">Thank you for shopping with us!</div>
+</div>
+
+<!-- Order Summary -->
+<div class="info-box">
+    <h3>🧾 Order Summary</h3>
+    <div class="info-row">
+        <span class="info-label">Order ID:</span>
+        <span class="info-value"><strong>#{{ order_id }}</strong></span>
+    </div>
+    <div class="info-row">
+        <span class="info-label">Product:</span>
+        <span class="info-value">{{ product_name }}</span>
+    </div>
+    {% if delivery_date %}
+    <div class="info-row">
+        <span class="info-label">Delivered On:</span>
+        <span class="info-value">{{ delivery_date }}</span>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Review Request -->
+<div
+    style="background: linear-gradient(135deg, #ffc107 0%, #ff9800 100%); padding: 30px; border-radius: 8px; text-align: center; margin: 25px 0;">
+    <h3 style="color: #333; margin: 0 0 15px 0;">⭐ Leave a Product Review</h3>
+    <p style="color: #333; margin: 0 0 20px 0;">Your feedback helps other customers make informed decisions.</p>
+
+    <a href="{{ product_review_link }}" class="btn" style="background: #333; color: #fff !important;">
+        ⭐ Write a Review
+    </a>
+</div>
+
+<!-- Satisfaction Check -->
+<div class="info-box" style="border-left-color: #17a2b8;">
+    <h3>💬 Not Satisfied?</h3>
+    <p style="margin: 0; color: #666;">
+        If you have any issues with your order or the product, please don't hesitate to contact us.
+        We're here to help!
+    </p>
+    <p style="margin: 10px 0 0 0;">
+        📞 {{ business.phone }}<br>
+        ✉️ {{ business.email }}
+    </p>
+</div>
+
+<div class="content-block" style="margin-top: 30px;">
+    <p>Thank you for trusting <strong>{{ business.name }}</strong>.</p>
+</div>
+
+<div style="margin-top: 30px;">
+    <p style="margin-bottom: 5px;">Warm regards,</p>
+    <p style="font-weight: 600; margin-bottom: 5px;">{{ business.name }}</p>
+</div>
+{% endblock %}

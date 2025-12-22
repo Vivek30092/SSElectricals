@@ -1,0 +1,161 @@
+{% extends 'firstApp/base.html' %}
+
+{% block title %}My Warranties - Shiv Shakti Electricals{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row">
+        <div class="col-12">
+            <!-- Page Header -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2 class="fw-bold mb-0">
+                    <i class="fas fa-shield-alt text-success me-2"></i>My Warranties
+                </h2>
+                <a href="{% url 'profile' %}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-1"></i>Back to Profile
+                </a>
+            </div>
+
+            {% if warranties %}
+            <!-- Warranties List -->
+            <div class="row">
+                {% for warranty in warranties %}
+                <div class="col-md-6 col-lg-4 mb-4">
+                    <div
+                        class="card h-100 shadow-sm warranty-card 
+                        {% if warranty.status == 'ACTIVE' %}border-success{% elif warranty.status == 'EXPIRED' %}border-secondary{% else %}border-danger{% endif %}">
+
+                        <!-- Status Header -->
+                        <div
+                            class="card-header 
+                            {% if warranty.status == 'ACTIVE' %}bg-success{% elif warranty.status == 'EXPIRED' %}bg-secondary{% else %}bg-danger{% endif %} text-white">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="fw-bold">
+                                    {% if warranty.status == 'ACTIVE' %}
+                                    <i class="fas fa-check-circle me-1"></i>Active
+                                    {% elif warranty.status == 'EXPIRED' %}
+                                    <i class="fas fa-clock me-1"></i>Expired
+                                    {% else %}
+                                    <i class="fas fa-ban me-1"></i>Voided
+                                    {% endif %}
+                                </span>
+                                {% if warranty.status == 'ACTIVE' and warranty.days_remaining > 0 %}
+                                <small>{{ warranty.days_remaining }} days left</small>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="card-body">
+                            <!-- Product Image -->
+                            {% if warranty.product_image %}
+                            <div class="text-center mb-3">
+                                <img src="{{ warranty.product_image.url }}" alt="{{ warranty.product_name }}"
+                                    class="rounded" style="max-height: 120px;">
+                            </div>
+                            {% endif %}
+
+                            <!-- Product Info -->
+                            <h5 class="card-title mb-2">{{ warranty.product_name }}</h5>
+                            {% if warranty.product_brand %}
+                            <p class="text-muted mb-1"><small>Brand: {{ warranty.product_brand }}</small></p>
+                            {% endif %}
+                            {% if warranty.product_serial %}
+                            <p class="text-muted mb-2"><small>Serial: <code>{{ warranty.product_serial }}</code></small>
+                            </p>
+                            {% endif %}
+
+                            <hr>
+
+                            <!-- Dates -->
+                            <div class="row text-center small">
+                                <div class="col-6">
+                                    <span class="text-muted d-block">Purchase Date</span>
+                                    <strong>{{ warranty.purchase_date|date:"d M Y" }}</strong>
+                                </div>
+                                <div class="col-6">
+                                    <span class="text-muted d-block">Expiry Date</span>
+                                    <strong>{{ warranty.warranty_expiry_date|date:"d M Y" }}</strong>
+                                </div>
+                            </div>
+
+                            <!-- Warranty Period -->
+                            <div class="mt-3 text-center">
+                                <span class="badge bg-light text-dark">
+                                    <i class="fas fa-calendar-alt me-1"></i>
+                                    {{ warranty.warranty_duration }} {{ warranty.get_warranty_unit_display }} Warranty
+                                </span>
+                            </div>
+
+                            {% if warranty.purchase_invoice %}
+                            <div class="mt-2 text-center">
+                                <small class="text-muted">Invoice: {{ warranty.purchase_invoice }}</small>
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Progress Bar for Active Warranties -->
+                        {% if warranty.status == 'ACTIVE' %}
+                        <div class="card-footer bg-transparent">
+                            <div class="progress" style="height: 6px;">
+                                {% widthratio warranty.days_remaining warranty.warranty_duration 1 as progress_inverse
+                                %}
+                                {% with progress=100 %}
+                                <div class="progress-bar 
+                                    {% if warranty.days_remaining > 30 %}bg-success{% elif warranty.days_remaining > 7 %}bg-warning{% else %}bg-danger{% endif %}"
+                                    role="progressbar" style="width: {% widthratio warranty.days_remaining 365 100 %}%">
+                                </div>
+                                {% endwith %}
+                            </div>
+                            <small class="text-muted">Warranty coverage remaining</small>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <!-- No Warranties -->
+            <div class="card shadow-sm">
+                <div class="card-body text-center py-5">
+                    <i class="fas fa-shield-alt fa-4x text-muted mb-4 opacity-50"></i>
+                    <h4 class="text-muted mb-3">No Warranties Found</h4>
+                    <p class="text-muted mb-4">
+                        You don't have any registered warranties yet.<br>
+                        When you purchase products from us, your warranty information will appear here.
+                    </p>
+                    <a href="{% url 'product_list' %}" class="btn btn-primary">
+                        <i class="fas fa-shopping-cart me-2"></i>Browse Products
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Info Box -->
+            <div class="card mt-4 bg-light border-0">
+                <div class="card-body">
+                    <h6 class="card-title">
+                        <i class="fas fa-info-circle text-info me-2"></i>About Warranties
+                    </h6>
+                    <ul class="small mb-0">
+                        <li>Warranties are registered by Shiv Shakti Electricals staff after your purchase.</li>
+                        <li>Keep your purchase invoice safe for any warranty claims.</li>
+                        <li>Contact us if you believe a warranty is missing from your account.</li>
+                        <li>Warranty coverage is subject to manufacturer terms and conditions.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .warranty-card {
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .warranty-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+    }
+</style>
+{% endblock %}

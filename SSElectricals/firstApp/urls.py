@@ -44,6 +44,7 @@ urlpatterns = [
     path('buy-now/<int:product_id>/', views.buy_now, name='buy_now'),
     path('orders/', views.order_history, name='order_history'),
     path('orders/cancel/<int:order_id>/', views.cancel_order, name='cancel_order'),
+    path('orders/confirm-quote/<int:order_id>/', views.confirm_price_quote, name='confirm_price_quote'),
     
     path('my-receipts/', views.user_receipts, name='user_receipts'),
     path('receipt/<int:receipt_id>/view/', views.receipt_print, name='user_receipt_view'),
@@ -193,4 +194,27 @@ urlpatterns = [
     path('shop-admin/announcements/<int:pk>/edit/', admin_views.admin_announcement_edit, name='admin_announcement_edit'),
     path('shop-admin/announcements/<int:pk>/delete/', admin_views.admin_announcement_delete, name='admin_announcement_delete'),
     path('shop-admin/announcements/<int:pk>/toggle/', admin_views.admin_announcement_toggle, name='admin_announcement_toggle'),
+    
+    # Electrician Management
+    path('shop-admin/electricians/', admin_views.admin_electrician_list, name='admin_electrician_list'),
+    path('shop-admin/electricians/add/', admin_views.admin_electrician_add, name='admin_electrician_add'),
+    path('shop-admin/electricians/<int:pk>/edit/', admin_views.admin_electrician_edit, name='admin_electrician_edit'),
+    path('shop-admin/electricians/<int:pk>/delete/', admin_views.admin_electrician_delete, name='admin_electrician_delete'),
+    path('shop-admin/electricians/<int:pk>/toggle-visibility/', admin_views.admin_electrician_toggle_visibility, name='admin_electrician_toggle_visibility'),
+    
+    # Warranty Management
+    path('shop-admin/warranties/', admin_views.admin_warranty_list, name='admin_warranty_list'),
+    path('shop-admin/warranties/add/', admin_views.admin_warranty_add, name='admin_warranty_add'),
+    path('shop-admin/warranties/<int:pk>/', admin_views.admin_warranty_detail, name='admin_warranty_detail'),
+    path('shop-admin/warranties/<int:pk>/edit/', admin_views.admin_warranty_edit, name='admin_warranty_edit'),
+    path('shop-admin/warranties/<int:pk>/void/', admin_views.admin_warranty_void, name='admin_warranty_void'),
+    
+    # Admin-Booked Appointments
+    path('shop-admin/appointments/book/', admin_views.admin_appointment_book, name='admin_appointment_book'),
+    
+    # Product Visibility Controls
+    path('shop-admin/products/<int:pk>/toggle-visibility/', admin_views.admin_product_toggle_visibility, name='admin_product_toggle_visibility'),
+    
+    # User Warranties
+    path('my-warranties/', views.user_warranties, name='user_warranties'),
 ]

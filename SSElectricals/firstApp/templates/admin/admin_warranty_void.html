@@ -1,0 +1,54 @@
+{% extends 'admin/base_admin.html' %}
+
+{% block title %}Void Warranty - Admin{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row justify-content-center">
+        <div class="col-lg-6">
+            <div class="card shadow-sm">
+                <div class="card-header bg-danger text-white">
+                    <h4 class="mb-0">
+                        <i class="fas fa-ban me-2"></i>Void Warranty
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>Warning:</strong> This action cannot be undone. The warranty will be permanently marked
+                        as voided.
+                    </div>
+
+                    <div class="card mb-4">
+                        <div class="card-body">
+                            <h5>{{ warranty.product_name }}</h5>
+                            <p class="text-muted mb-1">Customer: {{ warranty.customer_name }}</p>
+                            <p class="text-muted mb-1">Purchase Date: {{ warranty.purchase_date|date:"d M Y" }}</p>
+                            <p class="text-muted mb-0">Expiry: {{ warranty.warranty_expiry_date|date:"d M Y" }}</p>
+                        </div>
+                    </div>
+
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Reason for Voiding <span
+                                    class="text-danger">*</span></label>
+                            <textarea name="void_reason" class="form-control" rows="3" required
+                                placeholder="Please provide a reason for voiding this warranty..."></textarea>
+                        </div>
+
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'admin_warranty_list' %}" class="btn btn-outline-secondary">
+                                <i class="fas fa-arrow-left me-1"></i>Cancel
+                            </a>
+                            <button type="submit" class="btn btn-danger">
+                                <i class="fas fa-ban me-1"></i>Void Warranty
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
