@@ -1838,13 +1838,18 @@ class Warranty(models.Model):
         return f"{self.product_name} - {self.customer_name} (Expires: {self.warranty_expiry_date})"
     
     def save(self, *args, **kwargs):
+        # Ensure purchase_date is a date object (may come as string from forms)
+        if self.purchase_date and isinstance(self.purchase_date, str):
+            from datetime import datetime
+            self.purchase_date = datetime.strptime(self.purchase_date, '%Y-%m-%d').date()
+        
         # Auto-calculate expiry date
         if self.purchase_date and self.warranty_duration:
             from dateutil.relativedelta import relativedelta
             if self.warranty_unit == 'MONTHS':
-                self.warranty_expiry_date = self.purchase_date + relativedelta(months=self.warranty_duration)
+                self.warranty_expiry_date = self.purchase_date + relativedelta(months=int(self.warranty_duration))
             else:  # YEARS
-                self.warranty_expiry_date = self.purchase_date + relativedelta(years=self.warranty_duration)
+                self.warranty_expiry_date = self.purchase_date + relativedelta(years=int(self.warranty_duration))
         
         # Auto-update status based on expiry
         if self.warranty_expiry_date and self.status != 'VOIDED':

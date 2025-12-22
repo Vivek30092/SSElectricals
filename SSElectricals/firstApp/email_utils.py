@@ -340,8 +340,8 @@ def send_appointment_completed_review_email(appointment, review_link=None):
         'service_name': appointment.service.name if appointment.service else 'General Service',
         'appointment_date': appointment.date.strftime('%d %B %Y'),
         'electrician_name': appointment.assigned_electrician.name if appointment.assigned_electrician else None,
-        'review_link': review_link or 'https://g.page/r/YOUR_GOOGLE_PROFILE/review',  # Update with actual link
-        'business_profile_link': 'https://g.page/r/YOUR_GOOGLE_PROFILE',  # Update with actual link
+        'review_link': review_link or 'https://g.page/r/Cep_YI3hg2KCEBM/review',  # Update with actual link
+        'business_profile_link': 'https://share.google/K7NkRfxIJc9bXYY1c',  # Update with actual link
     }
     
     subject = f"⭐ Service Completed - Share Your Experience with {BUSINESS_INFO['name']}"

@@ -1074,8 +1074,61 @@ def admin_delete_analytics_file(request):
 
 @staff_member_required
 def admin_product_list(request):
-    products = Product.objects.select_related('category').all().order_by('-created_at')
-    return render(request, 'admin/admin_product_list.html', {'products': products})
+    products = Product.objects.select_related('category').all()
+    
+    # Get filter parameters
+    search = request.GET.get('search', '').strip()
+    visibility = request.GET.get('visibility', '')
+    stock = request.GET.get('stock', '')
+    sort = request.GET.get('sort', 'name_az')
+    
+    # Apply search filter
+    if search:
+        products = products.filter(
+            Q(name__icontains=search) | 
+            Q(brand__icontains=search) |
+            Q(category__name__icontains=search)
+        )
+    
+    # Apply visibility filter
+    if visibility == 'visible':
+        products = products.filter(is_visible_on_website=True)
+    elif visibility == 'hidden':
+        products = products.filter(is_visible_on_website=False)
+    
+    # Apply stock filter
+    if stock == 'in_stock':
+        products = products.filter(stock_quantity__gt=0)
+    elif stock == 'out_of_stock':
+        products = products.filter(stock_quantity=0)
+    
+    # Apply sorting
+    if sort == 'name_az':
+        products = products.order_by('name')
+    elif sort == 'name_za':
+        products = products.order_by('-name')
+    elif sort == 'price_low':
+        products = products.order_by('price')
+    elif sort == 'price_high':
+        products = products.order_by('-price')
+    elif sort == 'stock':
+        products = products.order_by('-stock_quantity')
+    else:
+        products = products.order_by('-created_at')
+    
+    # Pagination
+    from django.core.paginator import Paginator
+    paginator = Paginator(products, 25)  # 25 products per page
+    page_number = request.GET.get('page')
+    products = paginator.get_page(page_number)
+    
+    return render(request, 'admin/admin_product_list.html', {
+        'products': products,
+        'search': search,
+        'visibility': visibility,
+        'stock': stock,
+        'sort': sort,
+    })
 
 @staff_member_required
 def admin_product_add(request):
