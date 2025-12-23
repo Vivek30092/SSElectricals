@@ -13,6 +13,8 @@
                             <tr>
                                 <th>Client Name</th>
                                 <th>Service</th>
+                                <th>Price Status</th>
+                                <th>Verification</th>
                                 <th>Date & Time</th>
                                 <th>Location</th>
                                 <th>Status</th>
@@ -26,24 +28,55 @@
                                     <div class="fw-bold">{{ appointment.customer_name }}</div>
                                     <div class="text-muted small">{{ appointment.phone }}</div>
                                 </td>
-                                <td>{{ appointment.service_type }}</td>
+                                <td>
+                                    <span class="fw-semibold">{{ appointment.service_name }}</span>
+                                </td>
+                                <td>
+                                    {% if appointment.price_calculation == 'Auto-calculated' %}
+                                    <span class="badge bg-success-subtle text-success border border-success-subtle">
+                                        <i class="fas fa-calculator me-1"></i> Auto
+                                    </span>
+                                    {% else %}
+                                    <span class="badge bg-warning-subtle text-warning border border-warning-subtle">
+                                        <i class="fas fa-clock me-1"></i> Pending
+                                    </span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if appointment.location_verification == 'GPS confirmed' %}
+                                    <span class="badge bg-info-subtle text-info border border-info-subtle">
+                                        <i class="fas fa-crosshairs me-1"></i> GPS
+                                    </span>
+                                    {% else %}
+                                    <span
+                                        class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">
+                                        <i class="fas fa-keyboard me-1"></i> Manual
+                                    </span>
+                                    {% endif %}
+                                </td>
                                 <td>
                                     {{ appointment.date|date:"d M Y" }}<br>
                                     <span class="text-muted small">{{ appointment.time|time:"H:i A" }}</span>
                                 </td>
                                 <td>
-                                    {{ appointment.area }}<br>
-                                    <small class="text-muted">{{ appointment.city }}</small>
+                                    <span class="small">{{ appointment.address_line1 }}</span><br>
+                                    <small class="text-muted">{{ appointment.area }}, {{ appointment.city }}</small>
                                 </td>
                                 <td>
                                     {% if appointment.status == 'Pending' %}
                                     <span class="badge bg-warning text-dark">Pending</span>
+                                    {% elif appointment.status == 'Confirmed' %}
+                                    <span class="badge bg-primary">Confirmed</span>
+                                    {% elif appointment.status == 'In Progress' %}
+                                    <span class="badge bg-info">In Progress</span>
                                     {% elif appointment.status == 'Approved' %}
-                                    <span class="badge bg-info text-dark">Approved</span>
+                                    <span class="badge bg-success">Approved</span>
                                     {% elif appointment.status == 'Completed' %}
                                     <span class="badge bg-success">Completed</span>
-                                    {% else %}
+                                    {% elif appointment.status == 'Cancelled' %}
                                     <span class="badge bg-danger">Cancelled</span>
+                                    {% else %}
+                                    <span class="badge bg-secondary">{{ appointment.status }}</span>
                                     {% endif %}
                                 </td>
                                 <td>

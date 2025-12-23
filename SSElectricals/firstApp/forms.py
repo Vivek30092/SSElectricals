@@ -201,10 +201,9 @@ class CheckoutForm(forms.Form):
 class AppointmentForm(forms.ModelForm):
     other_area = forms.CharField(required=False, widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Enter your area name', 'id': 'id_other_area', 'style': 'display:none;'}))
     
-    # New: Dynamic service selection from database
-    service = forms.ModelChoiceField(
-        queryset=None,  # Set dynamically in __init__
-        empty_label="-- Select a Service --",
+    # New: Dynamic service selection from database with 'Other' option
+    service = forms.ChoiceField(
+        choices=[],  # Set dynamically in __init__
         widget=forms.Select(attrs={'class': 'form-select', 'id': 'id_service'}),
         required=True,
         help_text="Select the service you need"
@@ -212,10 +211,16 @@ class AppointmentForm(forms.ModelForm):
 
     class Meta:
         model = Appointment
-        fields = ['customer_name', 'phone', 'email', 'pincode', 'house_number', 'address_line1', 'address_line2', 'landmark', 'city', 'area', 'service', 'date', 'time', 'problem_description', 'visiting_charge', 'distance_km']
+        fields = [
+            'customer_name', 'phone', 'email', 'pincode', 'house_number', 
+            'address_line1', 'address_line2', 'landmark', 'city', 'area', 
+            'service', 'date', 'time', 'problem_description', 
+            'visiting_charge', 'distance_km', 'location_verification', 
+            'price_calculation', 'is_indore'
+        ]
         widgets = {
             'customer_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Full Name'}),
-            'phone': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '10-digit Phone Number'}),
+            'phone': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '10-digit Phone Number', 'required': 'required'}),
             'email': forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'Email Address'}),
             'pincode': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Pincode', 'id': 'id_pincode'}),
             'house_number': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'House Number', 'id': 'id_house_number'}),
@@ -229,6 +234,9 @@ class AppointmentForm(forms.ModelForm):
             'problem_description': forms.Textarea(attrs={'class': 'form-control', 'rows': 4, 'placeholder': 'Describe the issue...'}),
             'visiting_charge': forms.HiddenInput(),
             'distance_km': forms.HiddenInput(),
+            'location_verification': forms.HiddenInput(),
+            'price_calculation': forms.HiddenInput(),
+            'is_indore': forms.HiddenInput(),
         }
 
     def __init__(self, *args, **kwargs):
@@ -244,7 +252,12 @@ class AppointmentForm(forms.ModelForm):
         
         # Dynamic service selection - only show active services
         from .models import ServiceType
-        self.fields['service'].queryset = ServiceType.objects.filter(is_active=True).order_by('display_order', 'name')
+        active_services = ServiceType.objects.filter(is_active=True).order_by('display_order', 'name')
+        service_choices = [('', '-- Select a Service --')]
+        for s in active_services:
+            service_choices.append((str(s.id), s.name))
+        service_choices.append(('other', 'Other'))
+        self.fields['service'].choices = service_choices
 
     def clean_city(self):
         return 'Indore'
@@ -273,14 +286,33 @@ class AppointmentForm(forms.ModelForm):
                 cleaned_data['area'] = other_area
         
         # Calculate visiting charge based on service and distance
-        service = cleaned_data.get('service')
+        service_id = cleaned_data.get('service')
         distance_km = cleaned_data.get('distance_km')
         
-        if service:
-            charge, is_confirmed = service.get_charge_for_distance(float(distance_km) if distance_km else None)
-            if charge:
-                cleaned_data['visiting_charge'] = charge
-            cleaned_data['pricing_confirmed'] = is_confirmed
+        if service_id:
+            if service_id == 'other':
+                cleaned_data['service'] = None
+                cleaned_data['service_type'] = 'Other Appliance Repair' # Link to existing choice
+                cleaned_data['visiting_charge'] = 300.00 # Default for other
+                cleaned_data['pricing_confirmed'] = False
+                cleaned_data['price_calculation'] = 'Pending confirmation'
+            else:
+                try:
+                    from .models import ServiceType
+                    service_obj = ServiceType.objects.get(id=service_id)
+                    cleaned_data['service'] = service_obj
+                    charge, is_confirmed = service_obj.get_charge_for_distance(float(distance_km) if distance_km else None)
+                    if charge:
+                        cleaned_data['visiting_charge'] = charge
+                    cleaned_data['pricing_confirmed'] = is_confirmed
+                    
+                    if is_confirmed:
+                         cleaned_data['price_calculation'] = 'Auto-calculated'
+                    else:
+                         cleaned_data['price_calculation'] = 'Pending confirmation'
+                         
+                except (ServiceType.DoesNotExist, ValueError):
+                    pass
         
         return cleaned_data
 

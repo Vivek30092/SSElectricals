@@ -17,6 +17,9 @@
                         {% csrf_token %}
                         {{ form.visiting_charge }}
                         {{ form.distance_km }}
+                        {{ form.location_verification }}
+                        {{ form.price_calculation }}
+                        {{ form.is_indore }}
 
 
                         {% if form.non_field_errors %}
@@ -198,60 +201,72 @@
 
                                     <!-- Cost Summary Section (Dynamic Pricing) -->
                                     <div class="mt-auto pt-4">
-                                        <div id="costSummaryCard" class="card border-warning bg-warning bg-opacity-10">
-                                            <div class="card-body">
-                                                <h6 class="card-title fw-bold text-dark">
+                                        <div id="costSummaryCard"
+                                            class="card border-primary bg-primary bg-opacity-10 shadow-sm border-0 rounded-4">
+                                            <div class="card-body p-4">
+                                                <h6 class="card-title fw-bold text-primary mb-3">
                                                     <i class="fas fa-file-invoice-dollar me-2"></i>Estimated Cost
                                                 </h6>
 
                                                 <!-- Default message when no service/distance selected -->
                                                 <div id="chargeDisplay">
-                                                    <p class="mb-1 text-muted small">Select service and enable location
-                                                        to see
-                                                        estimated cost.</p>
-                                                    <p class="mb-0 fw-bold text-dark fs-5">₹---</p>
+                                                    <div
+                                                        class="d-flex flex-column align-items-center justify-content-center py-3">
+                                                        <p class="mb-2 text-muted small text-center">Select service and
+                                                            provide location to see estimated cost.</p>
+                                                        <div class="fs-2 fw-bold text-primary opacity-50">₹ ---</div>
+                                                    </div>
                                                 </div>
 
                                                 <!-- Message when pricing requires confirmation -->
-                                                <div id="confirmationMessage" class="alert alert-info mb-0"
+                                                <div id="confirmationMessage"
+                                                    class="alert alert-info border-0 shadow-sm rounded-3 mb-0"
                                                     style="display: none;">
-                                                    <i class="fas fa-phone-alt me-1"></i>
-                                                    <strong>Charges will be confirmed by admin after booking via
-                                                        call/email.</strong>
+                                                    <div class="d-flex">
+                                                        <i class="fas fa-info-circle mt-1 me-3 fs-5"></i>
+                                                        <div>
+                                                            <strong class="d-block mb-1">Admin Confirmation
+                                                                Required</strong>
+                                                            <span class="small" id="confirmationText">Estimated cost
+                                                                will be confirmed. Our admin will contact you
+                                                                soon.</span>
+                                                        </div>
+                                                    </div>
                                                 </div>
 
                                                 <!-- Dynamic Price Breakdown (for fixed pricing) -->
-                                                <div id="priceBreakdown" class="mt-3 pt-3 border-top"
+                                                <div id="priceBreakdown" class="bg-white rounded-3 p-3 shadow-sm"
                                                     style="display: none;">
-                                                    <div class="d-flex justify-content-between mb-1">
-                                                        <span class="text-muted small">Service:</span>
-                                                        <span id="serviceNameDisplay" class="fw-bold">--</span>
+                                                    <div class="d-flex justify-content-between mb-2">
+                                                        <span class="text-muted small">Service Fee:</span>
+                                                        <span id="serviceNameDisplay"
+                                                            class="fw-semibold small text-truncate ms-2"
+                                                            style="max-width: 150px;">--</span>
                                                     </div>
-                                                    <div class="d-flex justify-content-between mb-1">
-                                                        <span class="text-muted small">Distance:</span>
-                                                        <span id="distanceDisplay" class="text-muted">-- KM</span>
+                                                    <div class="d-flex justify-content-between mb-2 pb-2 border-bottom">
+                                                        <span class="text-muted small">Distance slab:</span>
+                                                        <span id="zoneDisplay"
+                                                            class="badge bg-light text-dark fw-normal">--</span>
                                                     </div>
-                                                    <div class="d-flex justify-content-between mb-1">
-                                                        <span class="text-muted small">Visiting Charge:</span>
-                                                        <span id="baseChargeDisplay"
-                                                            class="fw-bold text-success">₹---</span>
+                                                    <div class="d-flex justify-content-between align-items-center mt-3">
+                                                        <span class="fw-bold text-dark">Total Estimate:</span>
+                                                        <span id="totalEstimate" class="fw-bold text-primary fs-4">₹
+                                                            ---</span>
                                                     </div>
-                                                    <hr class="my-2">
-                                                    <div class="d-flex justify-content-between">
-                                                        <span class="fw-bold">Total Visiting Charge:</span>
-                                                        <span id="totalEstimate"
-                                                            class="fw-bold text-primary fs-5">₹---</span>
-                                                    </div>
-                                                    <small class="text-muted d-block mt-2">
-                                                        <i class="fas fa-info-circle"></i>
-                                                        Distance slab: <span id="zoneDisplay">--</span>
-                                                    </small>
+
+                                                    <input type="text" id="readOnlyCost"
+                                                        class="form-control form-control-sm bg-light mt-3 text-center fw-bold text-primary"
+                                                        readonly value="Estimated Cost: ₹ ---">
                                                 </div>
 
-                                                <p class="mt-2 mb-0 text-muted" style="font-size: 0.75rem;">
-                                                    * Final charge may vary based on actual work. Parts/material cost is
-                                                    extra.
-                                                </p>
+                                                <div
+                                                    class="mt-3 p-2 bg-white bg-opacity-50 rounded-3 border-start border-4 border-warning">
+                                                    <p class="mb-0 text-muted" style="font-size: 0.75rem;">
+                                                        <i class="fas fa-exclamation-triangle me-1 text-warning"></i>
+                                                        <strong>Note:</strong> Final charges may vary based on service
+                                                        complexity or materials required.
+                                                    </p>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -303,570 +318,131 @@
     let accuracyCircle = null;
     let currentGpsAccuracy = null;
     let distanceMatrixService = null;
-    let currentDistanceKm = null;  // Store current distance for pricing
+    let currentDistanceKm = null;
 
-    // Update service charge UI based on selected service and distance
-    function updateServiceChargeUI(distanceKm) {
-        currentDistanceKm = distanceKm;
-
-        // Update the hidden distance_km field  
-        const distanceField = document.getElementById('id_distance_km');
-        if (distanceField) {
-            distanceField.value = distanceKm ? distanceKm.toFixed(2) : '';
-        }
-
-        // Get selected service
-        const serviceSelect = document.getElementById('id_service');
-        const serviceId = serviceSelect ? serviceSelect.value : null;
-
-        if (!serviceId) {
-            // No service selected yet
-            document.getElementById('chargeDisplay').style.display = 'block';
-            document.getElementById('priceBreakdown').style.display = 'none';
-            document.getElementById('confirmationMessage').style.display = 'none';
-            return;
-        }
-
-        // Log for debugging
-        console.log(`Fetching price for service_id=${serviceId}, distance_km=${distanceKm}`);
-
-        // Fetch pricing from API
-        fetch(`/api/service-price/?service_id=${serviceId}&distance_km=${distanceKm || ''}`)
-            .then(response => response.json())
-            .then(data => {
-                console.log('Price API response:', data);
-                if (data.success) {
-                    updatePricingDisplay(data, distanceKm);
-                } else {
-                    console.error('Error fetching price:', data.error);
-                }
-            })
-            .catch(error => {
-                console.error('Error fetching service price:', error);
-            });
-    }
-
-
-    // Update the pricing display based on API response
-    function updatePricingDisplay(data, distanceKm) {
-        const chargeDisplay = document.getElementById('chargeDisplay');
-        const priceBreakdown = document.getElementById('priceBreakdown');
-        const confirmationMessage = document.getElementById('confirmationMessage');
-        const visitingChargeField = document.getElementById('id_visiting_charge');
-
-        // Detailed logging
-        console.log(`===== PRICING DEBUG =====`);
-        console.log(`Distance: ${distanceKm} km`);
-        console.log(`Distance Slab: ${data.distance_slab}`);
-        console.log(`Charge: ₹${data.charge}`);
-        console.log(`Default Charge: ₹${data.default_charge}`);
-        console.log(`=========================`);
-
-        if (data.requires_confirmation) {
-            // Show confirmation message (price needs to be confirmed by admin)
-            chargeDisplay.style.display = 'none';
-            priceBreakdown.style.display = 'none';
-            confirmationMessage.style.display = 'block';
-
-            // Set visiting charge to 0 or default (admin will set later)
-            if (visitingChargeField) {
-                visitingChargeField.value = data.default_charge || 0;
-            }
-        } else {
-            // Show fixed pricing
-            chargeDisplay.style.display = 'none';
-            confirmationMessage.style.display = 'none';
-            priceBreakdown.style.display = 'block';
-
-            // Update display elements
-            document.getElementById('serviceNameDisplay').textContent = data.service_name;
-            document.getElementById('distanceDisplay').textContent = distanceKm ? `${distanceKm.toFixed(2)} KM` : 'Not calculated';
-            document.getElementById('baseChargeDisplay').textContent = `₹${data.charge}`;
-            document.getElementById('totalEstimate').textContent = `₹${data.charge}`;
-            document.getElementById('zoneDisplay').textContent = data.distance_slab || 'default';
-
-            // Update hidden visiting_charge field
-            if (visitingChargeField) {
-                visitingChargeField.value = data.charge;
-            }
-        }
-    }
-
-
-    // Listen for service selection changes
-    document.addEventListener('DOMContentLoaded', function () {
-        const serviceSelect = document.getElementById('id_service');
-        if (serviceSelect) {
-            serviceSelect.addEventListener('change', function () {
-                // Re-fetch pricing when service changes
-                updateServiceChargeUI(currentDistanceKm);
-            });
-        }
-    });
-
-
-    // Initialize Google Places Autocomplete
-    function initAutocomplete() {
-        const input = document.getElementById('addressAutocomplete');
-
-        if (!input) {
-            console.error('Address autocomplete input not found');
-            return;
-        }
-
-        // Restrict to Indore, India
-        const options = {
-            componentRestrictions: { country: 'in' },
-            bounds: {
-                north: 23.0,
-                south: 22.5,
-                east: 76.2,
-                west: 75.5
-            },
-            strictBounds: true,
-            fields: ['formatted_address', 'geometry', 'address_components', 'name']
-        };
-
-        autocomplete = new google.maps.places.Autocomplete(input, options);
-        autocomplete.addListener('place_changed', onPlaceSelected);
-
-        console.log('Google Places Autocomplete initialized');
-    }
-
-    // When user selects a place from autocomplete
-    function onPlaceSelected() {
-        const place = autocomplete.getPlace();
-
-        if (!place.geometry) {
-            showMessage('error', 'Please select a valid address from the dropdown suggestions');
-            return;
-        }
-
-        selectedPlace = place;
-
-        const lat = place.geometry.location.lat();
-        const lng = place.geometry.location.lng();
-        const address = place.formatted_address;
-
-        // Extract pincode, area, city
-        let pincode = '';
-        let area = '';
-        let city = 'Indore';
-        let road = '';
-        let houseNumber = '';
-
-        place.address_components.forEach(component => {
-            if (component.types.includes('postal_code')) {
-                pincode = component.long_name;
-            }
-            if (component.types.includes('sublocality_level_1') ||
-                component.types.includes('sublocality')) {
-                area = component.long_name;
-            }
-            if (component.types.includes('locality')) {
-                city = component.long_name;
-            }
-            if (component.types.includes('route')) {
-                road = component.long_name;
-            }
-            if (component.types.includes('street_number')) {
-                houseNumber = component.long_name;
-            }
-        });
-
-        // Validate pincode (Indore: 452xxx or 453xxx)
-        if (pincode && !pincode.startsWith('452') && !pincode.startsWith('453')) {
-            showMessage('error', 'Service available only in Indore. Selected pincode: ' + pincode);
-            document.getElementById('addressAutocomplete').value = '';
-            return;
-        }
-
-        // Calculate distance and update UI
-        processLocation(lat, lng, address, area, city, pincode, road, houseNumber, 'PLACES');
-    }
-
-    // Simple client-side validation for date (disable past dates)
-    document.addEventListener('DOMContentLoaded', function () {
-        var today = new Date().toISOString().split('T')[0];
-        var dateInput = document.querySelector('input[type="date"]');
-        if (dateInput) {
-            dateInput.setAttribute('min', today);
-        }
-
-        // Initialize other area visibility
-        var areaSelect = document.getElementById('id_area');
-        if (areaSelect) toggleOtherArea(areaSelect);
-
-        // Check if profile data is present and locked
-        var pincodeInput = document.getElementById('id_pincode');
-        var detectBtn = document.getElementById('detectLocationBtn');
-        if (pincodeInput && pincodeInput.hasAttribute('readonly')) {
-            if (detectBtn) {
-                // Do NOT disable the button, just update text to indicate it's for cost calculation
-                detectBtn.innerHTML = '<i class="fas fa-calculator me-1"></i> Calculate Visiting Charge';
-                detectBtn.title = "Address is locked. Click to calculate visiting charge based on current location.";
-                detectBtn.classList.remove('btn-outline-primary');
-                detectBtn.classList.add('btn-outline-success');
-            }
-        }
-
-        // Add listeners for dynamic pricing
-        var serviceSelect = document.getElementById('id_service_type');
-        var areaSelectElem = document.getElementById('id_area');
-
-        if (serviceSelect) {
-            serviceSelect.addEventListener('change', fetchServicePrice);
-        }
-        if (areaSelectElem) {
-            areaSelectElem.addEventListener('change', function () {
-                toggleOtherArea(this);
-                fetchServicePrice();
-            });
-        }
-
-        // Initial price fetch if both are already selected
-        if (serviceSelect && serviceSelect.value && areaSelectElem && areaSelectElem.value) {
-            fetchServicePrice();
-        }
-    });
-
-    // Fetch service price from API
-    function fetchServicePrice() {
-        var serviceType = document.getElementById('id_service_type').value;
-        var area = document.getElementById('id_area').value;
-
-        if (!serviceType || !area) {
-            return;
-        }
-
-        // Show loading
-        var breakdown = document.getElementById('priceBreakdown');
-        var chargeDisplay = document.getElementById('chargeDisplay');
-        chargeDisplay.innerHTML = '<p class="mb-1 text-info small"><i class="fas fa-spinner fa-spin"></i> Fetching price...</p>';
-
-        fetch('/api/service-price/?service_type=' + encodeURIComponent(serviceType) + '&area=' + encodeURIComponent(area))
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    updatePriceDisplay(data);
-                } else {
-                    chargeDisplay.innerHTML = '<p class="mb-1 text-muted small">Price information unavailable.</p>';
-                    breakdown.style.display = 'none';
-                }
-            })
-            .catch(error => {
-                console.error('Price fetch error:', error);
-                chargeDisplay.innerHTML = '<p class="mb-1 text-muted small">Select service and area for pricing.</p>';
-            });
-    }
-
-    // Update price display with API data
-    function updatePriceDisplay(data) {
-        var chargeDisplay = document.getElementById('chargeDisplay');
-        var breakdown = document.getElementById('priceBreakdown');
-        var card = document.getElementById('costSummaryCard');
-
-        // Show service type info
-        chargeDisplay.innerHTML = `
-            <p class="mb-1 text-success fw-semibold">${data.service_type}</p>
-            <p class="mb-0 text-muted small">in ${data.area}</p>
-        `;
-
-        // Update breakdown
-        document.getElementById('baseChargeDisplay').textContent = '₹' + data.base_price;
-        document.getElementById('serviceChargeRange').textContent = '₹' + data.min_service_charge + ' - ₹' + data.max_service_charge;
-
-        var totalMin = data.base_price + data.min_service_charge;
-        var totalMax = data.base_price + data.max_service_charge;
-        document.getElementById('totalEstimate').textContent = '₹' + totalMin + ' - ₹' + totalMax;
-        document.getElementById('zoneDisplay').textContent = data.zone_display;
-
-        // Show breakdown
-        breakdown.style.display = 'block';
-        card.className = 'card border-success bg-success bg-opacity-10';
-
-        // Update hidden visiting charge field
-        var chargeInput = document.getElementById('id_visiting_charge');
-        if (chargeInput) {
-            chargeInput.value = data.base_price;
-        }
-    }
-
-    // GPS Assist Button
-    document.getElementById('detectLocationBtn').addEventListener('click', useGpsLocation);
-
-    function useGpsLocation() {
+    // --- REQUIREMENT: INDORE VALIDATION ---
+    function checkIndoreLocation() {
         if (!navigator.geolocation) {
-            showMessage('error', 'GPS not supported on this device. Please use the address search box above.');
+            setManualLocationStatus();
             return;
         }
-
-        const btn = document.getElementById('detectLocationBtn');
-        const msgDiv = document.getElementById('locationMsg');
-
-        if (btn.disabled) return;
-
-        btn.disabled = true;
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Getting high-precision location...';
-        msgDiv.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Requesting high-accuracy GPS...';
-        msgDiv.className = 'form-text text-info fw-bold';
-
-        const gpsOptions = {
-            enableHighAccuracy: true,  // Request GPS (not WiFi/cell tower)
-            timeout: 10000,            // 10 seconds timeout
-            maximumAge: 0              // No cached location
-        };
 
         navigator.geolocation.getCurrentPosition(
             (position) => {
                 const lat = position.coords.latitude;
                 const lng = position.coords.longitude;
-                const accuracy = position.coords.accuracy; // meters
 
-                // Store GPS accuracy
-                currentGpsAccuracy = accuracy;
-
-                // Show accuracy feedback
-                if (accuracy > 100) {
-                    showMessage('warning', `GPS accuracy: ±${Math.round(accuracy)}m - Please verify address carefully`);
-                } else if (accuracy > 50) {
-                    showMessage('success', `GPS accuracy: ±${Math.round(accuracy)}m - Good precision`);
-                } else {
-                    showMessage('success', `GPS accuracy: ±${Math.round(accuracy)}m - Excellent precision!`);
-                }
-
-                // Reverse geocode using Google Geocoding API
                 const geocoder = new google.maps.Geocoder();
-                const latlng = { lat: lat, lng: lng };
-
-                geocoder.geocode({ location: latlng }, (results, status) => {
-                    btn.disabled = false;
-                    btn.innerHTML = '<i class="fas fa-crosshairs me-1"></i> Auto-fill Address using GPS';
-
+                geocoder.geocode({ location: { lat: lat, lng: lng } }, (results, status) => {
                     if (status === 'OK' && results[0]) {
-                        // Pre-fill autocomplete
-                        document.getElementById('addressAutocomplete').value = results[0].formatted_address;
-
-                        // Extract address components
-                        let pincode = '';
-                        let area = '';
-                        let city = 'Indore';
-                        let road = '';
-                        let houseNumber = '';
-
-                        results[0].address_components.forEach(component => {
-                            if (component.types.includes('postal_code')) {
-                                pincode = component.long_name;
-                            }
-                            if (component.types.includes('sublocality_level_1') ||
-                                component.types.includes('sublocality')) {
-                                area = component.long_name;
-                            }
-                            if (component.types.includes('locality')) {
-                                city = component.long_name;
-                            }
-                            if (component.types.includes('route')) {
-                                road = component.long_name;
-                            }
-                            if (component.types.includes('street_number')) {
-                                houseNumber = component.long_name;
-                            }
+                        let city = "";
+                        results[0].address_components.forEach(comp => {
+                            if (comp.types.includes('locality')) city = comp.long_name;
                         });
 
-                        // Validate if location is in Indore service area
-                        if (pincode && !pincode.startsWith('452') && !pincode.startsWith('453')) {
-                            msgDiv.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Location outside Indore service area. Please use address search for Indore locations.';
-                            msgDiv.className = 'form-text text-danger fw-bold';
-                            return;
-                        }
+                        const isIndore = city.toLowerCase() === 'indore';
+                        document.getElementById('id_is_indore').value = isIndore ? 'True' : 'False';
+                        document.getElementById('id_location_verification').value = 'GPS confirmed';
 
-                        processLocation(lat, lng, results[0].formatted_address, area, city, pincode, road, houseNumber, 'GPS');
-                        msgDiv.innerHTML = '<i class="fas fa-check-circle"></i> Location detected successfully!';
-                        msgDiv.className = 'form-text text-success fw-bold';
+                        if (!isIndore) {
+                            showOutsideIndoreWarning();
+                        }
                     } else {
-                        msgDiv.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Could not determine address from GPS. Please use the search box above.';
-                        msgDiv.className = 'form-text text-warning fw-bold';
+                        setManualLocationStatus();
                     }
                 });
             },
             (error) => {
-                const btn = document.getElementById('detectLocationBtn');
-                btn.disabled = false;
-                btn.innerHTML = '<i class="fas fa-crosshairs me-1"></i> Auto-fill Address using GPS';
-
-                const msgDiv = document.getElementById('locationMsg');
-                msgDiv.innerHTML = '<i class="fas fa-info-circle"></i> GPS permission denied. Please use the address search box above.';
-                msgDiv.className = 'form-text text-muted fw-bold';
+                setManualLocationStatus();
+                showMessage('warning', 'We couldn’t auto-detect your location. We’ll verify it manually.');
             },
-            gpsOptions  // Use high-accuracy GPS settings
+            { timeout: 5000 }
         );
     }
 
-    // Process location data and calculate distance
-    function processLocation(lat, lng, fullAddress, area, city, pincode, road, houseNumber, source) {
-        console.log('Processing location:', lat, lng, 'via', source);
-
-        // Auto-fill address fields
-        if (houseNumber) document.getElementById('id_house_number').value = houseNumber;
-        if (road) document.getElementById('id_address_line1').value = road;
-        if (area) document.getElementById('id_address_line2').value = area;
-        if (pincode) document.getElementById('id_pincode').value = pincode;
-        if (city) document.getElementById('id_city').value = city;
-
-        // Try to match area to dropdown
-        if (area) {
-            const areaSelect = document.getElementById('id_area');
-            let matched = false;
-
-            // Try exact match first
-            for (let i = 0; i < areaSelect.options.length; i++) {
-                if (areaSelect.options[i].value === area ||
-                    areaSelect.options[i].text.toLowerCase() === area.toLowerCase()) {
-                    areaSelect.selectedIndex = i;
-                    matched = true;
-                    break;
-                }
-            }
-
-            // If no exact match, try partial match
-            if (!matched) {
-                for (let i = 0; i < areaSelect.options.length; i++) {
-                    const optionText = areaSelect.options[i].text.toLowerCase();
-                    const areaLower = area.toLowerCase();
-                    if (optionText.includes(areaLower) || areaLower.includes(optionText)) {
-                        areaSelect.selectedIndex = i;
-                        matched = true;
-                        break;
-                    }
-                }
-            }
-
-            // If still no match, select "Other" and fill other_area
-            if (!matched) {
-                areaSelect.value = 'Other';
-                document.getElementById('id_other_area').value = area;
-                document.getElementById('id_other_area').style.display = 'block';
-            }
-        }
-
-        // Show location on map
-        showLocationOnMap(lat, lng, fullAddress);
-
-        // Calculate road distance using Distance Matrix API
-        calculateRoadDistance(lat, lng);
+    function setManualLocationStatus() {
+        document.getElementById('id_location_verification').value = 'Manual entry';
+        document.getElementById('id_is_indore').value = 'True'; // Default to True to not block, verified manually
     }
 
-    // Calculate accurate road distance using Distance Matrix API
-    function calculateRoadDistance(userLat, userLng) {
-        if (!distanceMatrixService) {
-            distanceMatrixService = new google.maps.DistanceMatrixService();
+    function showOutsideIndoreWarning() {
+        const text = document.getElementById('confirmationText');
+        if (text) text.textContent = "Service availability and charges will be confirmed by admin.";
+        updateServiceChargeUI(currentDistanceKm);
+    }
+
+    // Initialize Page
+    document.addEventListener('DOMContentLoaded', function () {
+        // Attempt GPS check
+        setTimeout(checkIndoreLocation, 1000);
+
+        // Date constraints
+        const today = new Date().toISOString().split('T')[0];
+        const dateInput = document.querySelector('input[type="date"]');
+        if (dateInput) dateInput.setAttribute('min', today);
+
+        // Listen for service selection
+        const serviceSelect = document.getElementById('id_service');
+        if (serviceSelect) {
+            serviceSelect.addEventListener('change', function () {
+                updateServiceChargeUI(currentDistanceKm);
+            });
         }
+    });
 
-        const shopLocation = new google.maps.LatLng(SHOP_LAT, SHOP_LNG);
-        const userLocation = new google.maps.LatLng(userLat, userLng);
+    function initAutocomplete() {
+        const input = document.getElementById('addressAutocomplete');
+        if (!input) return;
 
-        showMessage('info', 'Calculating precise road distance...');
-
-        distanceMatrixService.getDistanceMatrix({
-            origins: [shopLocation],
-            destinations: [userLocation],
-            travelMode: google.maps.TravelMode.DRIVING,
-            unitSystem: google.maps.UnitSystem.METRIC,
-            avoidHighways: false,
-            avoidTolls: false
-        }, (response, status) => {
-            if (status === 'OK' && response.rows[0].elements[0].status === 'OK') {
-                const element = response.rows[0].elements[0];
-                const distanceKm = element.distance.value / 1000; // meters to km
-                const duration = element.duration.text;
-
-                console.log(`✓ Road distance: ${distanceKm.toFixed(2)} km`);
-                showMessage('success', `Distance from shop: ${element.distance.text}`);
-
-                // Update service charge UI
-                updateServiceChargeUI(distanceKm);
-
-                // Run verification
-                performLocationVerification(userLat, userLng, distanceKm);
-            } else {
-                // Fallback to Haversine if Distance Matrix API fails
-                console.warn('Distance Matrix API failed, using Haversine fallback');
-                const straightDist = haversineDistance(SHOP_LAT, SHOP_LNG, userLat, userLng);
-
-                showMessage('warning', 'Using approximate straight-line distance. Actual distance may vary.');
-                updateServiceChargeUI(straightDist);
-
-                performLocationVerification(userLat, userLng, straightDist);
-            }
+        autocomplete = new google.maps.places.Autocomplete(input, {
+            componentRestrictions: { country: 'in' },
+            fields: ['formatted_address', 'geometry', 'address_components', 'name']
         });
+        autocomplete.addListener('place_changed', onPlaceSelected);
     }
 
-    // Show location on interactive map
-    function showLocationOnMap(lat, lng, address) {
-        const mapContainer = document.getElementById('mapContainer');
-        const mapSection = document.getElementById('mapSection');
-        mapSection.style.display = 'block';
+    function onPlaceSelected() {
+        const place = autocomplete.getPlace();
+        if (!place.geometry) return;
 
-        // Initialize map if not already done
-        if (!map) {
-            map = new google.maps.Map(mapContainer, {
-                zoom: 15,
-                center: { lat: lat, lng: lng },
-                mapTypeControl: false,
-                streetViewControl: false,
-                fullscreenControl: true,
-                zoomControl: true
-            });
+        const lat = place.geometry.location.lat();
+        const lng = place.geometry.location.lng();
 
-            // Add shop marker (blue)
-            shopMarker = new google.maps.Marker({
-                position: { lat: SHOP_LAT, lng: SHOP_LNG },
-                map: map,
-                icon: {
-                    url: 'http://maps.google.com/mapfiles/ms/icons/blue-dot.png'
-                },
-                title: 'Shiv Shakti Electricals (Shop Location)'
-            });
+        let pincode = '', area = '', city = 'Indore', road = '', houseNumber = '';
+        place.address_components.forEach(component => {
+            if (component.types.includes('postal_code')) pincode = component.long_name;
+            if (component.types.includes('sublocality_level_1') || component.types.includes('sublocality')) area = component.long_name;
+            if (component.types.includes('locality')) city = component.long_name;
+            if (component.types.includes('route')) road = component.long_name;
+            if (component.types.includes('street_number')) houseNumber = component.long_name;
+        });
 
-            // Add service range circle (7 KM)
-            new google.maps.Circle({
-                map: map,
-                center: { lat: SHOP_LAT, lng: SHOP_LNG },
-                radius: 7000, // 7 KM
-                fillColor: '#FFC107',
-                fillOpacity: 0.08,
-                strokeColor: '#FFC107',
-                strokeOpacity: 0.4,
-                strokeWeight: 2
-            });
-        } else {
-            map.setCenter({ lat: lat, lng: lng });
+        processLocation(lat, lng, place.formatted_address, area, city, pincode, road, houseNumber, 'PLACES');
+    }
+
+    function useGpsLocation() {
+        if (!navigator.geolocation) {
+            showMessage('error', 'GPS not supported.');
+            return;
         }
 
-        // Add/update customer marker (red, draggable)
-        if (marker) {
-            marker.setPosition({ lat: lat, lng: lng });
-        } else {
-            marker = new google.maps.Marker({
-                position: { lat: lat, lng: lng },
-                map: map,
-                draggable: true,
-                animation: google.maps.Animation.DROP,
-                title: 'Your Service Location (Drag to adjust)'
-            });
+        const btn = document.getElementById('detectLocationBtn');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Detecting...';
 
-            // Update when marker is dragged
-            marker.addListener('dragend', (event) => {
-                const newLat = event.latLng.lat();
-                const newLng = event.latLng.lng();
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                const lat = position.coords.latitude;
+                const lng = position.coords.longitude;
+                currentGpsAccuracy = position.coords.accuracy;
 
-                // Reverse geocode new position
                 const geocoder = new google.maps.Geocoder();
-                geocoder.geocode({ location: { lat: newLat, lng: newLng } }, (results, status) => {
+                geocoder.geocode({ location: { lat: lat, lng: lng } }, (results, status) => {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fas fa-crosshairs me-1"></i> Auto-fill Address using GPS';
+
                     if (status === 'OK' && results[0]) {
                         document.getElementById('addressAutocomplete').value = results[0].formatted_address;
-
-                        // Extract components and reprocess
                         let pincode = '', area = '', city = 'Indore', road = '', houseNumber = '';
                         results[0].address_components.forEach(component => {
                             if (component.types.includes('postal_code')) pincode = component.long_name;
@@ -876,189 +452,183 @@
                             if (component.types.includes('street_number')) houseNumber = component.long_name;
                         });
 
-                        processLocation(newLat, newLng, results[0].formatted_address, area, city, pincode, road, houseNumber, 'MAP_DRAG');
+                        document.getElementById('id_location_verification').value = 'GPS confirmed';
+                        processLocation(lat, lng, results[0].formatted_address, area, city, pincode, road, houseNumber, 'GPS');
+                        showMessage('success', 'Location detected!');
+                    }
+                });
+            },
+            () => {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-crosshairs me-1"></i> Auto-fill Address using GPS';
+                showMessage('warning', 'GPS failed. We’ll verify it manually.');
+                document.getElementById('id_location_verification').value = 'Manual entry';
+            }
+        );
+    }
+
+    function processLocation(lat, lng, fullAddress, area, city, pincode, road, houseNumber, source) {
+        if (houseNumber) document.getElementById('id_house_number').value = houseNumber;
+        if (road) document.getElementById('id_address_line1').value = road;
+        if (area) document.getElementById('id_address_line2').value = area;
+        if (pincode) document.getElementById('id_pincode').value = pincode;
+        if (city) document.getElementById('id_city').value = city;
+
+        if (area) {
+            const areaSelect = document.getElementById('id_area');
+            let matched = false;
+            for (let i = 0; i < areaSelect.options.length; i++) {
+                if (areaSelect.options[i].value === area || areaSelect.options[i].text.toLowerCase().includes(area.toLowerCase())) {
+                    areaSelect.selectedIndex = i;
+                    matched = true;
+                    break;
+                }
+            }
+            if (!matched) {
+                areaSelect.value = 'Other';
+                document.getElementById('id_other_area').value = area;
+                document.getElementById('id_other_area').style.display = 'block';
+            }
+        }
+
+        showLocationOnMap(lat, lng, fullAddress);
+        calculateRoadDistance(lat, lng);
+    }
+
+    function calculateRoadDistance(userLat, userLng) {
+        if (!distanceMatrixService) distanceMatrixService = new google.maps.DistanceMatrixService();
+
+        distanceMatrixService.getDistanceMatrix({
+            origins: [new google.maps.LatLng(SHOP_LAT, SHOP_LNG)],
+            destinations: [new google.maps.LatLng(userLat, userLng)],
+            travelMode: google.maps.TravelMode.DRIVING,
+            unitSystem: google.maps.UnitSystem.METRIC,
+        }, (response, status) => {
+            if (status === 'OK' && response.rows[0].elements[0].status === 'OK') {
+                const distKm = response.rows[0].elements[0].distance.value / 1000;
+                updateServiceChargeUI(distKm);
+                performLocationVerification(userLat, userLng, distKm);
+            }
+        });
+    }
+
+    function updateServiceChargeUI(distanceKm) {
+        currentDistanceKm = distanceKm;
+        const distField = document.getElementById('id_distance_km');
+        if (distField) distField.value = distanceKm ? distanceKm.toFixed(2) : '';
+
+        const serviceSelect = document.getElementById('id_service');
+        const serviceVal = serviceSelect ? serviceSelect.value : null;
+
+        const chargeDisplay = document.getElementById('chargeDisplay');
+        const priceBreakdown = document.getElementById('priceBreakdown');
+        const confirmationMessage = document.getElementById('confirmationMessage');
+        const confirmationText = document.getElementById('confirmationText');
+        const visitingChargeField = document.getElementById('id_visiting_charge');
+        const isIndore = document.getElementById('id_is_indore').value === 'True';
+
+        if (!serviceVal) {
+            chargeDisplay.style.display = 'block';
+            priceBreakdown.style.display = 'none';
+            confirmationMessage.style.display = 'none';
+            return;
+        }
+
+        if (serviceVal === 'other') {
+            chargeDisplay.style.display = 'none';
+            priceBreakdown.style.display = 'none';
+            confirmationMessage.style.display = 'block';
+            confirmationText.textContent = "Estimated cost will be confirmed. Our admin will contact you soon.";
+            document.getElementById('id_price_calculation').value = 'Pending confirmation';
+            return;
+        }
+
+        if (!isIndore) {
+            chargeDisplay.style.display = 'none';
+            priceBreakdown.style.display = 'none';
+            confirmationMessage.style.display = 'block';
+            confirmationText.textContent = "Service availability and charges will be confirmed by admin.";
+            document.getElementById('id_price_calculation').value = 'Pending confirmation';
+            return;
+        }
+
+        fetch(`/api/service-price/?service_id=${serviceVal}&distance_km=${distanceKm || ''}`)
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    if (data.requires_confirmation) {
+                        chargeDisplay.style.display = 'none';
+                        priceBreakdown.style.display = 'none';
+                        confirmationMessage.style.display = 'block';
+                        confirmationText.textContent = "Estimated cost will be confirmed. Our admin will contact you soon.";
+                        document.getElementById('id_price_calculation').value = 'Pending confirmation';
+                    } else {
+                        chargeDisplay.style.display = 'none';
+                        confirmationMessage.style.display = 'none';
+                        priceBreakdown.style.display = 'block';
+
+                        document.getElementById('serviceNameDisplay').textContent = data.service_name;
+                        document.getElementById('zoneDisplay').textContent = data.distance_slab;
+                        document.getElementById('totalEstimate').textContent = `₹ ${data.charge}`;
+                        document.getElementById('readOnlyCost').value = `Estimated Cost: ₹ ${data.charge}`;
+
+                        if (visitingChargeField) visitingChargeField.value = data.charge;
+                        document.getElementById('id_price_calculation').value = 'Auto-calculated';
+                    }
+                }
+            });
+    }
+
+    function showLocationOnMap(lat, lng, address) {
+        const mapSection = document.getElementById('mapSection');
+        mapSection.style.display = 'block';
+        if (!map) {
+            map = new google.maps.Map(document.getElementById('mapContainer'), {
+                zoom: 14,
+                center: { lat: lat, lng: lng },
+                disableDefaultUI: true,
+                zoomControl: true
+            });
+            shopMarker = new google.maps.Marker({ position: { lat: SHOP_LAT, lng: SHOP_LNG }, map: map, icon: 'http://maps.google.com/mapfiles/ms/icons/blue-dot.png' });
+        } else {
+            map.setCenter({ lat: lat, lng: lng });
+        }
+
+        if (marker) marker.setPosition({ lat: lat, lng: lng });
+        else {
+            marker = new google.maps.Marker({ position: { lat: lat, lng: lng }, map: map, draggable: true });
+            marker.addListener('dragend', (e) => {
+                const geocoder = new google.maps.Geocoder();
+                geocoder.geocode({ location: e.latLng }, (res, status) => {
+                    if (status === 'OK' && res[0]) {
+                        onPlaceSelectedFromCoordinate(e.latLng.lat(), e.latLng.lng(), res[0]);
                     }
                 });
             });
         }
-
-        // Show GPS accuracy circle if available
-        if (currentGpsAccuracy) {
-            if (accuracyCircle) {
-                accuracyCircle.setMap(null);
-            }
-            accuracyCircle = new google.maps.Circle({
-                map: map,
-                center: { lat: lat, lng: lng },
-                radius: currentGpsAccuracy,
-                fillColor: '#FF5722',
-                fillOpacity: 0.1,
-                strokeColor: '#FF5722',
-                strokeOpacity: 0.3,
-                strokeWeight: 1
-            });
-        }
     }
 
-    // Perform address verification
-    function performLocationVerification(lat, lng, distKm) {
-        const checks = {
-            gpsAccuracy: currentGpsAccuracy ? currentGpsAccuracy <= 50 : false,
-            roadDistanceOK: distKm <= 7,
-            pincodeValid: false,
-            withinServiceArea: false,
-            addressComplete: false
-        };
-
-        // Check pincode
-        const pincode = document.getElementById('id_pincode').value;
-        if (pincode && (pincode.startsWith('452') || pincode.startsWith('453'))) {
-            checks.pincodeValid = true;
-            checks.withinServiceArea = true;
-        }
-
-        // Check address completeness
-        const house = document.getElementById('id_house_number').value;
-        const line1 = document.getElementById('id_address_line1').value;
-        if (house && line1 && pincode) {
-            checks.addressComplete = true;
-        }
-
-        // Calculate confidence score
-        const totalChecks = Object.keys(checks).length;
-        const passedChecks = Object.values(checks).filter(v => v).length;
-        const confidence = (passedChecks / totalChecks) * 100;
-
-        displayVerificationStatus(checks, confidence);
+    function onPlaceSelectedFromCoordinate(lat, lng, res) {
+        document.getElementById('addressAutocomplete').value = res.formatted_address;
+        let pincode = '', area = '', city = 'Indore', road = '', houseNumber = '';
+        res.address_components.forEach(comp => {
+            if (comp.types.includes('postal_code')) pincode = comp.long_name;
+            if (comp.types.includes('sublocality')) area = comp.long_name;
+        });
+        processLocation(lat, lng, res.formatted_address, area, city, pincode, road, houseNumber, 'MAP');
     }
 
-    // Display verification status - only show when confidence < 60%
-    function displayVerificationStatus(checks, confidence) {
-        const statusDiv = document.getElementById('verificationStatus');
-        const bar = document.getElementById('confidenceBar');
-        const details = document.getElementById('verificationDetails');
-
-        // Only show verification details when confidence is less than 60%
-        if (confidence >= 60) {
-            statusDiv.style.display = 'none';
-            return;
-        }
-
-        statusDiv.style.display = 'block';
-
-        // Update progress bar
-        bar.style.width = confidence + '%';
-        bar.textContent = Math.round(confidence) + '% Verified';
-
-        // Low confidence - show warning/danger
-        bar.className = 'progress-bar bg-danger progress-bar-striped progress-bar-animated';
-        statusDiv.className = 'alert alert-danger mb-3';
-
-        // Show verification details
-        let detailsHTML = '<ul class="mb-0 small ps-3">';
-        detailsHTML += `<li>${checks.gpsAccuracy ? '✓' : '✗'} GPS Accuracy ${currentGpsAccuracy ? `(±${Math.round(currentGpsAccuracy)}m)` : ''}</li>`;
-        detailsHTML += `<li>${checks.roadDistanceOK ? '✓' : '✗'} Within Service Range (≤7 KM)</li>`;
-        detailsHTML += `<li>${checks.pincodeValid ? '✓' : '✗'} Valid Indore Pincode</li>`;
-        detailsHTML += `<li>${checks.withinServiceArea ? '✓' : '✗'} Service Area Confirmed</li>`;
-        detailsHTML += `<li>${checks.addressComplete ? '✓' : '✗'} Address Complete</li>`;
-        detailsHTML += '</ul>';
-
-        details.innerHTML = detailsHTML;
+    function showMessage(type, msg) {
+        const div = document.getElementById('locationMsg');
+        div.textContent = msg;
+        div.className = `form-text small fw-bold text-${type === 'error' ? 'danger' : type === 'success' ? 'success' : 'warning'}`;
     }
 
-
-    // Haversine distance calculation
-    function haversineDistance(lat1, lon1, lat2, lon2) {
-        const R = 6371; // Earth radius in km
-        const dLat = deg2rad(lat2 - lat1);
-        const dLon = deg2rad(lon2 - lon1);
-        const a =
-            Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-            Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) *
-            Math.sin(dLon / 2) * Math.sin(dLon / 2);
-        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-        return R * c;
+    function toggleOtherArea(s) {
+        const other = document.getElementById('id_other_area');
+        other.style.display = s.value === 'Other' ? 'block' : 'none';
     }
 
-    function deg2rad(deg) {
-        return deg * (Math.PI / 180);
-    }
-
-    // Show user-friendly messages with enhanced styling
-    function showMessage(type, message) {
-        const msgDiv = document.getElementById('locationMsg');
-        const icons = {
-            'success': 'fa-check-circle',
-            'error': 'fa-times-circle',
-            'warning': 'fa-exclamation-triangle',
-            'info': 'fa-spinner fa-spin'
-        };
-        const bgClasses = {
-            'success': 'bg-success bg-opacity-10 text-success border-success',
-            'error': 'bg-danger bg-opacity-10 text-danger border-danger',
-            'warning': 'bg-warning bg-opacity-10 text-warning border-warning',
-            'info': 'bg-info bg-opacity-10 text-info border-info'
-        };
-
-        msgDiv.innerHTML = `<i class="fas ${icons[type] || 'fa-info-circle'} me-2"></i>${message}`;
-        msgDiv.className = `d-inline-block px-3 py-2 rounded-pill border small fw-semibold mt-2 ${bgClasses[type] || 'bg-light text-muted'}`;
-        msgDiv.style.display = 'inline-block';
-    }
-
-    function toggleOtherArea(select) {
-        var otherInput = document.getElementById('id_other_area');
-        if (select.value === 'Other') {
-            otherInput.style.display = 'block';
-            otherInput.required = true;
-        } else {
-            otherInput.style.display = 'none';
-            otherInput.required = false;
-            otherInput.value = '';
-        }
-    }
-
-    function updateServiceChargeUI(distKm) {
-        var chargeDisplay = document.getElementById('chargeDisplay');
-        var card = document.getElementById('costSummaryCard');
-
-        // Pricing Logic
-        var charge = 0;
-        var message = "";
-        var isOutOfRange = false;
-
-        if (distKm <= 3) {
-            charge = 200;
-            message = "Distance: " + distKm.toFixed(1) + " KM (Within 3 KM)";
-        } else if (distKm > 3 && distKm <= 7) {
-            charge = 250;
-            message = "Distance: " + distKm.toFixed(1) + " KM (3-7 KM Range)";
-        } else {
-            isOutOfRange = true;
-            message = "Distance: " + distKm.toFixed(1) + " KM (Out of Quick Service Range)";
-        }
-
-        // Update hidden field
-        var chargeInput = document.getElementById('id_visiting_charge');
-        if (chargeInput) {
-            chargeInput.value = charge;
-        }
-
-        if (isOutOfRange) {
-            card.className = 'card border-danger bg-danger bg-opacity-10';
-            chargeDisplay.innerHTML = `
-                <p class="mb-1 text-danger fw-bold">${message}</p>
-                <p class="mb-0 text-danger small">Please contact us directly for service availability.</p>
-            `;
-        } else {
-            card.className = 'card border-success bg-success bg-opacity-10';
-            chargeDisplay.innerHTML = `
-                <p class="mb-1 text-success fw-bold">${message}</p>
-                <div class="d-flex align-items-baseline">
-                    <span class="fs-6 text-muted me-2">Visiting Charge:</span>
-                    <span class="fs-3 fw-bold text-success">₹${charge}</span>
-                </div>
-            `;
-        }
-    }
+    function performLocationVerification(lat, lng, dist) { } // Placeholder
 </script>
 {% endblock %}

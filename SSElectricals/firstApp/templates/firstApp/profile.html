@@ -85,8 +85,7 @@
                         <div class="d-flex align-items-center gap-3">
                             <span class="theme-label">Light</span>
                             <div class="form-check form-switch" style="transform: scale(1.5); margin: 0 1rem;">
-                                <input class="form-check-input" type="checkbox" role="switch" id="themeSwitch" {% if
-                                    user.theme_preference=='dark' %} checked {% endif %}
+                                <input class="form-check-input" type="checkbox" role="switch" id="themeSwitch" {% if user.theme_preference == 'dark' %} checked {% endif %}
                                     onchange="updateThemeField(this)">
                                 <input type="hidden" name="theme_preference" id="theme_preference_hidden"
                                     value="{{ user.theme_preference }}">

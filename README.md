@@ -301,8 +301,8 @@ This is a private project for Shiv Shakti Electricals. For any inquiries or supp
 
 **Shiv Shakti Electricals**
 - 📍 Indore, Madhya Pradesh, India
-- 📞 +91-9993149226
-- 📧 shivshaktielectrical1430@gmail.com
+- 📞 +91-7828659551
+- 📧 vivekkumarc934@gmail.com
 - 🌐 [Google Business Profile](https://g.page/r/Cep_YI3hg2KCEBM)
 
 ---

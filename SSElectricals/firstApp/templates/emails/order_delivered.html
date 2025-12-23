@@ -49,8 +49,7 @@
             {% for item in items %}
             <tr style="{% if forloop.counter|divisibleby:2 %}background-color: #f7fafc;{% endif %}">
                 <td style="padding: 14px 12px; border-bottom: 1px solid #e2e8f0;">{{ item.product.name }}</td>
-                <td style="padding: 14px 12px; text-align: center; border-bottom: 1px solid #e2e8f0;">{{ item.quantity
-                    }}</td>
+                <td style="padding: 14px 12px; text-align: center; border-bottom: 1px solid #e2e8f0;">{{ item.quantity }}</td>
                 <td style="padding: 14px 12px; text-align: right; border-bottom: 1px solid #e2e8f0;">₹{{ item.price }}
                 </td>
                 <td style="padding: 14px 12px; text-align: center; border-bottom: 1px solid #e2e8f0;">

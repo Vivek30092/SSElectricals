@@ -9,7 +9,7 @@ from django.conf import settings
 import pandas as pd
 from django.db.models import Sum, Count, F, Q
 from django.db import models
-from django.db.models.functions import TruncDate, TruncMonth
+from django.db.models.functions import TruncDate, TruncMonth, Coalesce
 from django.utils import timezone
 from .forms import ProductForm, ReviewForm, DailySalesForm, DailyExpenditureForm
 from django.core.mail import send_mail
@@ -867,8 +867,10 @@ def admin_appointment_update(request, pk):
         status = request.POST.get('status')
         visiting_charge = request.POST.get('visiting_charge')
         extra_charge = request.POST.get('extra_charge')
+        electrician_id = request.POST.get('assigned_electrician')
         
         old_status = appointment.status
+        old_electrician = appointment.assigned_electrician
 
         if status:
             appointment.status = status
@@ -878,28 +880,58 @@ def admin_appointment_update(request, pk):
             
         if extra_charge:
             appointment.extra_charge = extra_charge
+        
+        # Handle electrician assignment
+        if electrician_id:
+            if electrician_id == 'none':
+                appointment.assigned_electrician = None
+            else:
+                from .models import Electrician
+                try:
+                    electrician = Electrician.objects.get(id=electrician_id)
+                    appointment.assigned_electrician = electrician
+                except Electrician.DoesNotExist:
+                    pass
             
         appointment.save()
         
-        # Send Email Notification if status changed
-        if old_status != appointment.status and appointment.email:
-            try:
-                from .email_utils import send_appointment_status_email, send_appointment_complete_email
-                
+        # Send Email Notifications
+        try:
+            from .email_utils import send_appointment_status_email, send_appointment_complete_email, send_electrician_assignment_email
+            
+            # If status changed
+            if old_status != appointment.status and appointment.email:
                 if appointment.status == 'Completed':
                     # Send completion email with review request
                     send_appointment_complete_email(appointment)
                 else:
-                    # Send status update email
+                    # Send status update email (includes electrician info if assigned)
                     send_appointment_status_email(appointment)
-            except Exception as e:
-                print(f"Error sending appointment email: {e}")
+            
+            # If electrician was newly assigned or changed
+            if appointment.assigned_electrician and old_electrician != appointment.assigned_electrician:
+                # Send email to user about electrician assignment
+                if appointment.email and old_electrician != appointment.assigned_electrician:
+                    send_appointment_status_email(appointment)
+                
+                # Send email to electrician about new appointment
+                if appointment.assigned_electrician.email:
+                    send_electrician_assignment_email(appointment)
+                    
+        except Exception as e:
+            print(f"Error sending appointment email: {e}")
 
-        messages.success(request, "Appointment updated successfully.")
+            messages.success(request, "Appointment updated successfully.")
         return redirect('admin_appointment_list')
+    
+    # Get all electricians for dropdown
+    from .models import Electrician
+    electricians = Electrician.objects.filter(is_active=True).order_by('name')
+    
     return render(request, 'admin/appointment_update.html', {
         'appointment': appointment,
-        'status_choices': Appointment.STATUS_CHOICES
+        'status_choices': Appointment.STATUS_CHOICES,
+        'electricians': electricians
     })
 
 @staff_member_required
@@ -1074,21 +1106,28 @@ def admin_delete_analytics_file(request):
 
 @staff_member_required
 def admin_product_list(request):
+    """
+    Admin view to list products with search, sorting, and filtering.
+    Enhanced to search across multiple fields and sort by effective price.
+    """
+    # Base queryset
     products = Product.objects.select_related('category').all()
     
     # Get filter parameters
     search = request.GET.get('search', '').strip()
     visibility = request.GET.get('visibility', '')
     stock = request.GET.get('stock', '')
-    sort = request.GET.get('sort', 'name_az')
+    sort = request.GET.get('sort', 'newest')
     
     # Apply search filter
     if search:
         products = products.filter(
             Q(name__icontains=search) | 
             Q(brand__icontains=search) |
-            Q(category__name__icontains=search)
-        )
+            Q(category__name__icontains=search) |
+            Q(description__icontains=search) |
+            Q(vendor__icontains=search)
+        ).distinct()
     
     # Apply visibility filter
     if visibility == 'visible':
@@ -1102,28 +1141,33 @@ def admin_product_list(request):
     elif stock == 'out_of_stock':
         products = products.filter(stock_quantity=0)
     
+    # Annotate with effective price for accurate sorting (handles discounts)
+    products = products.annotate(
+        effective_price=Coalesce('discount_price', 'price')
+    )
+    
     # Apply sorting
     if sort == 'name_az':
         products = products.order_by('name')
     elif sort == 'name_za':
         products = products.order_by('-name')
     elif sort == 'price_low':
-        products = products.order_by('price')
+        products = products.order_by('effective_price')
     elif sort == 'price_high':
-        products = products.order_by('-price')
+        products = products.order_by('-effective_price')
     elif sort == 'stock':
         products = products.order_by('-stock_quantity')
     else:
+        # Default to newest products
         products = products.order_by('-created_at')
     
     # Pagination
-    from django.core.paginator import Paginator
-    paginator = Paginator(products, 25)  # 25 products per page
+    paginator = Paginator(products, 25)
     page_number = request.GET.get('page')
-    products = paginator.get_page(page_number)
+    products_page = paginator.get_page(page_number)
     
     return render(request, 'admin/admin_product_list.html', {
-        'products': products,
+        'products': products_page,
         'search': search,
         'visibility': visibility,
         'stock': stock,
@@ -1298,7 +1342,10 @@ def admin_order_detail(request, pk):
                 # Calculate final price
                 subtotal = sum(item.price * item.quantity for item in order.items.all())
                 order.total_price = subtotal
-                order.final_price = subtotal + order.delivery_charge
+                
+                # Ensure delivery_charge is not None
+                delivery_charge = order.delivery_charge if order.delivery_charge is not None else Decimal('0.00')
+                order.final_price = subtotal + delivery_charge
                 order.delivery_charge_status = 'CONFIRMED'
                 
                 # NOW deduct stock (was deferred until pricing confirmed)
@@ -3233,63 +3280,3 @@ def admin_product_toggle_visibility(request, pk):
     messages.success(request, f'Product "{product.name}" is now {status}.')
     
     return redirect('admin_product_list')
-
-
-@staff_required
-def admin_product_list_enhanced(request):
-    """Enhanced product list with search, filters, and visibility controls."""
-    products = Product.objects.all().select_related('category')
-    
-    # Search functionality
-    search = request.GET.get('search', '')
-    if search:
-        products = products.filter(
-            models.Q(name__icontains=search) |
-            models.Q(brand__icontains=search) |
-            models.Q(description__icontains=search)
-        )
-    
-    # Filter by visibility
-    visibility = request.GET.get('visibility', '')
-    if visibility == 'visible':
-        products = products.filter(is_visible_on_website=True)
-    elif visibility == 'hidden':
-        products = products.filter(is_visible_on_website=False)
-    
-    # Filter by stock
-    stock = request.GET.get('stock', '')
-    if stock == 'in_stock':
-        products = products.filter(stock_quantity__gt=0)
-    elif stock == 'out_of_stock':
-        products = products.filter(stock_quantity=0)
-    
-    # Sorting
-    sort = request.GET.get('sort', 'name')
-    if sort == 'price_low':
-        products = products.order_by('price')
-    elif sort == 'price_high':
-        products = products.order_by('-price')
-    elif sort == 'name_az':
-        products = products.order_by('name')
-    elif sort == 'name_za':
-        products = products.order_by('-name')
-    elif sort == 'stock':
-        products = products.order_by('-stock_quantity')
-    else:
-        products = products.order_by('name')
-    
-    # Pagination
-    paginator = Paginator(products, 20)
-    page = request.GET.get('page', 1)
-    products = paginator.get_page(page)
-    
-    categories = Category.objects.all()
-    
-    return render(request, 'admin/admin_product_list.html', {
-        'products': products,
-        'search': search,
-        'visibility': visibility,
-        'stock': stock,
-        'sort': sort,
-        'categories': categories,
-    })

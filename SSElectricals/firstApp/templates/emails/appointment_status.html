@@ -87,8 +87,7 @@
         style="background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%); padding: 20px; border-radius: 8px; margin: 15px 0; text-align: center;">
         <h3 style="margin: 0 0 10px 0; color: #2e7d32;">📅 Visit Schedule</h3>
         <p style="margin: 0; font-size: 18px; color: #1b5e20;">
-            <strong>{{ appointment.date|date:"F d, Y" }}</strong> at <strong>{{ appointment.time|time:"h:i A"
-                }}</strong>
+            <strong>{{ appointment.date|date:"F d, Y" }}</strong> at <strong>{{ appointment.time|time:"h:i A" }}</strong>
         </p>
     </div>
 </div>
@@ -157,6 +156,37 @@
                 appointment.total_charge }}</td>
         </tr>
     </table>
+</div>
+{% endif %}
+
+{% if appointment.assigned_electrician %}
+<!-- Electrician Information -->
+<div class="info-box"
+    style="background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%); border-left: 4px solid #2196f3;">
+    <h3 style="color: #1565c0;">👷 Assigned Technician</h3>
+    <table style="width: 100%; border-collapse: collapse;">
+        <tr style="border-bottom: 1px solid #90caf9;">
+            <td style="padding: 12px 0; font-weight: 600; color: #0d47a1; width: 40%;">Technician Name:</td>
+            <td style="padding: 12px 0; color: #1565c0;"><strong>{{ appointment.assigned_electrician.name }}</strong>
+            </td>
+        </tr>
+        <tr style="border-bottom: 1px solid #90caf9;">
+            <td style="padding: 12px 0; font-weight: 600; color: #0d47a1;">Contact Number:</td>
+            <td style="padding: 12px 0; color: #1565c0;"><strong>📞 {{ appointment.assigned_electrician.phone
+                    }}</strong></td>
+        </tr>
+        {% if appointment.assigned_electrician.specialization %}
+        <tr>
+            <td style="padding: 12px 0; font-weight: 600; color: #0d47a1;">Specialization:</td>
+            <td style="padding: 12px 0; color: #1565c0;">{{ appointment.assigned_electrician.specialization }}</td>
+        </tr>
+        {% endif %}
+    </table>
+    <p
+        style="margin: 15px 0 0 0; padding: 12px; background-color: #e1f5fe; border-radius: 4px; color: #01579b; font-size: 14px;">
+        <strong>Note:</strong> {{ appointment.assigned_electrician.name }} will be handling your service appointment.
+        They will contact you before the visit.
+    </p>
 </div>
 {% endif %}
 

@@ -20,10 +20,8 @@
                         <label class="form-label">Update Status</label>
                         <select name="status" class="form-select">
                             {% for status, label in status_choices %}
-                            <option value="{{ status }}" {% if appointment.status == status %}
-                            selected
-                            {% endif %}>
-                            {{ label }}
+                            <option value="{{ status }}" {% if appointment.status == status %} selected {% endif %}>
+                                {{ label }}
                             </option>
                             {% endfor %}
                         </select>
@@ -39,6 +37,20 @@
                         <label class="form-label">Extra Charge (Material/Other) (₹)</label>
                         <input type="number" name="extra_charge" class="form-control"
                             value="{{ appointment.extra_charge }}" step="0.01">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Assign Electrician</label>
+                        <select name="assigned_electrician" class="form-select">
+                            <option value="none" {% if not appointment.assigned_electrician %}selected{% endif %}>None
+                                (Unassigned)</option>
+                            {% for electrician in electricians %}
+                            <option value="{{ electrician.id }}" {% if appointment.assigned_electrician and appointment.assigned_electrician.id == electrician.id %}selected{% endif %}>
+                                {{ electrician.name }} - {{ electrician.phone }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        <div class="form-text">Assign an electrician to this appointment</div>
                     </div>
 
                     <div class="d-flex justify-content-between">

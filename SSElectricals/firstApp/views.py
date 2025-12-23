@@ -105,9 +105,17 @@ def receipt_detail(request, receipt_id):
     })
 
 
+@login_required
 def receipt_print(request, receipt_id):
     """Print-friendly A4 receipt view"""
     receipt = get_object_or_404(OfflineReceipt, id=receipt_id)
+    
+    # Security check: Only owner (by email) or staff can view
+    if not request.user.is_staff and receipt.buyer_email != request.user.email:
+        from django.contrib import messages
+        messages.error(request, "Access denied. This receipt belongs to another email address.")
+        return redirect('home')
+        
     items = receipt.items.all()
     
     return render(request, 'admin/admin_receipt_print.html', {
@@ -188,13 +196,29 @@ def receipt_pdf(request, receipt_id):
     return redirect('receipt_print', receipt_id=receipt.id)
 
 
+@login_required
 def order_receipt_print(request, order_id):
     """Print-friendly A4 order receipt view"""
     order = get_object_or_404(Order, id=order_id)
     
+    # Security check: Only owner or staff can view
+    if not request.user.is_staff and order.user != request.user:
+        from django.contrib import messages
+        messages.error(request, "Access denied. This receipt belongs to another user.")
+        return redirect('home')
+    
     return render(request, 'admin/order_receipt_print.html', {
         'order': order
     })
+
+
+@login_required
+def order_receipt(request, order_id):
+    """
+    User-friendly order receipt view.
+    Same as order_receipt_print but with a cleaner URL for users.
+    """
+    return order_receipt_print(request, order_id)
 
 def onetap_login_request(request):
     """
@@ -515,6 +539,11 @@ def confirm_delivery_otp(request):
             order = Order.objects.get(id=order_id, status='Out for Delivery')
             if order.delivery_otp and order.delivery_otp == otp.strip():
                 order.status = 'Delivered'
+                
+                # Generate receipt number if not exists
+                if not order.receipt_number:
+                    order.generate_receipt_number()
+                    
                 order.save()
                 messages.success(request, f"Order #{order_id} marked as Delivered.")
             else:
@@ -948,6 +977,22 @@ def book_appointment(request):
             appointment = form.save(commit=False)
             if request.user.is_authenticated:
                 appointment.user = request.user
+                
+                # --- Requirement: Google User Profile Auto-Update ---
+                # check if user logged in via google
+                is_google_user = False
+                try:
+                    is_google_user = request.user.socialaccount_set.filter(provider='google').exists()
+                except:
+                    # Fallback if socialaccount is not installed or configured correctly
+                    pass
+                
+                if is_google_user and not request.user.phone_number:
+                    # Save entered phone number into user profile
+                    request.user.phone_number = appointment.phone
+                    request.user.save()
+                    # Profil updated silently
+
                 # If verified, force the email to be the user's email
                 if request.user.is_email_verified:
                     appointment.email = request.user.email
@@ -1859,12 +1904,25 @@ def change_profile_password(request):
 
 @login_required
 def user_receipts(request):
-    """Show receipts for logged-in user based on their email"""
+    """Show receipts for logged-in user (both offline and online)"""
     user_email = request.user.email
-    receipts = OfflineReceipt.objects.filter(buyer_email=user_email).order_by('-created_at')
+    
+    # Offline receipts based on email
+    offline_receipts = OfflineReceipt.objects.filter(buyer_email=user_email).order_by('-created_at')
+    
+    # Online order receipts (delivered and has receipt_number)
+    online_orders = Order.objects.filter(
+        user=request.user, 
+        status='Delivered'
+    ).exclude(receipt_number__isnull=True).order_by('-created_at')
+    
+    # Check if any receipts/orders exist
+    any_receipts = offline_receipts.exists() or online_orders.exists()
     
     return render(request, 'firstApp/user_receipts.html', {
-        'receipts': receipts
+        'offline_receipts': offline_receipts,
+        'online_orders': online_orders,
+        'any_receipts': any_receipts
     })
 
 

@@ -27,12 +27,18 @@
                     <td>
                         {% if appointment.status == 'Pending' %}
                         <span class="badge bg-warning text-dark">Pending</span>
+                        {% elif appointment.status == 'Confirmed' %}
+                        <span class="badge bg-primary">Confirmed</span>
+                        {% elif appointment.status == 'In Progress' %}
+                        <span class="badge bg-info">In Progress</span>
                         {% elif appointment.status == 'Approved' %}
-                        <span class="badge bg-info text-dark">Approved</span>
+                        <span class="badge bg-success">Approved</span>
                         {% elif appointment.status == 'Completed' %}
                         <span class="badge bg-success">Completed</span>
                         {% elif appointment.status == 'Cancelled' %}
                         <span class="badge bg-danger">Cancelled</span>
+                        {% else %}
+                        <span class="badge bg-secondary">{{ appointment.status }}</span>
                         {% endif %}
                     </td>
                     <td>

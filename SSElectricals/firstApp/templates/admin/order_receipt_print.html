@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Order Receipt {{ order.receipt_number }} - SS Electricals</title>
+    <title>Order Receipt #{{ order.id }} - Shiv Shakti Electrical</title>
     {% load static %}
 
     <style>
@@ -18,7 +18,7 @@
             font-family: 'Arial', sans-serif;
             background: #f5f5f5 !important;
             color: #333 !important;
-            padding: 20px;
+            padding: 10px;
             color-scheme: light;
         }
 
@@ -27,110 +27,84 @@
             min-height: 297mm;
             margin: 0 auto;
             background: white;
-            padding: 20mm;
+            padding: 15mm;
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            position: relative;
+            display: flex;
+            flex-direction: column;
         }
 
         /* Header */
         .header {
-            text-align: center;
-            border-bottom: 3px solid #ffc107;
-            padding-bottom: 15px;
-            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            border-bottom: 2px solid #ffc107;
+            padding-bottom: 8px;
+            margin-bottom: 12px;
         }
 
-        .header h1 {
+        .header-left h1 {
             color: #1a1a2e;
-            font-size: 32px;
-            margin-bottom: 5px;
+            font-size: 22px;
+            margin-bottom: 2px;
         }
 
-        .header .company-icon {
-            font-size: 48px;
-            color: #ffc107;
-            margin-bottom: 10px;
-        }
-
-        .header p {
+        .header-left p {
             color: #666;
-            font-size: 14px;
-            line-height: 1.6;
+            font-size: 11px;
+            line-height: 1.3;
+            margin: 1px 0;
+        }
+
+        .qr-top-right {
+            width: 60px;
+            height: 60px;
+            border: 1px solid #ddd;
+            padding: 2px;
         }
 
         /* Receipt Info */
         .receipt-info {
             display: flex;
             justify-content: space-between;
-            margin-bottom: 25px;
-            padding: 15px;
-            background: #f8f9fa;
-            border-left: 4px solid #1a1a2e;
-        }
-
-        .receipt-info-left h2 {
-            color: #1a1a2e;
-            font-size: 24px;
             margin-bottom: 10px;
+            padding: 8px;
+            background: #f8f9fa;
+            font-size: 11px;
         }
 
-        .receipt-info p {
-            margin: 5px 0;
-            font-size: 14px;
-        }
-
-        .status-badge {
-            display: inline-block;
-            padding: 5px 15px;
-            border-radius: 20px;
-            font-weight: bold;
-            font-size: 14px;
-            text-transform: uppercase;
-        }
-
-        .status-confirmed {
-            background: #28a745;
-            color: white;
-        }
-
-        .status-pending {
-            background: #ffc107;
-            color: #000;
-        }
-
-        .status-delivered {
-            background: #17a2b8;
-            color: white;
-        }
-
-        .status-cancelled {
-            background: #dc3545;
-            color: white;
+        .receipt-info h2 {
+            font-size: 16px;
+            margin-bottom: 4px;
+            color: #1a1a2e;
         }
 
         /* Customer Info */
         .customer-section {
-            margin-bottom: 25px;
-            padding: 15px;
+            margin-bottom: 10px;
+            padding: 6px 8px;
             background: #fff3cd;
-            border-left: 4px solid #ffc107;
+            border-left: 3px solid #ffc107;
+            font-size: 11px;
         }
 
         .customer-section h3 {
+            font-size: 12px;
+            margin-bottom: 4px;
             color: #1a1a2e;
-            margin-bottom: 10px;
-            font-size: 18px;
         }
 
         .customer-section p {
-            margin: 3px 0;
-            font-size: 14px;
+            margin: 2px 0;
         }
 
         /* Items Table */
         .items-table {
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 25px;
+            margin-bottom: 12px;
+            font-size: 11px;
         }
 
         .items-table thead {
@@ -140,14 +114,9 @@
 
         .items-table th,
         .items-table td {
-            padding: 12px;
+            padding: 6px 8px;
             text-align: left;
             border: 1px solid #ddd;
-        }
-
-        .items-table th {
-            font-weight: bold;
-            font-size: 14px;
         }
 
         .items-table tbody tr:nth-child(even) {
@@ -158,16 +127,21 @@
             text-align: right;
         }
 
+        .items-table .text-center {
+            text-align: center;
+        }
+
         /* Totals */
         .totals-section {
             display: flex;
             justify-content: flex-end;
-            margin-bottom: 30px;
+            margin-bottom: 15px;
         }
 
         .totals-table {
-            width: 50%;
+            width: 45%;
             border-collapse: collapse;
+            font-size: 11px;
         }
 
         .totals-table tr {
@@ -175,83 +149,74 @@
         }
 
         .totals-table td {
-            padding: 10px;
-            font-size: 14px;
+            padding: 5px 8px;
         }
 
         .totals-table .total-row {
             background: #1a1a2e;
             color: white;
             font-weight: bold;
-            font-size: 18px;
-        }
-
-        /* QR Codes */
-        .qr-section {
-            display: flex;
-            justify-content: space-around;
-            margin: 30px 0;
-            padding: 20px;
-            border: 2px dashed #ffc107;
-            background: #fffef8;
-        }
-
-        .qr-box {
-            text-align: center;
-        }
-
-        .qr-box h4 {
-            margin-bottom: 10px;
-            color: #1a1a2e;
             font-size: 14px;
-        }
-
-        .qr-box img {
-            max-width: 150px;
-            height: auto;
-            border: 2px solid #ddd;
-            padding: 5px;
-            background: white;
-        }
-
-        .qr-box .qr-text {
-            margin-top: 8px;
-            font-size: 12px;
-            color: #666;
         }
 
         /* Footer */
         .footer {
-            margin-top: 40px;
-            padding-top: 20px;
-            border-top: 2px solid #ddd;
+            margin-top: auto;
+            padding-top: 10px;
+            border-top: 1px solid #ddd;
+            text-align: center;
+            font-size: 10px;
+            padding-bottom: 0;
+        }
+
+        .footer-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .google-qr-box {
             text-align: center;
         }
 
+        .google-qr-box h4 {
+            font-size: 11px;
+            margin-bottom: 4px;
+            color: #1a1a2e;
+        }
+
+        .google-qr {
+            width: 70px;
+            height: 70px;
+            border: 1px solid #ddd;
+            padding: 2px;
+        }
+
+        .thank-you {
+            font-size: 14px;
+            font-weight: bold;
+            color: #1a1a2e;
+            margin: 8px 0;
+        }
+
         .signature-section {
-            margin: 30px 0;
             text-align: right;
+            margin: 15px 0 10px 0;
         }
 
         .signature-line {
             display: inline-block;
-            width: 250px;
-            border-bottom: 2px solid #333;
-            margin-top: 50px;
-        }
-
-        .thank-you {
-            font-size: 18px;
-            font-weight: bold;
-            color: #1a1a2e;
-            margin: 20px 0;
+            width: 180px;
+            border-bottom: 1px solid #333;
+            margin-top: 25px;
         }
 
         /* Print Styles */
         @media print {
             @page {
                 size: A4;
-                margin: 15mm;
+                margin: 12mm;
             }
 
             body {
@@ -267,10 +232,6 @@
             .no-print {
                 display: none !important;
             }
-
-            .qr-section {
-                page-break-inside: avoid;
-            }
         }
 
         /* Screen Only */
@@ -283,11 +244,11 @@
             }
 
             .print-buttons button {
-                padding: 10px 20px;
-                margin-left: 10px;
+                padding: 8px 16px;
+                margin-left: 8px;
                 border: none;
                 border-radius: 5px;
-                font-size: 16px;
+                font-size: 14px;
                 cursor: pointer;
                 background: #1a1a2e;
                 color: white;
@@ -301,150 +262,157 @@
 </head>
 
 <body>
-    <!-- Print Buttons (visible on screen only) -->
+    <!-- Print Buttons -->
     <div class="print-buttons no-print">
         <button onclick="window.print();">
-            <i class="fas fa-print"></i> Print
+            🖨️ Print
         </button>
-        <button onclick="window.location.href='{% url 'admin_order_detail' order.id %}';">
-            <i class="fas fa-arrow-left"></i> Back
+        <button onclick="window.history.back();">
+            ← Back
         </button>
     </div>
 
     <div class="receipt-container">
-        <!-- Header -->
+        <!-- Header with QR -->
         <div class="header">
-            <div class="company-icon">⚡</div>
-            <h1>SHIV SHAKTI ELECTRICAL</h1>
-            <p>Complete Electrical Solutions</p>
-            <p>📞 +91 XXX-XXX-XXXX | 📧 contact@sselectrical.com</p>
+            <div class="header-left">
+                <h1>Shiv Shakti Electrical</h1>
+                <p>B-155, Abhinandan Nagar, Indore (M.P.)</p>
+                <p>📞 +91-9993149226</p>
+                <p><strong>GSTIN:</strong> __________________</p>
+            </div>
+            <div class="header-right">
+                {% if order.receipt_qr_code %}
+                <img src="{{ order.receipt_qr_code.url }}" alt="Receipt QR" class="qr-top-right">
+                {% else %}
+                <div
+                    style="width: 60px; height: 60px; background: #f0f0f0; display: flex; align-items: center; justify-content: center; font-size: 8px; border: 1px solid #ddd;">
+                    QR
+                </div>
+                {% endif %}
+            </div>
         </div>
 
         <!-- Receipt Info -->
         <div class="receipt-info">
-            <div class="receipt-info-left">
-                <h2>ORDER RECEIPT</h2>
-                <p><strong>Receipt #:</strong> {{ order.receipt_number|default:"Pending" }}</p>
-                <p><strong>Order #:</strong> {{ order.id }}</p>
-                <p><strong>Date:</strong> {{ order.created_at|date:"d-M-Y, h:i A" }}</p>
+            <div>
+                <h2>INVOICE / RECEIPT</h2>
+                <p><strong>Order #:</strong> #{{ order.id }}</p>
+                <p><strong>Date:</strong> {{ order.created_at|date:"d-M-Y" }}</p>
+                {% if order.receipt_number %}
+                <p><strong>Receipt #:</strong> {{ order.receipt_number }}</p>
+                {% endif %}
                 {% if order.financial_year %}
-                <p><strong>Financial Year:</strong> {{ order.financial_year }}</p>
+                <p><strong>FY:</strong> {{ order.financial_year }}</p>
                 {% endif %}
             </div>
-            <div class="receipt-info-right">
-                <span class="status-badge status-{{ order.status|lower }}">
-                    {{ order.status }}
-                </span>
+            <div>
+                <h3 style="font-size: 14px; margin-bottom: 6px; color: #1a1a2e;">BILL TO:</h3>
+                <p><strong>{{ order.user.get_full_name|default:order.user.username }}</strong></p>
+                {% if order.user.phone_number %}<p>📞 {{ order.user.phone_number }}</p>{% endif %}
+                <p>✉️ {{ order.user.email }}</p>
+                <p>📍 {{ order.address }}</p>
             </div>
-        </div>
-
-        <!-- Customer Section -->
-        <div class="customer-section">
-            <h3>BILL TO:</h3>
-            <p><strong>Name:</strong> {{ order.user.get_full_name|default:order.user.username }}</p>
-            <p><strong>Phone:</strong> {{ order.user.phone_number|default:"N/A" }}</p>
-            <p><strong>Email:</strong> {{ order.user.email }}</p>
-            <p><strong>Delivery Address:</strong> {{ order.address }}</p>
-            {% if order.distance_km %}
-            <p><strong>Distance:</strong> {{ order.distance_km }} km</p>
-            {% endif %}
         </div>
 
         <!-- Items Table -->
         <table class="items-table">
             <thead>
                 <tr>
-                    <th>#</th>
-                    <th>Product</th>
-                    <th class="text-end">Qty</th>
-                    <th class="text-end">Unit Price (₹)</th>
-                    <th class="text-end">Total (₹)</th>
+                    <th style="width: 40px;">S.No.</th>
+                    <th>Item</th>
+                    <th class="text-center" style="width: 50px;">Qty</th>
+                    <th class="text-end" style="width: 70px;">MRP</th>
+                    <th class="text-end" style="width: 60px;">Disc%</th>
+                    <th class="text-end" style="width: 70px;">Price</th>
+                    <th class="text-end" style="width: 80px;">Total</th>
                 </tr>
             </thead>
             <tbody>
                 {% for item in order.items.all %}
                 <tr>
-                    <td>{{ forloop.counter }}</td>
+                    <td class="text-center">{{ forloop.counter }}</td>
                     <td>
                         <strong>{{ item.product.name }}</strong>
                         {% if item.product.brand %}
-                        <br><small style="color: #666;">Brand: {{ item.product.brand }}</small>
+                        <br><small style="color: #666;">{{ item.product.brand }}</small>
                         {% endif %}
                     </td>
-                    <td class="text-end">{{ item.quantity }}</td>
-                    <td class="text-end">₹{{ item.price }}</td>
-                    <td class="text-end"><strong>₹{{ item.price|floatformat:2 }}</strong></td>
+                    <td class="text-center">{{ item.quantity }}</td>
+                    <td class="text-end">₹{{ item.product.price|floatformat:2 }}</td>
+                    <td class="text-end" style="color: #28a745;">
+                        {% if item.product.discount_price and item.product.price > 0 %}
+                        {% widthratio item.product.price|add:"-"|add:item.price item.product.price 100 %}%
+                        {% else %}
+                        0%
+                        {% endif %}
+                    </td>
+                    <td class="text-end">₹{{ item.price|floatformat:2 }}</td>
+                    <td class="text-end"><strong>₹{% widthratio item.price 1 item.quantity %}</strong></td>
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
 
-        <!-- Totals -->
+        <!-- Totals Section -->
         <div class="totals-section">
             <table class="totals-table">
                 <tr>
-                    <td>Subtotal (Products):</td>
-                    <td class="text-end"><strong>₹{{ order.total_price }}</strong></td>
+                    <td>Subtotal:</td>
+                    <td class="text-end"><strong>₹{{ order.total_price|floatformat:2 }}</strong></td>
                 </tr>
-                {% if order.delivery_charge > 0 %}
                 <tr>
                     <td>Delivery Charge:</td>
-                    <td class="text-end">₹{{ order.delivery_charge }}</td>
+                    <td class="text-end">
+                        {% if order.free_delivery_applied %}
+                        <span style="text-decoration: line-through;">₹{{ order.delivery_charge|default:"0.00" }}</span>
+                        <strong style="color: green;"> FREE</strong>
+                        {% else %}
+                        <strong>₹{{ order.delivery_charge|default:"0.00"|floatformat:2 }}</strong>
+                        {% endif %}
+                    </td>
                 </tr>
-                {% endif %}
-                {% if order.free_delivery_applied %}
-                <tr style="color: #28a745;">
-                    <td>Free Delivery Applied:</td>
-                    <td class="text-end">-₹{{ order.delivery_charge }}</td>
-                </tr>
-                {% endif %}
                 <tr class="total-row">
                     <td>GRAND TOTAL:</td>
-                    <td class="text-end">₹{{ order.grand_total }}</td>
+                    <td class="text-end">₹{{ order.grand_total|default:"0.00"|floatformat:2 }}</td>
                 </tr>
             </table>
         </div>
 
-        <!-- QR Codes Section -->
-        <div class="qr-section">
-            <div class="qr-box">
-                <h4>Order Receipt QR Code</h4>
-                {% if order.receipt_qr_code %}
-                <img src="{{ order.receipt_qr_code.url }}" alt="Order Receipt QR">
-                <p class="qr-text">Scan for order details</p>
-                {% else %}
-                <div
-                    style="width: 150px; height: 150px; background: #f0f0f0; display: flex; align-items: center; justify-content: center;">
-                    <small>QR Not Generated</small>
-                </div>
-                {% endif %}
-            </div>
-
-            <div class="qr-box">
-                <h4>Check us out on Google</h4>
-                <img src="/media/data/ask_for_review.png" alt="Google Reviews" onerror="this.style.display='none'">
-                <p class="qr-text">Scan to review us!</p>
-            </div>
-        </div>
-
-        <!-- Payment Info -->
-        <div style="background: #e7f3ff; border: 2px solid #0d6efd; padding: 15px; margin: 20px 0; border-radius: 8px;">
+        <!-- Payment Method -->
+        <div
+            style="background: #e7f3ff; border: 1px solid #0d6efd; padding: 8px; margin: 10px 0; border-radius: 5px; font-size: 11px;">
             <strong style="color: #0d6efd;">💳 Payment Method:</strong> {{ order.get_payment_method_display }}
         </div>
 
         <!-- Signature Section -->
         <div class="signature-section">
-            <p><strong>Authorized Signature:</strong></p>
+            <p style="font-size: 11px; margin-bottom: 5px;"><strong>Authorized Signature:</strong></p>
             <div class="signature-line"></div>
         </div>
 
-        <!-- Footer -->
+        <!-- Footer - Centered text with QR at bottom right -->
         <div class="footer">
-            <p class="thank-you">⚡ Thank You for Your Order! ⚡</p>
-            <p style="font-size: 12px; color: #666;">
-                This is a computer-generated order receipt.<br>
-                For any queries, please contact us or visit our store.
-            </p>
+            <!-- Centered Content -->
+            <div style="text-align: center; padding-right: 100px;">
+                <p class="thank-you">⚡ Thank You for Shopping! ⚡</p>
+                <p style="color: #666; margin: 5px 0;">
+                    <strong>Online Order - Computer Generated Receipt</strong>
+                </p>
+                <p style="margin: 3px 0;">Contact: +91-9993149226</p>
+                <p style="margin: 8px 0 3px 0;">This is a computer-generated invoice and does not require a physical
+                    signature.</p>
+                <p style="margin: 0;">For any queries, please contact us at +91-9993149226</p>
+            </div>
+
+            <!-- Google QR - Bottom Right -->
+            <div style="position: absolute; bottom: 15mm; right: 15mm; text-align: center;">
+                <h4 style="font-size: 11px; margin-bottom: 4px; color: #1a1a2e;">Review us on Google!</h4>
+                <img src="/media/data/ask_for_review.png" alt="Google Reviews"
+                    style="width: 80px; height: 80px; border: 1px solid #ddd; padding: 2px;"
+                    onerror="this.style.display='none'">
+                <p style="font-size: 9px; color: #666; margin-top: 2px;">Scan to review</p>
+            </div>
         </div>
     </div>
 </body>

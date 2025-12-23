@@ -264,18 +264,25 @@ class Order(models.Model):
     def grand_total(self):
         """
         Returns the grand total for the order.
-        For enquiry orders without confirmed pricing, returns None.
+        For enquiry orders without any pricing set, returns None.
         """
-        # Enquiry orders without pricing confirmation - return None
-        if self.order_type == 'enquiry' and not self.pricing_confirmed:
+        from decimal import Decimal
+        
+        # Only return None for truly pending enquiries (status = 'Pending Enquiry')
+        # For 'Price Shared' status, we show the price even if not confirmed yet
+        if self.order_type == 'enquiry' and self.status == 'Pending Enquiry':
             return None
+        
+        # Convert None values to Decimal(0)
+        total_price = self.total_price if self.total_price is not None else Decimal('0.00')
+        delivery_charge = self.delivery_charge if self.delivery_charge is not None else Decimal('0.00')
         
         # Use final price if available
         if self.final_price:
-            if self.final_price == self.total_price and self.delivery_charge > 0:
-                 return self.total_price + self.delivery_charge
+            if self.final_price == total_price and delivery_charge > 0:
+                 return total_price + delivery_charge
             return self.final_price
-        return self.total_price + self.delivery_charge
+        return total_price + delivery_charge
     
     @property
     def is_enquiry_pending(self):
@@ -866,6 +873,29 @@ class Appointment(models.Model):
     
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Pending')
     cancellation_reason = models.CharField(max_length=255, blank=True, null=True)
+    
+    # New tracking fields for Admin visibility
+    LOCATION_VERIFICATION_CHOICES = [
+        ('GPS confirmed', 'GPS confirmed'),
+        ('Manual entry', 'Manual entry'),
+    ]
+    PRICE_CALCULATION_CHOICES = [
+        ('Auto-calculated', 'Auto-calculated'),
+        ('Pending confirmation', 'Pending confirmation'),
+    ]
+    
+    location_verification = models.CharField(
+        max_length=50, 
+        choices=LOCATION_VERIFICATION_CHOICES, 
+        default='Manual entry'
+    )
+    price_calculation = models.CharField(
+        max_length=50, 
+        choices=PRICE_CALCULATION_CHOICES, 
+        default='Pending confirmation'
+    )
+    is_indore = models.BooleanField(default=True, help_text="True if location is verified as Indore")
+    
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
