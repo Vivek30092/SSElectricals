@@ -1,6 +1,8 @@
 # Core Django & Web Framework
 Django==5.2.8
 django-allauth==65.3.0
+PyJWT==2.10.1
+cryptography==46.0.3
 whitenoise==6.8.2
 gunicorn==23.0.0
 
