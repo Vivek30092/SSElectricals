@@ -49,12 +49,9 @@ SECRET_KEY = "django-insecure-t07&hx8jj30@9b26uogg&uj_*p!x%0x-+6svt65ft15z5q*k7=
 DEBUG = True
 
 ALLOWED_HOSTS = [
-    'sselectricals.com',
-    'www.sselectricals.com',
     'localhost',
     'sselectricals.onrender.com'
     '127.0.0.1',
-    '0.0.0.0'
     ]
 
 
