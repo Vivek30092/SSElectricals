@@ -48,7 +48,13 @@ SECRET_KEY = "django-insecure-t07&hx8jj30@9b26uogg&uj_*p!x%0x-+6svt65ft15z5q*k7=
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = [
+    'sselectricals.com',
+    'www.sselectricals.com',
+    'localhost',
+    '127.0.0.1',
+    '0.0.0.0'
+    ]
 
 
 # Application definition
@@ -74,6 +80,7 @@ SITE_ID = 1
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -85,6 +92,7 @@ MIDDLEWARE = [
     "allauth.account.middleware.AccountMiddleware",  # Required for allauth
 ]
 
+STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 ROOT_URLCONF = "SSElectricals.urls"
 
 TEMPLATES = [
@@ -223,3 +231,9 @@ SOCIALACCOUNT_ADAPTER = 'firstApp.adapters.CustomSocialAccountAdapter'
 # Custom account adapter to handle redirects for already logged-in users
 ACCOUNT_ADAPTER = 'firstApp.adapters.CustomAccountAdapter'
 
+
+CSRF_TRUSTED_ORIGINS = [
+    "https://sselectricals.onrender.com"
+]
+
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")

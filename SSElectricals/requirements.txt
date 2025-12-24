@@ -1,12 +1,12 @@
-Django
+psycopg2-binary
+whitenoise
+python-dotenv
 geopy
 requests
 pandas
 openpyxl
 Pillow
 reportlab
-gunicorn
-whitenoise
 python-docx
 python-dateutil
 absl-py==2.3.1
