@@ -20,7 +20,7 @@
                         <label class="form-label">Update Status</label>
                         <select name="status" class="form-select">
                             {% for status, label in status_choices %}
-                            <option value="{{ status }}" {% if appointment.status == status %} selected {% endif %}>
+                            <option value="{{ status }}" {% if appointment.status==status %} selected {% endif %}>
                                 {{ label }}
                             </option>
                             {% endfor %}
@@ -45,8 +45,9 @@
                             <option value="none" {% if not appointment.assigned_electrician %}selected{% endif %}>None
                                 (Unassigned)</option>
                             {% for electrician in electricians %}
-                            <option value="{{ electrician.id }}" {% if appointment.assigned_electrician and appointment.assigned_electrician.id == electrician.id %}selected{% endif %}>
-                                {{ electrician.name }} - {{ electrician.phone }}
+                            <option value="{{ electrician.id }}" {% if appointment.assigned_electrician and
+                                appointment.assigned_electrician.id==electrician.id %}selected{% endif %}>
+                                {{ electrician.name }} - {{ electrician.phone_number }}
                             </option>
                             {% endfor %}
                         </select>

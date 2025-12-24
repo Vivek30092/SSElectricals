@@ -916,12 +916,12 @@ def admin_appointment_update(request, pk):
                 
                 # Send email to electrician about new appointment
                 if appointment.assigned_electrician.email:
-                    send_electrician_assignment_email(appointment)
+                    send_electrician_assignment_email(appointment, appointment.assigned_electrician)
                     
         except Exception as e:
             print(f"Error sending appointment email: {e}")
 
-            messages.success(request, "Appointment updated successfully.")
+        messages.success(request, "Appointment updated successfully.")
         return redirect('admin_appointment_list')
     
     # Get all electricians for dropdown

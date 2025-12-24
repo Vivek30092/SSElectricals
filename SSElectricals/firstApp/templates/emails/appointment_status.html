@@ -19,10 +19,24 @@
     <p style="color: #ffffff; opacity: 0.95; margin: 10px 0 0 0;">Your service request is being reviewed by our team.
     </p>
 </div>
+{% elif appointment.status == 'Confirmed' %}
+<div
+    style="background: linear-gradient(135deg, #2196f3 0%, #1976d2 100%); padding: 20px; border-radius: 8px; text-align: center; margin: 20px 0;">
+    <h2 style="color: #ffffff; margin: 0;">✓ Appointment Confirmed!</h2>
+    <p style="color: #ffffff; opacity: 0.95; margin: 10px 0 0 0;">Your service appointment has been confirmed and
+        scheduled.</p>
+</div>
+{% elif appointment.status == 'In Progress' %}
+<div
+    style="background: linear-gradient(135deg, #00bcd4 0%, #0097a7 100%); padding: 20px; border-radius: 8px; text-align: center; margin: 20px 0;">
+    <h2 style="color: #ffffff; margin: 0;">🔧 Service In Progress</h2>
+    <p style="color: #ffffff; opacity: 0.95; margin: 10px 0 0 0;">Our technician is currently working on your service.
+    </p>
+</div>
 {% elif appointment.status == 'Approved' %}
 <div
     style="background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%); padding: 20px; border-radius: 8px; text-align: center; margin: 20px 0;">
-    <h2 style="color: #ffffff; margin: 0;">✓ Appointment Confirmed!</h2>
+    <h2 style="color: #ffffff; margin: 0;">✓ Appointment Approved!</h2>
     <p style="color: #ffffff; opacity: 0.95; margin: 10px 0 0 0;">Your service appointment has been approved.</p>
 </div>
 {% elif appointment.status == 'Completed' %}
@@ -87,7 +101,8 @@
         style="background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%); padding: 20px; border-radius: 8px; margin: 15px 0; text-align: center;">
         <h3 style="margin: 0 0 10px 0; color: #2e7d32;">📅 Visit Schedule</h3>
         <p style="margin: 0; font-size: 18px; color: #1b5e20;">
-            <strong>{{ appointment.date|date:"F d, Y" }}</strong> at <strong>{{ appointment.time|time:"h:i A" }}</strong>
+            <strong>{{ appointment.date|date:"F d, Y" }}</strong> at <strong>{{ appointment.time|time:"h:i A"
+                }}</strong>
         </p>
     </div>
 </div>
@@ -172,8 +187,7 @@
         </tr>
         <tr style="border-bottom: 1px solid #90caf9;">
             <td style="padding: 12px 0; font-weight: 600; color: #0d47a1;">Contact Number:</td>
-            <td style="padding: 12px 0; color: #1565c0;"><strong>📞 {{ appointment.assigned_electrician.phone
-                    }}</strong></td>
+            <td style="padding: 12px 0; color: #1565c0;"><strong>📞 {{ appointment.assigned_electrician.phone_number }}</strong></td>
         </tr>
         {% if appointment.assigned_electrician.specialization %}
         <tr>
