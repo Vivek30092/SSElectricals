@@ -217,4 +217,7 @@ urlpatterns = [
     
     # User Warranties
     path('my-warranties/', views.user_warranties, name='user_warranties'),
+    
+    # Free Delivery Terms
+    path('free-delivery-terms/', views.free_delivery_terms, name='free_delivery_terms'),
 ]

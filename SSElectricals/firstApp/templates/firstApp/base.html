@@ -154,6 +154,58 @@
             color: #e0e0e0;
         }
 
+        /* Announcement Modal Dark Mode */
+        body.dark-mode .modal-content[style*="#ffffff"] {
+            background: #1e1e1e !important;
+        }
+
+        body.dark-mode .modal-body {
+            background: #1e1e1e !important;
+            color: #e0e0e0 !important;
+        }
+
+        body.dark-mode .modal-footer {
+            background: #1e1e1e !important;
+        }
+
+        /* Ensure announcement content is visible in dark mode */
+        body.dark-mode .modal-body *:not(strong):not(b):not(a) {
+            color: #d0d0d0 !important;
+        }
+
+        body.dark-mode .modal-body strong,
+        body.dark-mode .modal-body b {
+            color: #ffffff !important;
+        }
+
+        body.dark-mode .modal-body a {
+            color: #64b5f6 !important;
+        }
+
+        /* Toast Dark Mode */
+        body.dark-mode .toast {
+            background-color: #1e1e1e !important;
+            color: #e0e0e0 !important;
+        }
+
+        body.dark-mode .toast-body {
+            background: #1e1e1e !important;
+            color: #e0e0e0 !important;
+        }
+
+        body.dark-mode .toast-body *:not(strong):not(b):not(a) {
+            color: #d0d0d0 !important;
+        }
+
+        body.dark-mode .toast-body strong,
+        body.dark-mode .toast-body b {
+            color: #ffffff !important;
+        }
+
+        body.dark-mode .toast-body a {
+            color: #64b5f6 !important;
+        }
+
         body.dark-mode .btn-close {
             filter: invert(1) grayscale(100%) brightness(200%);
         }

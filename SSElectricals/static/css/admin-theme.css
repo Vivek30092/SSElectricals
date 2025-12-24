@@ -711,19 +711,27 @@ body.dark-mode .form-control::placeholder {
 /* Readonly Total Field - Match other inputs while keeping readonly appearance */
 body.dark-mode input[name="total"][readonly],
 body.dark-mode .form-control[readonly] {
-    background-color: #150a2e !important; /* Match other inputs */
-    border-color: rgba(76, 93, 215, 0.3) !important; /* Match other inputs */
-    color: #e8e8e8 !important; /* Match other inputs */
-    cursor: default; /* Indicate non-editable */
-    opacity: 1; /* Override browser default opacity for readonly */
+    background-color: #150a2e !important;
+    /* Match other inputs */
+    border-color: rgba(76, 93, 215, 0.3) !important;
+    /* Match other inputs */
+    color: #e8e8e8 !important;
+    /* Match other inputs */
+    cursor: default;
+    /* Indicate non-editable */
+    opacity: 1;
+    /* Override browser default opacity for readonly */
 }
 
 body.dark-mode input[name="total"][readonly]:focus,
 body.dark-mode .form-control[readonly]:focus {
-    background-color: #150a2e !important; /* Keep same on focus */
-    border-color: rgba(76, 93, 215, 0.5) !important; /* Slightly brighter border on focus */
+    background-color: #150a2e !important;
+    /* Keep same on focus */
+    border-color: rgba(76, 93, 215, 0.5) !important;
+    /* Slightly brighter border on focus */
     color: #e8e8e8 !important;
-    box-shadow: none; /* No glow on readonly field */
+    box-shadow: none;
+    /* No glow on readonly field */
 }
 
 body.dark-mode .invalid-feedback,
@@ -1228,6 +1236,3 @@ body.dark-mode .sorting-info {
     border-color: rgba(76, 93, 215, 0.3);
     color: #68A2EB;
 }
-
-
-

@@ -23,23 +23,30 @@
                     <hr>
                     <p class="mb-1"><strong>Visiting Charge:</strong> ₹{{ appointment.visiting_charge|floatformat:0 }}
                     </p>
+                    <small class="text-muted d-block mb-2">
+                        <i class="fas fa-map-marker-alt me-1"></i>Based on distance from shop and admin pricing
+                    </small>
                     {% if price_info %}
-                    <p class="mb-1 text-muted"><strong>Service Charge (Est.):</strong> ₹{{
-                        price_info.min_service_charge|floatformat:0 }} - ₹{{ price_info.max_service_charge|floatformat:0
-                        }}</p>
+                    <p class="mb-1"><strong>Extra Products/Materials (If Required):</strong> <span class="text-info">To
+                            be declared after inspection</span></p>
                     {% else %}
-                    <p class="mb-1 text-muted"><strong>Service Charge (Est.):</strong> ₹300 - ₹1500</p>
+                    <p class="mb-1"><strong>Extra Products/Materials (If Required):</strong> <span class="text-info">To
+                            be declared after inspection</span></p>
                     {% endif %}
+                    <small class="text-muted d-block mb-2">
+                        <i class="fas fa-toolbox me-1"></i>Cost of additional parts/materials will be shared after
+                        technician inspection
+                    </small>
                     {% if appointment.extra_charge > 0 %}
                     <p class="mb-1"><strong>Additional Charge:</strong> ₹{{ appointment.extra_charge|floatformat:0 }}
                     </p>
                     {% endif %}
                     <hr>
-                    <p class="mb-0 fs-5"><strong>Estimated Total:</strong> ₹{{ estimated_min }} - ₹{{ estimated_max }}
+                    <p class="mb-0 fs-5"><strong>Minimum Visiting Charge:</strong> ₹{{ appointment.visiting_charge|floatformat:0 }}
                     </p>
                     <small class="text-muted d-block mt-2">
-                        <i class="fas fa-info-circle"></i> Final charges may vary based on actual work. Parts/material
-                        cost is extra.
+                        <i class="fas fa-info-circle"></i> Final charges will be confirmed after inspection. You'll only
+                        pay for actual work and materials used.
                     </small>
                 </div>
                 {% endif %}

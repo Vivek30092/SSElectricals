@@ -186,12 +186,18 @@ AUTHENTICATION_BACKENDS = [
 ]
 
 # Django Allauth Configuration (Updated to latest format)
-ACCOUNT_LOGIN_METHODS = {'email'}  # Login using email only
+# Modern way: use ACCOUNT_LOGIN_METHODS instead of deprecated settings
+ACCOUNT_LOGIN_METHODS = {'email'}  # Login using email only (replaces ACCOUNT_AUTHENTICATION_METHOD)
 ACCOUNT_UNIQUE_EMAIL = True
-ACCOUNT_EMAIL_VERIFICATION = 'optional'
-ACCOUNT_SIGNUP_FIELDS = ['email*', 'password1*', 'password2*']  # Required signup fields
-SOCIALACCOUNT_AUTO_SIGNUP = True
-SOCIALACCOUNT_EMAIL_VERIFICATION = 'none'
+ACCOUNT_EMAIL_VERIFICATION = 'none'  # Skip email verification
+# ACCOUNT_SIGNUP_FIELDS defines required fields (replaces ACCOUNT_EMAIL_REQUIRED and ACCOUNT_USERNAME_REQUIRED)
+ACCOUNT_SIGNUP_FIELDS = ['email*', 'password1*', 'password2*']
+
+# Social account settings
+SOCIALACCOUNT_AUTO_SIGNUP = True  # Auto-create account from social login
+SOCIALACCOUNT_EMAIL_VERIFICATION = 'none'  # Skip email verification for social accounts
+SOCIALACCOUNT_EMAIL_REQUIRED = False  # Don't require additional email
+SOCIALACCOUNT_QUERY_EMAIL = False  # Don't ask for email if Google provides it
 SOCIALACCOUNT_LOGIN_ON_GET = True  # Skip confirmation page, login directly from Google
 
 
@@ -207,9 +213,13 @@ SOCIALACCOUNT_PROVIDERS = {
         'AUTH_PARAMS': {
             'access_type': 'online',
         },
+        'VERIFIED_EMAIL': True,  # Trust Google's email verification
     }
 }
 
 # Custom adapter to handle Google OAuth users (auto-generate phone numbers)
 SOCIALACCOUNT_ADAPTER = 'firstApp.adapters.CustomSocialAccountAdapter'
+
+# Custom account adapter to handle redirects for already logged-in users
+ACCOUNT_ADAPTER = 'firstApp.adapters.CustomAccountAdapter'
 

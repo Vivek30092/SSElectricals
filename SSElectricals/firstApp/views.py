@@ -438,8 +438,8 @@ def checkout(request):
                 
                 delivery_charge = Decimal(str(delivery_charge))
 
-                # Free Delivery Logic: If user hasn't used free delivery yet AND within 3 KM
-                if request.user.free_delivery_used_count == 0 and dist_km <= 3.0:
+                # Free Delivery Logic: If user hasn't used free delivery yet AND within 2 KM
+                if request.user.free_delivery_used_count == 0 and dist_km <= 2.0:
                     delivery_charge = Decimal('0.00')
                     is_free_delivery = True
             
@@ -1991,3 +1991,8 @@ def user_warranties(request):
     return render(request, 'firstApp/user_warranties.html', {
         'warranties': warranties,
     })
+
+
+def free_delivery_terms(request):
+    """Display free delivery offer terms and conditions"""
+    return render(request, 'firstApp/free_delivery_terms.html')

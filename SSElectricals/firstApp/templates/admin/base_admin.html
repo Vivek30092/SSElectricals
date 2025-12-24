@@ -21,98 +21,672 @@
 <body>
 
     <div class="sidebar">
+        <!-- Brand Header with Gradient -->
         <div class="brand">
-            <i class="fas fa-bolt"></i> Admin Panel
+            <div class="brand-icon">
+                <i class="fas fa-bolt"></i>
+            </div>
+            <div class="brand-text">
+                <strong>SS Electricals</strong>
+                <small class="d-block text-muted" style="font-size: 0.75rem;">Admin Panel</small>
+            </div>
         </div>
-        <a href="{% url 'admin_dashboard' %}"
-            class="{% if request.resolver_match.url_name == 'admin_dashboard' %}active{% endif %}">
-            <i class="fas fa-tachometer-alt me-2"></i> Dashboard
-        </a>
-        <a href="{% url 'admin_product_list' %}"
-            class="{% if 'product' in request.resolver_match.url_name %}active{% endif %}">
-            <i class="fas fa-box me-2"></i> Products
-        </a>
-        <a href="{% url 'admin_order_list' %}"
-            class="{% if 'order' in request.resolver_match.url_name %}active{% endif %}">
-            <i class="fas fa-shopping-cart me-2"></i> Orders
-        </a>
-        <a href="{% url 'admin_appointment_list' %}"
-            class="{% if 'appointment' in request.resolver_match.url_name %}active{% endif %}">
-            <i class="fas fa-calendar-check me-2"></i> Appointments
-        </a>
-        <a href="{% url 'admin_service_prices' %}"
-            class="{% if 'service_price' in request.resolver_match.url_name %}active{% endif %}">
-            <i class="fas fa-tag me-2"></i> Service Pricing
-        </a>
-        <a href="{% url 'admin_service_types' %}"
-            class="{% if 'service_type' in request.resolver_match.url_name %}active{% endif %}"
-            style="padding-left: 35px;">
-            <i class="fas fa-cogs me-2"></i> Service Types
-        </a>
-        <a href="{% url 'admin_distance_zones' %}"
-            class="{% if 'distance_zone' in request.resolver_match.url_name %}active{% endif %}"
-            style="padding-left: 35px;">
-            <i class="fas fa-map-marker-alt me-2"></i> Distance Zones
-        </a>
-        <a href="{% url 'admin_user_list' %}"
-            class="{% if 'user' in request.resolver_match.url_name %}active{% endif %}">
-            <i class="fas fa-users me-2"></i> Users
-        </a>
-        <a href="{% url 'admin_analytics' %}"
-            class="{% if 'analytics' in request.resolver_match.url_name %}active{% endif %}">
-            <i class="fas fa-chart-line me-2"></i> Analytics
-        </a>
-        <a href="{% url 'admin_daily_sales' %}"
-            class="{% if 'sales' in request.resolver_match.url_name %}active{% endif %}">
-            <i class="fas fa-rupee-sign me-2"></i> Daily Sales
-        </a>
-        <a href="{% url 'admin_daily_expenses' %}"
-            class="{% if 'expenses' in request.resolver_match.url_name %}active{% endif %}">
-            <i class="fas fa-money-bill-wave me-2"></i> Expenses
-        </a>
-        <a href="{% url 'admin_reviews_list' %}"
-            class="{% if 'review' in request.resolver_match.url_name %}active{% endif %}">
-            <i class="fas fa-star me-2"></i> Reviews
-        </a>
-        <a href="{% url 'receipt_list' %}"
-            class="{% if 'receipt' in request.resolver_match.url_name %}active{% endif %}">
-            <i class="fas fa-receipt me-2"></i> Offline Receipts
-        </a>
-        <a href="{% url 'admin_notifications_list' %}"
-            class="{% if 'notification' in request.resolver_match.url_name %}active{% endif %}">
-            <i class="fas fa-bell me-2"></i> Notifications
-        </a>
-        <a href="{% url 'admin_announcements_list' %}"
-            class="{% if 'announcement' in request.resolver_match.url_name %}active{% endif %}">
-            <i class="fas fa-bullhorn me-2"></i> Announcements
-        </a>
-        <a href="{% url 'admin_electrician_list' %}"
-            class="{% if 'electrician' in request.resolver_match.url_name %}active{% endif %}">
-            <i class="fas fa-hard-hat me-2"></i> Electricians
-        </a>
-        <a href="{% url 'admin_warranty_list' %}"
-            class="{% if 'warranty' in request.resolver_match.url_name %}active{% endif %}">
-            <i class="fas fa-shield-alt me-2"></i> Warranties
-        </a>
-        <a href="{% url 'admin_appointment_book' %}"
-            class="{% if 'appointment_book' in request.resolver_match.url_name %}active{% endif %}">
-            <i class="fas fa-calendar-plus me-2"></i> Book Appointment
-        </a>
-        <a href="{% url 'admin_activity_log' %}"
-            class="{% if 'log' in request.resolver_match.url_name %}active{% endif %}">
-            <i class="fas fa-history me-2"></i> Logs
-        </a>
-        <hr style="border-color: #555;">
-        <a href="{% url 'home' %}">
-            <i class="fas fa-globe me-2"></i> View Site
-        </a>
-        <form action="{% url 'logout' %}" method="post" class="d-inline">
-            {% csrf_token %}
-            <button type="submit" class="btn btn-link text-decoration-none p-0 text-start w-100"
-                style="color: #ccc; padding: 15px 20px !important;">
-                <i class="fas fa-sign-out-alt me-2"></i> Logout
-            </button>
-        </form>
+
+        <!-- Search Bar -->
+        <div class="sidebar-search">
+            <i class="fas fa-search"></i>
+            <input type="text" id="sidebarSearch" placeholder="Search menu..." class="form-control form-control-sm">
+        </div>
+
+        <!-- Main Navigation -->
+        <nav class="sidebar-nav">
+            <!-- Dashboard -->
+            <a href="{% url 'admin_dashboard' %}"
+                class="nav-item {% if request.resolver_match.url_name == 'admin_dashboard' %}active{% endif %}">
+                <i class="fas fa-tachometer-alt"></i>
+                <span>Dashboard</span>
+                <span class="badge bg-primary">Home</span>
+            </a>
+
+            <!-- SALES & INVENTORY Section -->
+            <div class="nav-section">
+                <div class="nav-section-title section-toggle" data-section="sales-inventory">
+                    <i class="fas fa-store me-2"></i>
+                    <span>Sales & Inventory</span>
+                    <i class="fas fa-chevron-down ms-auto toggle-icon"></i>
+                </div>
+
+                <div class="nav-section-content show" id="sales-inventory">
+                    <a href="{% url 'admin_product_list' %}"
+                        class="nav-item {% if 'product' in request.resolver_match.url_name %}active{% endif %}">
+                        <i class="fas fa-box"></i>
+                        <span>Products</span>
+                    </a>
+
+                    <a href="{% url 'admin_order_list' %}"
+                        class="nav-item {% if 'order' in request.resolver_match.url_name %}active{% endif %}">
+                        <i class="fas fa-shopping-cart"></i>
+                        <span>Orders</span>
+                        <span class="badge bg-success">New</span>
+                    </a>
+
+                    <a href="{% url 'admin_category_list' %}"
+                        class="nav-item {% if 'category' in request.resolver_match.url_name %}active{% endif %}">
+                        <i class="fas fa-tags"></i>
+                        <span>Categories</span>
+                    </a>
+                </div>
+            </div>
+
+            <!-- SERVICES Section -->
+            <div class="nav-section">
+                <div class="nav-section-title section-toggle" data-section="services">
+                    <i class="fas fa-tools me-2"></i>
+                    <span>Services</span>
+                    <i class="fas fa-chevron-down ms-auto toggle-icon"></i>
+                </div>
+
+                <div class="nav-section-content show" id="services">
+                    <a href="{% url 'admin_appointment_list' %}"
+                        class="nav-item {% if 'appointment' in request.resolver_match.url_name and 'book' not in request.resolver_match.url_name %}active{% endif %}">
+                        <i class="fas fa-calendar-check"></i>
+                        <span>Appointments</span>
+                    </a>
+
+                    <a href="{% url 'admin_appointment_book' %}"
+                        class="nav-item {% if 'appointment_book' in request.resolver_match.url_name %}active{% endif %}">
+                        <i class="fas fa-calendar-plus"></i>
+                        <span>Book Appointment</span>
+                    </a>
+
+                    <a href="{% url 'admin_service_types' %}"
+                        class="nav-item {% if 'service_type' in request.resolver_match.url_name %}active{% endif %}">
+                        <i class="fas fa-cogs"></i>
+                        <span>Service Types</span>
+                    </a>
+
+                    <a href="{% url 'admin_distance_zones' %}"
+                        class="nav-item {% if 'distance_zone' in request.resolver_match.url_name %}active{% endif %}">
+                        <i class="fas fa-map-marker-alt"></i>
+                        <span>Distance Zones</span>
+                    </a>
+
+                    <a href="{% url 'admin_electrician_list' %}"
+                        class="nav-item {% if 'electrician' in request.resolver_match.url_name %}active{% endif %}">
+                        <i class="fas fa-hard-hat"></i>
+                        <span>Electricians</span>
+                    </a>
+                </div>
+            </div>
+
+            <!-- FINANCE Section -->
+            <div class="nav-section">
+                <div class="nav-section-title section-toggle" data-section="finance">
+                    <i class="fas fa-rupee-sign me-2"></i>
+                    <span>Finance</span>
+                    <i class="fas fa-chevron-down ms-auto toggle-icon"></i>
+                </div>
+
+                <div class="nav-section-content show" id="finance">
+                    <a href="{% url 'admin_daily_sales' %}"
+                        class="nav-item {% if 'sales' in request.resolver_match.url_name %}active{% endif %}">
+                        <i class="fas fa-cash-register"></i>
+                        <span>Daily Sales</span>
+                    </a>
+
+                    <a href="{% url 'admin_daily_expenses' %}"
+                        class="nav-item {% if 'expenses' in request.resolver_match.url_name %}active{% endif %}">
+                        <i class="fas fa-money-bill-wave"></i>
+                        <span>Expenses</span>
+                    </a>
+
+                    <a href="{% url 'receipt_list' %}"
+                        class="nav-item {% if 'receipt' in request.resolver_match.url_name %}active{% endif %}">
+                        <i class="fas fa-receipt"></i>
+                        <span>Offline Receipts</span>
+                    </a>
+
+                    <a href="{% url 'admin_analytics' %}"
+                        class="nav-item {% if 'analytics' in request.resolver_match.url_name %}active{% endif %}">
+                        <i class="fas fa-chart-line"></i>
+                        <span>Analytics</span>
+                    </a>
+                </div>
+            </div>
+
+            <!-- CUSTOMER RELATIONS Section -->
+            <div class="nav-section">
+                <div class="nav-section-title section-toggle" data-section="customer-relations">
+                    <i class="fas fa-users me-2"></i>
+                    <span>Customer Relations</span>
+                    <i class="fas fa-chevron-down ms-auto toggle-icon"></i>
+                </div>
+
+                <div class="nav-section-content show" id="customer-relations">
+                    <a href="{% url 'admin_user_list' %}"
+                        class="nav-item {% if 'user' in request.resolver_match.url_name %}active{% endif %}">
+                        <i class="fas fa-user-friends"></i>
+                        <span>Users</span>
+                    </a>
+
+                    <a href="{% url 'admin_reviews_list' %}"
+                        class="nav-item {% if 'review' in request.resolver_match.url_name %}active{% endif %}">
+                        <i class="fas fa-star"></i>
+                        <span>Reviews</span>
+                    </a>
+
+                    <a href="{% url 'admin_warranty_list' %}"
+                        class="nav-item {% if 'warranty' in request.resolver_match.url_name %}active{% endif %}">
+                        <i class="fas fa-shield-alt"></i>
+                        <span>Warranties</span>
+                    </a>
+
+                    <a href="{% url 'admin_notifications_list' %}"
+                        class="nav-item {% if 'notification' in request.resolver_match.url_name %}active{% endif %}">
+                        <i class="fas fa-bell"></i>
+                        <span>Notifications</span>
+                    </a>
+
+                    <a href="{% url 'admin_announcements_list' %}"
+                        class="nav-item {% if 'announcement' in request.resolver_match.url_name %}active{% endif %}">
+                        <i class="fas fa-bullhorn"></i>
+                        <span>Announcements</span>
+                    </a>
+                </div>
+            </div>
+
+            <!-- SYSTEM Section -->
+            <div class="nav-section">
+                <div class="nav-section-title section-toggle" data-section="system">
+                    <i class="fas fa-cog me-2"></i>
+                    <span>System</span>
+                    <i class="fas fa-chevron-down ms-auto toggle-icon"></i>
+                </div>
+
+                <div class="nav-section-content show" id="system">
+                    <a href="{% url 'admin_activity_log' %}"
+                        class="nav-item {% if 'log' in request.resolver_match.url_name %}active{% endif %}">
+                        <i class="fas fa-history"></i>
+                        <span>Activity Logs</span>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Divider -->
+            <hr class="sidebar-divider">
+
+            <!-- Quick Actions -->
+            <a href="{% url 'home' %}" class="nav-item" target="_blank">
+                <i class="fas fa-globe"></i>
+                <span>View Website</span>
+                <i class="fas fa-external-link-alt ms-auto" style="font-size: 0.75rem; opacity: 0.5;"></i>
+            </a>
+
+            <form action="{% url 'logout' %}" method="post" class="d-inline">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-link text-decoration-none p-0 text-start w-100 nav-item"
+                    style="border: none; background: none;">
+                    <i class="fas fa-sign-out-alt"></i> <span>Logout</span>
+                </button>
+            </form>
+        </nav>
+
+        <!-- Enhanced Sidebar Styles -->
+        <style>
+            /* Brand Header Enhancement */
+            .sidebar .brand {
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                padding: 20px 15px;
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+            }
+
+            .sidebar .brand-icon {
+                width: 40px;
+                height: 40px;
+                background: rgba(255, 255, 255, 0.2);
+                border-radius: 10px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 1.3rem;
+            }
+
+            .sidebar .brand-text {
+                flex: 1;
+                line-height: 1.3;
+            }
+
+            .sidebar .brand-text strong {
+                font-size: 1.1rem;
+                display: block;
+            }
+
+            /* Search Bar */
+            .sidebar-search {
+                padding: 15px;
+                background: rgba(255, 255, 255, 0.05);
+                border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+                position: relative;
+            }
+
+            .sidebar-search i {
+                position: absolute;
+                left: 25px;
+                top: 50%;
+                transform: translateY(-50%);
+                color: #999;
+                z-index: 1;
+            }
+
+            .sidebar-search input {
+                background: rgba(255, 255, 255, 0.1);
+                border: 1px solid rgba(255, 255, 255, 0.2);
+                color: #fff;
+                padding-left: 35px;
+                border-radius: 20px;
+                transition: all 0.3s;
+            }
+
+            .sidebar-search input:focus {
+                background: rgba(255, 255, 255, 0.15);
+                border-color: #667eea;
+                box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+                color: #fff;
+            }
+
+            .sidebar-search input::placeholder {
+                color: #999;
+            }
+
+            /* Navigation Sections */
+            .sidebar-nav {
+                padding: 10px 0;
+                overflow-y: auto;
+                max-height: calc(100vh - 200px);
+            }
+
+            .sidebar-nav::-webkit-scrollbar {
+                width: 6px;
+            }
+
+            .sidebar-nav::-webkit-scrollbar-track {
+                background: rgba(255, 255, 255, 0.05);
+            }
+
+            .sidebar-nav::-webkit-scrollbar-thumb {
+                background: rgba(255, 255, 255, 0.2);
+                border-radius: 3px;
+            }
+
+            .nav-section {
+                margin: 15px 0;
+            }
+
+            .nav-section-title {
+                padding: 10px 20px;
+                color: #999;
+                font-size: 0.75rem;
+                font-weight: 600;
+                text-transform: uppercase;
+                letter-spacing: 1px;
+                display: flex;
+                align-items: center;
+                border-left: 3px solid transparent;
+            }
+
+            .nav-section-title i {
+                font-size: 1rem;
+            }
+
+            /* Nav Items */
+            .sidebar .nav-item {
+                display: flex !important;
+                align-items: center;
+                padding: 12px 20px !important;
+                color: #ccc !important;
+                text-decoration: none;
+                transition: all 0.3s;
+                border-left: 3px solid transparent;
+                gap: 12px;
+            }
+
+            .sidebar .nav-item i {
+                width: 20px;
+                text-align: center;
+                font-size: 1.1rem;
+            }
+
+            .sidebar .nav-item span {
+                flex: 1;
+            }
+
+            .sidebar .nav-item:hover {
+                background: rgba(255, 255, 255, 0.1);
+                border-left-color: #667eea;
+                color: #fff !important;
+                padding-left: 23px !important;
+            }
+
+            .sidebar .nav-item.active {
+                background: linear-gradient(90deg, rgba(102, 126, 234, 0.3) 0%, transparent 100%);
+                border-left-color: #667eea;
+                color: #fff !important;
+                font-weight: 600;
+            }
+
+            .sidebar .nav-item.active i {
+                color: #667eea;
+            }
+
+            /* Sub Items */
+            .sidebar .nav-item.sub {
+                padding-left: 50px !important;
+                font-size: 0.9rem;
+            }
+
+            .sidebar .nav-item.sub:hover {
+                padding-left: 53px !important;
+            }
+
+            /* Badges */
+            .sidebar .nav-item .badge {
+                font-size: 0.65rem;
+                padding: 3px 8px;
+                border-radius: 10px;
+                font-weight: 600;
+            }
+
+            /* Submenu */
+            .nav-submenu-toggle {
+                display: flex;
+                align-items: center;
+                padding: 12px 20px;
+                color: #ccc;
+                cursor: pointer;
+                transition: all 0.3s;
+                border-left: 3px solid transparent;
+                gap: 12px;
+            }
+
+            .nav-submenu-toggle i:first-child {
+                width: 20px;
+                text-align: center;
+                font-size: 1.1rem;
+            }
+
+            .nav-submenu-toggle span {
+                flex: 1;
+            }
+
+            .nav-submenu-toggle:hover {
+                background: rgba(255, 255, 255, 0.1);
+                border-left-color: #667eea;
+                color: #fff;
+                padding-left: 23px;
+            }
+
+            .nav-submenu-toggle .fa-chevron-down {
+                transition: transform 0.3s;
+                font-size: 0.75rem;
+                margin-left: auto;
+                width: auto !important;
+            }
+
+            .nav-submenu-toggle.active .fa-chevron-down {
+                transform: rotate(180deg);
+            }
+
+            .nav-submenu-items {
+                max-height: 0;
+                overflow: hidden;
+                transition: max-height 0.3s ease-out;
+            }
+
+            .nav-submenu-items.show {
+                max-height: 500px;
+            }
+
+            /* Divider */
+            .sidebar-divider {
+                border-color: rgba(255, 255, 255, 0.1);
+                margin: 15px 20px;
+            }
+
+            /* ===== LIGHT MODE OVERRIDES ===== */
+            /* Override dark-themed inline styles for light mode */
+            body:not(.dark-mode) .sidebar .brand {
+                background: linear-gradient(135deg, #7B5CFA 0%, #6C57CE 100%) !important;
+                box-shadow: 0 4px 6px rgba(123, 92, 250, 0.15) !important;
+            }
+
+            body:not(.dark-mode) .sidebar .brand-icon {
+                background: rgba(255, 255, 255, 0.25) !important;
+                color: #fff !important;
+            }
+
+            body:not(.dark-mode) .sidebar .brand-text {
+                color: #fff !important;
+            }
+
+            body:not(.dark-mode) .sidebar .brand-text strong,
+            body:not(.dark-mode) .sidebar .brand-text small {
+                color: #fff !important;
+            }
+
+            body:not(.dark-mode) .sidebar-search {
+                background: rgba(123, 92, 250, 0.05) !important;
+                border-bottom-color: rgba(123, 92, 250, 0.1) !important;
+            }
+
+            body:not(.dark-mode) .sidebar-search i {
+                color: #999 !important;
+            }
+
+            body:not(.dark-mode) .sidebar-search input {
+                background: rgba(123, 92, 250, 0.08) !important;
+                border-color: rgba(123, 92, 250, 0.2) !important;
+                color: #2d2d2d !important;
+            }
+
+            body:not(.dark-mode) .sidebar-search input:focus {
+                background: rgba(123, 92, 250, 0.12) !important;
+                border-color: #7B5CFA !important;
+                box-shadow: 0 0 0 3px rgba(123, 92, 250, 0.15) !important;
+                color: #2d2d2d !important;
+            }
+
+            body:not(.dark-mode) .sidebar-search input::placeholder {
+                color: #999 !important;
+            }
+
+            body:not(.dark-mode) .sidebar-nav::-webkit-scrollbar-track {
+                background: rgba(123, 92, 250, 0.05) !important;
+            }
+
+            body:not(.dark-mode) .sidebar-nav::-webkit-scrollbar-thumb {
+                background: rgba(123, 92, 250, 0.2) !important;
+            }
+
+            body:not(.dark-mode) .nav-section-title {
+                color: #999 !important;
+            }
+
+            body:not(.dark-mode) .sidebar .nav-item {
+                color: #6d6d6d !important;
+            }
+
+            body:not(.dark-mode) .sidebar .nav-item:hover {
+                background: rgba(123, 92, 250, 0.08) !important;
+                border-left-color: #7B5CFA !important;
+                color: #7B5CFA !important;
+            }
+
+            body:not(.dark-mode) .sidebar .nav-item.active {
+                background: linear-gradient(90deg, rgba(123, 92, 250, 0.15) 0%, transparent 100%) !important;
+                border-left-color: #7B5CFA !important;
+                color: #7B5CFA !important;
+            }
+
+            body:not(.dark-mode) .sidebar .nav-item.active i {
+                color: #7B5CFA !important;
+            }
+
+            body:not(.dark-mode) .nav-submenu-toggle {
+                color: #6d6d6d !important;
+            }
+
+            body:not(.dark-mode) .nav-submenu-toggle:hover {
+                background: rgba(123, 92, 250, 0.08) !important;
+                border-left-color: #7B5CFA !important;
+                color: #7B5CFA !important;
+            }
+
+            body:not(.dark-mode) .sidebar-divider {
+                border-color: rgba(123, 92, 250, 0.15) !important;
+            }
+
+            /* ===== SECTION TOGGLE STYLES ===== */
+            .section-toggle {
+                cursor: pointer;
+                user-select: none;
+                display: flex !important;
+                align-items: center;
+            }
+
+            .section-toggle span {
+                flex: 1;
+            }
+
+            .section-toggle .toggle-icon {
+                font-size: 0.75rem;
+                transition: transform 0.3s ease;
+                width: auto !important;
+            }
+
+            .section-toggle.collapsed .toggle-icon {
+                transform: rotate(-90deg);
+            }
+
+            .nav-section-content {
+                max-height: 1000px;
+                overflow: hidden;
+                transition: max-height 0.4s ease-out, opacity 0.3s ease;
+                opacity: 1;
+            }
+
+            .nav-section-content:not(.show) {
+                max-height: 0;
+                opacity: 0;
+            }
+
+            .section-toggle:hover {
+                background: rgba(123, 92, 250, 0.08);
+                border-radius: 4px;
+            }
+
+            body.dark-mode .section-toggle:hover {
+                background: rgba(255, 255, 255, 0.05);
+            }
+        </style>
+
+        <!-- Enhanced Sidebar JavaScript -->
+        <script>
+            document.addEventListener('DOMContentLoaded', function () {
+                // Submenu Toggle
+                document.querySelectorAll('.nav-submenu-toggle').forEach(toggle => {
+                    toggle.addEventListener('click', function () {
+                        const submenuId = this.getAttribute('data-toggle');
+                        const submenu = document.getElementById(submenuId);
+
+                        this.classList.toggle('active');
+                        submenu.classList.toggle('show');
+                    });
+                });
+
+                // Auto-open active submenu
+                document.querySelectorAll('.nav-submenu-items .nav-item.active').forEach(activeItem => {
+                    const submenu = activeItem.closest('.nav-submenu-items');
+                    const toggle = submenu.previousElementSibling;
+
+                    if (submenu && toggle) {
+                        submenu.classList.add('show');
+                        toggle.classList.add('active');
+                    }
+                });
+
+                // Section Toggle (Collapsible Categories)
+                document.querySelectorAll('.section-toggle').forEach(toggle => {
+                    toggle.addEventListener('click', function () {
+                        const sectionId = this.getAttribute('data-section');
+                        const content = document.getElementById(sectionId);
+
+                        // Toggle collapsed class and show/hide content
+                        this.classList.toggle('collapsed');
+                        content.classList.toggle('show');
+
+                        // Save state to localStorage
+                        const isCollapsed = this.classList.contains('collapsed');
+                        localStorage.setItem('section-' + sectionId, isCollapsed ? 'collapsed' : 'expanded');
+                    });
+
+                    // Restore state from localStorage
+                    const sectionId = toggle.getAttribute('data-section');
+                    const savedState = localStorage.getItem('section-' + sectionId);
+                    if (savedState === 'collapsed') {
+                        toggle.classList.add('collapsed');
+                        document.getElementById(sectionId).classList.remove('show');
+                    }
+                });
+
+                // Auto-expand section containing active page
+                document.querySelectorAll('.nav-section-content .nav-item.active').forEach(activeItem => {
+                    const section = activeItem.closest('.nav-section-content');
+                    const toggle = section.previousElementSibling;
+
+                    if (section && toggle) {
+                        section.classList.add('show');
+                        toggle.classList.remove('collapsed');
+                    }
+                });
+
+                // Search Functionality
+                const searchInput = document.getElementById('sidebarSearch');
+                if (searchInput) {
+                    searchInput.addEventListener('input', function () {
+                        const query = this.value.toLowerCase();
+                        const navItems = document.querySelectorAll('.sidebar .nav-item');
+                        const sections = document.querySelectorAll('.nav-section');
+
+                        navItems.forEach(item => {
+                            const text = item.textContent.toLowerCase();
+                            if (text.includes(query)) {
+                                item.style.display = 'flex';
+                                // Show parent section
+                                const section = item.closest('.nav-section');
+                                if (section) section.style.display = 'block';
+                            } else {
+                                item.style.display = 'none';
+                            }
+                        });
+
+                        // Hide empty sections
+                        if (query) {
+                            sections.forEach(section => {
+                                const visibleItems = section.querySelectorAll('.nav-item[style*="display: flex"]');
+                                if (visibleItems.length === 0) {
+                                    section.style.display = 'none';
+                                }
+                            });
+                        } else {
+                            sections.forEach(section => section.style.display = 'block');
+                        }
+                    });
+                }
+            });
+        </script>
     </div>
 
     <div class="main-content">

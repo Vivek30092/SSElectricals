@@ -39,7 +39,16 @@
                                     <div class="mb-3">
                                         <label for="{{ form.customer_name.id_for_label }}"
                                             class="form-label fw-semibold">Full Name</label>
+                                        {% if user.first_name or user.last_name %}
+                                        <input type="text" class="form-control bg-light"
+                                            value="{{ user.first_name }} {{ user.last_name }}" readonly>
+                                        <input type="hidden" name="{{ form.customer_name.name }}"
+                                            value="{{ user.first_name }} {{ user.last_name }}">
+                                        <small class="text-muted"><i class="fas fa-lock me-1"></i>Name from your profile
+                                            (cannot be changed here)</small>
+                                        {% else %}
                                         {{ form.customer_name }}
+                                        {% endif %}
                                         {% if form.customer_name.errors %}
                                         <div class="text-danger small mt-1">{{ form.customer_name.errors.0 }}</div>
                                         {% endif %}
@@ -47,7 +56,18 @@
                                     <div class="mb-3">
                                         <label for="{{ form.phone.id_for_label }}" class="form-label fw-semibold">Phone
                                             Number</label>
+                                        {% if user.phone_number %}
+                                        <input type="text" class="form-control bg-light" value="{{ user.phone_number }}"
+                                            readonly>
+                                        <input type="hidden" name="{{ form.phone.name }}"
+                                            value="{{ user.phone_number }}">
+                                        <small class="text-muted"><i class="fas fa-lock me-1"></i>Phone from your
+                                            profile (cannot be changed here)</small>
+                                        {% else %}
                                         {{ form.phone }}
+                                        <small class="text-info"><i class="fas fa-info-circle me-1"></i>Please add your
+                                            phone number</small>
+                                        {% endif %}
                                         {% if form.phone.errors %}
                                         <div class="text-danger small mt-1">{{ form.phone.errors.0 }}</div>
                                         {% endif %}
@@ -55,7 +75,15 @@
                                     <div class="mb-3">
                                         <label for="{{ form.email.id_for_label }}" class="form-label fw-semibold">Email
                                             Address</label>
+                                        {% if user.email %}
+                                        <input type="email" class="form-control bg-light" value="{{ user.email }}"
+                                            readonly>
+                                        <input type="hidden" name="{{ form.email.name }}" value="{{ user.email }}">
+                                        <small class="text-muted"><i class="fas fa-lock me-1"></i>Email from your
+                                            profile (cannot be changed here)</small>
+                                        {% else %}
                                         {{ form.email }}
+                                        {% endif %}
                                         {% if form.email.errors %}
                                         <div class="text-danger small mt-1">{{ form.email.errors.0 }}</div>
                                         {% endif %}
@@ -83,7 +111,33 @@
                                             <i class="fas fa-crosshairs me-1"></i> Auto-fill Address using GPS
                                         </button>
                                         <div id="locationMsg" class="form-text small"></div>
+
+                                        <!-- Distance Display - Pill Style -->
+                                        <div id="distanceDisplay" class="mt-2" style="display: none;">
+                                            <div class="distance-pill">
+                                                <i class="fas fa-check-circle text-success me-2"></i>
+                                                <span class="fw-semibold" style="color: #0d9488;">Distance from shop:
+                                                    <span id="distanceValue">1.1 km</span></span>
+                                            </div>
+                                        </div>
                                     </div>
+
+                                    <style>
+                                        .distance-pill {
+                                            display: inline-flex;
+                                            align-items: center;
+                                            padding: 10px 20px;
+                                            background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+                                            border: 2px solid #6ee7b7;
+                                            border-radius: 50px;
+                                            font-size: 0.95rem;
+                                            box-shadow: 0 2px 4px rgba(13, 148, 136, 0.1);
+                                        }
+
+                                        .distance-pill i {
+                                            font-size: 1.1rem;
+                                        }
+                                    </style>
 
                                     <!-- Interactive Map for Location Confirmation -->
                                     <div class="mb-3" id="mapSection" style="display: none;">
@@ -388,6 +442,12 @@
                 updateServiceChargeUI(currentDistanceKm);
             });
         }
+
+        // GPS button event listener
+        const gpsBtn = document.getElementById('detectLocationBtn');
+        if (gpsBtn) {
+            gpsBtn.addEventListener('click', useGpsLocation);
+        }
     });
 
     function initAutocomplete() {
@@ -506,6 +566,15 @@
         }, (response, status) => {
             if (status === 'OK' && response.rows[0].elements[0].status === 'OK') {
                 const distKm = response.rows[0].elements[0].distance.value / 1000;
+
+                // Show distance in the display element
+                const distanceDisplay = document.getElementById('distanceDisplay');
+                const distanceValue = document.getElementById('distanceValue');
+                if (distanceDisplay && distanceValue) {
+                    distanceValue.textContent = distKm.toFixed(1) + ' km';
+                    distanceDisplay.style.display = 'block';
+                }
+
                 updateServiceChargeUI(distKm);
                 performLocationVerification(userLat, userLng, distKm);
             }

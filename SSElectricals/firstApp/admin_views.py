@@ -865,7 +865,6 @@ def admin_appointment_update(request, pk):
     appointment = get_object_or_404(Appointment, pk=pk)
     if request.method == 'POST':
         status = request.POST.get('status')
-        visiting_charge = request.POST.get('visiting_charge')
         extra_charge = request.POST.get('extra_charge')
         electrician_id = request.POST.get('assigned_electrician')
         
@@ -874,10 +873,10 @@ def admin_appointment_update(request, pk):
 
         if status:
             appointment.status = status
-        
-        if visiting_charge:
-            appointment.visiting_charge = visiting_charge
             
+        # Note: visiting_charge is read-only and set during appointment creation
+        # It should not be modified from the admin panel
+        
         if extra_charge:
             appointment.extra_charge = extra_charge
         
@@ -1357,13 +1356,13 @@ def admin_order_detail(request, pk):
                         messages.warning(request, f"Insufficient stock for {item.product.name}. Available: {item.product.stock_quantity}")
                 
                 # Check free delivery eligibility
-                if order.user.free_delivery_used_count == 0 and order.distance_km and order.distance_km <= 3:
+                if order.user.free_delivery_used_count == 0 and order.distance_km and order.distance_km <= 2:
                     order.free_delivery_applied = True
                     order.delivery_charge = Decimal('0.00')
                     order.final_price = order.total_price
                     order.user.free_delivery_used_count += 1
                     order.user.save()
-                    messages.info(request, "Free delivery applied (first order within 3 KM).")
+                    messages.info(request, "Free delivery applied (first order within 2 KM).")
                 
                 messages.success(request, "Pricing confirmed! Stock has been deducted.")
             

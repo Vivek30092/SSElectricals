@@ -8,6 +8,33 @@
                 <h5 class="mb-0">Update Appointment #{{ appointment.id }}</h5>
             </div>
             <div class="card-body">
+                <!-- Appointment Details Information -->
+                <div class="alert alert-info mb-4">
+                    <h6 class="alert-heading mb-3"><i class="fas fa-info-circle me-2"></i>Appointment Details</h6>
+                    <div class="row g-2">
+                        <div class="col-md-6">
+                            <strong>Service:</strong>
+                            <span class="text-dark">{{ appointment.service_name|default:"Not specified" }}</span>
+                        </div>
+                        <div class="col-md-6">
+                            <strong>Date & Time:</strong>
+                            <span class="text-danger">{{ appointment.date|date:"M. j, Y" }} at {{ appointment.time|time:"g a" }}</span>
+                        </div>
+                        <div class="col-md-6">
+                            <strong>Area:</strong>
+                            <span class="text-dark">{{ appointment.area|default:"Not specified" }}</span>
+                        </div>
+                        <div class="col-md-6">
+                            <strong>Address:</strong>
+                            <span class="text-dark">{{ appointment.address|default:"Not provided" }}</span>
+                        </div>
+                        <div class="col-12">
+                            <strong>Problem:</strong>
+                            <span class="text-dark">{{ appointment.problem_description|default:"Not described" }}</span>
+                        </div>
+                    </div>
+                </div>
+
                 <form method="post">
                     {% csrf_token %}
 
@@ -20,7 +47,7 @@
                         <label class="form-label">Update Status</label>
                         <select name="status" class="form-select">
                             {% for status, label in status_choices %}
-                            <option value="{{ status }}" {% if appointment.status==status %} selected {% endif %}>
+                            <option value="{{ status }}" {% if appointment.status == status %} selected {% endif %}>
                                 {{ label }}
                             </option>
                             {% endfor %}
@@ -29,14 +56,28 @@
 
                     <div class="mb-3">
                         <label class="form-label">Visiting Charge (₹)</label>
-                        <input type="number" name="visiting_charge" class="form-control"
-                            value="{{ appointment.visiting_charge }}" step="0.01">
+                        <input type="text" class="form-control" value="₹{{ appointment.visiting_charge|floatformat:2 }}"
+                            disabled>
+                        <div class="form-text text-muted">
+                            <i class="fas fa-map-marker-alt me-1"></i>Calculated based on distance from shop and admin
+                            pricing
+                        </div>
                     </div>
 
                     <div class="mb-3">
                         <label class="form-label">Extra Charge (Material/Other) (₹)</label>
                         <input type="number" name="extra_charge" class="form-control"
-                            value="{{ appointment.extra_charge }}" step="0.01">
+                            value="{{ appointment.extra_charge }}" step="0.01" id="extraChargeInput">
+                        <div class="form-text text-muted">
+                            <i class="fas fa-toolbox me-1"></i>Additional cost for parts/materials after inspection
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="alert alert-success">
+                            <strong>Total Charge:</strong>
+                            <span class="fs-5 ms-2" id="totalCharge">₹{{ appointment.visiting_charge|add:appointment.extra_charge|floatformat:2 }}</span>
+                        </div>
                     </div>
 
                     <div class="mb-3">
@@ -45,8 +86,7 @@
                             <option value="none" {% if not appointment.assigned_electrician %}selected{% endif %}>None
                                 (Unassigned)</option>
                             {% for electrician in electricians %}
-                            <option value="{{ electrician.id }}" {% if appointment.assigned_electrician and
-                                appointment.assigned_electrician.id==electrician.id %}selected{% endif %}>
+                            <option value="{{ electrician.id }}" {% if appointment.assigned_electrician and appointment.assigned_electrician.id == electrician.id %}selected{% endif %}>
                                 {{ electrician.name }} - {{ electrician.phone_number }}
                             </option>
                             {% endfor %}
@@ -63,4 +103,22 @@
         </div>
     </div>
 </div>
+
+<script>
+    // Dynamic Total Calculation
+    document.addEventListener('DOMContentLoaded', function () {
+        const visitingCharge = {{ appointment.visiting_charge|default: 0
+    }};
+    const extraChargeInput = document.getElementById('extraChargeInput');
+    const totalChargeDisplay = document.getElementById('totalCharge');
+
+    if (extraChargeInput && totalChargeDisplay) {
+        extraChargeInput.addEventListener('input', function () {
+            const extraCharge = parseFloat(this.value) || 0;
+            const total = visitingCharge + extraCharge;
+            totalChargeDisplay.textContent = '₹' + total.toFixed(2);
+        });
+    }
+    });
+</script>
 {% endblock %}
