@@ -50,9 +50,9 @@ DEBUG = True
 
 ALLOWED_HOSTS = [
     'localhost',
-    'sselectricals.onrender.com'
     '127.0.0.1',
-    ]
+    'sselectricals.onrender.com',
+]
 
 
 # Application definition
