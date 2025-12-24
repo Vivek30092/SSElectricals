@@ -20,3 +20,5 @@ staticfiles/
 .DS_Store
 Thumbs.db
 **/media/
+
+*.sqlite3
