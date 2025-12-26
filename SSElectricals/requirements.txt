@@ -8,6 +8,7 @@ gunicorn==23.0.0
 
 # Database
 psycopg2-binary==2.9.11
+dj-database-url==2.3.0
 
 # Environment & Configuration
 python-dotenv==1.2.1
@@ -60,3 +61,4 @@ sqlparse==0.5.3
 # Note: Removed Jupyter/notebook packages 
 # Note: Removed Google Cloud/Firebase packages if not actively used
 # Note: Removed Flask, FastAPI, Streamlit - not needed for Django project
+dj-database-url==2.3.0
