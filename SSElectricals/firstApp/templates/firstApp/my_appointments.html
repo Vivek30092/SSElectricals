@@ -19,12 +19,12 @@
             <tbody>
                 {% for appointment in appointments %}
                 <tr>
-                    <td class="ps-4 fw-bold">{{ appointment.service_type }}</td>
-                    <td>
+                    <td data-label="Service" class="ps-4 fw-bold">{{ appointment.service_type }}</td>
+                    <td data-label="Date & Time">
                         <div><i class="far fa-calendar-alt me-1 text-muted"></i> {{ appointment.date }}</div>
                         <div class="small text-muted"><i class="far fa-clock me-1"></i> {{ appointment.time }}</div>
                     </td>
-                    <td>
+                    <td data-label="Status">
                         {% if appointment.status == 'Pending' %}
                         <span class="badge bg-warning text-dark">Pending</span>
                         {% elif appointment.status == 'Confirmed' %}
@@ -41,13 +41,13 @@
                         <span class="badge bg-secondary">{{ appointment.status }}</span>
                         {% endif %}
                     </td>
-                    <td>
+                    <td data-label="Charges">
                         <div class="fw-bold">₹{{ appointment.total_charge }}</div>
                         {% if appointment.extra_charge > 0 %}
                         <small class="text-muted">(Inc. extra ₹{{ appointment.extra_charge }})</small>
                         {% endif %}
                     </td>
-                    <td class="pe-4">
+                    <td data-label="Actions" class="pe-4">
                         <button type="button" class="btn btn-sm btn-outline-secondary me-2" data-bs-toggle="modal"
                             data-bs-target="#apptModal{{ appointment.id }}">
                             View

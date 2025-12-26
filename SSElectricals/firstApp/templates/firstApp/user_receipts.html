@@ -36,20 +36,21 @@
                             <tbody>
                                 {% for order in online_orders %}
                                 <tr>
-                                    <td><strong>{{ order.receipt_number }}</strong></td>
-                                    <td>
+                                    <td data-label="Receipt #"><strong>{{ order.receipt_number }}</strong></td>
+                                    <td data-label="Date">
                                         {{ order.created_at|date:"d-M-Y" }}<br>
                                         <small class="text-muted">{{ order.created_at|date:"h:i A" }}</small>
                                     </td>
-                                    <td>
+                                    <td data-label="Items">
                                         <span class="badge bg-info text-dark">
                                             {{ order.items.count }} item{{ order.items.count|pluralize }}
                                         </span>
                                     </td>
-                                    <td>
-                                        <strong style="font-size: 1.1em; color: #28a745;">₹{{ order.grand_total }}</strong>
+                                    <td data-label="Total Amount">
+                                        <strong style="font-size: 1.1em; color: #28a745;">₹{{ order.grand_total
+                                            }}</strong>
                                     </td>
-                                    <td>
+                                    <td data-label="Actions">
                                         <a href="{% url 'order_receipt_print' order.id %}"
                                             class="btn btn-sm btn-primary" title="View Receipt" target="_blank">
                                             <i class="fas fa-eye"></i> View Receipt
@@ -85,22 +86,24 @@
                             <tbody>
                                 {% for receipt in offline_receipts %}
                                 <tr>
-                                    <td><strong>{{ receipt.receipt_number }}</strong></td>
-                                    <td>
+                                    <td data-label="Receipt #"><strong>{{ receipt.receipt_number }}</strong></td>
+                                    <td data-label="Date">
                                         {{ receipt.created_at|date:"d-M-Y" }}<br>
                                         <small class="text-muted">{{ receipt.created_at|date:"h:i A" }}</small>
                                     </td>
-                                    <td>
+                                    <td data-label="Shop">
                                         <strong>{{ receipt.shop_name }}</strong><br>
                                         <small class="text-muted">{{ receipt.shop_phone }}</small>
                                     </td>
-                                    <td>
-                                        <span class="badge bg-primary">{{ receipt.items.count }} item{{  receipt.items.count|pluralize }}</span>
+                                    <td data-label="Items">
+                                        <span class="badge bg-primary">{{ receipt.items.count }} item{{
+                                            receipt.items.count|pluralize }}</span>
                                     </td>
-                                    <td>
-                                        <strong style="font-size: 1.1em; color: #28a745;">₹{{ receipt.grand_total }}</strong>
+                                    <td data-label="Total Amount">
+                                        <strong style="font-size: 1.1em; color: #28a745;">₹{{ receipt.grand_total
+                                            }}</strong>
                                     </td>
-                                    <td>
+                                    <td data-label="Actions">
                                         <a href="{% url 'user_receipt_view' receipt.id %}"
                                             class="btn btn-sm btn-outline-success" title="View Receipt" target="_blank">
                                             <i class="fas fa-eye"></i> View

@@ -54,13 +54,13 @@
                     <tbody>
                         {% for item in order.items.all %}
                         <tr>
-                            <td>{{ item.product.name }}</td>
-                            <td>{{ item.quantity }}</td>
+                            <td data-label="Product">{{ item.product.name }}</td>
+                            <td data-label="Quantity">{{ item.quantity }}</td>
                             {% if order.pricing_confirmed %}
-                            <td>₹{{ item.price }}</td>
-                            <td><strong>₹{% widthratio item.price 1 item.quantity %}</strong></td>
+                            <td data-label="Unit Price">₹{{ item.price }}</td>
+                            <td data-label="Subtotal"><strong>₹{% widthratio item.price 1 item.quantity %}</strong></td>
                             {% endif %}
-                            <td>
+                            <td data-label="Action">
                                 {% if order.status == 'Delivered' %}
                                 {% if item.product.id in reviewed_product_ids %}
                                 <span class="badge bg-success"><i class="fas fa-check"></i> Reviewed</span>
@@ -144,7 +144,7 @@
 
                     <!-- Price Summary Card -->
                     <div class="bg-white rounded p-3 my-3 shadow-sm">
-                        <table class="table table-sm mb-0">
+                        <table class="table table-sm mb-0 no-mobile-card">
                             <tbody>
                                 <tr>
                                     <td class="border-0">Products Subtotal:</td>

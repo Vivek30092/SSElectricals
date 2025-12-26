@@ -571,6 +571,25 @@
             // Default to light theme for non-authenticated users
             // Light theme is default (no class needed)
             {% endif %}
+
+            // Mobile-only UI Enhancements
+            if (window.innerWidth <= 768) {
+                // Improve forms for mobile tap targets and keyboards
+                document.querySelectorAll('input[name*="phone"], input[name*="mobile"], input[id*="phone"]').forEach(el => {
+                    if (!el.type || el.type === 'text') el.type = 'tel';
+                    el.inputMode = 'tel';
+                });
+                document.querySelectorAll('input[name*="email"], input[id*="email"]').forEach(el => {
+                    if (!el.type || el.type === 'text') el.type = 'email';
+                    el.inputMode = 'email';
+                });
+                document.querySelectorAll('input[name*="pincode"], input[name*="zip"], input[id*="pincode"]').forEach(el => {
+                    el.inputMode = 'numeric';
+                });
+
+                // Smooth scrolling for mobile
+                document.documentElement.style.scrollBehavior = 'smooth';
+            }
         });
     </script>
 

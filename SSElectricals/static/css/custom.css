@@ -245,3 +245,241 @@ body.dark-mode .dropdown-item:hover {
 body.dark-mode .dropdown-divider {
     border-color: #444;
 }
+
+/* ============================================
+   MOBILE-ONLY UI/UX ENHANCEMENTS
+   Breakpoints: Phone & Small Tablet (<= 768px)
+   ============================================ */
+
+   @media (max-width: 768px) {
+    /* 1. Layout & Spacing */
+    .container {
+        padding-left: 12px !important;
+        padding-right: 12px !important;
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+
+    .row {
+        margin-left: -8px !important;
+        margin-right: -8px !important;
+    }
+
+    .row > * {
+        padding-left: 8px !important;
+        padding-right: 8px !important;
+    }
+
+    /* Vertical Spacing */
+    .mb-3, .my-3 { margin-bottom: 1.5rem !important; }
+    .mb-4, .my-4 { margin-bottom: 2rem !important; }
+    .mb-5, .my-5 { margin-bottom: 2.5rem !important; }
+
+    section, .py-5 {
+        padding-top: 2.5rem !important;
+        padding-bottom: 2.5rem !important;
+    }
+
+    /* 2. Typography & Readability */
+    body {
+        font-size: 16px;
+        line-height: 1.6;
+    }
+
+    h1, .display-3 { font-size: 2rem !important; }
+    h2 { font-size: 1.75rem !important; }
+    h3 { font-size: 1.5rem !important; }
+    h4 { font-size: 1.25rem !important; }
+    h5 { font-size: 1.15rem !important; }
+    
+    .form-label {
+        font-size: 1rem;
+        font-weight: 600;
+        margin-bottom: 0.6rem;
+    }
+
+    .lead { font-size: 1.1rem !important; }
+
+    /* 3. Buttons & Touch Targets */
+    .btn:not(.btn-sm):not(.navbar .btn) {
+        width: 100% !important;
+        min-height: 48px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 0.75rem;
+        font-size: 1rem;
+        font-weight: 600;
+        border-radius: 10px;
+    }
+
+    .btn-group, .d-flex.gap-2 {
+        flex-direction: column;
+        width: 100%;
+    }
+
+    .btn-group > .btn, .d-flex.gap-2 > .btn {
+        margin-right: 0 !important;
+        margin-left: 0 !important;
+        width: 100% !important;
+    }
+
+    /* 4. Forms Optimization */
+    .form-control, .form-select {
+        height: 50px !important;
+        font-size: 16px !important; /* Prevents iOS zoom */
+        padding: 10px 15px !important;
+        border-radius: 10px !important;
+    }
+
+    textarea.form-control {
+        height: auto !important;
+        min-height: 100px;
+    }
+
+    .input-group {
+        flex-direction: column;
+    }
+
+    .input-group > * {
+        width: 100% !important;
+        border-radius: 10px !important;
+        margin-bottom: 5px;
+    }
+
+    /* 5. Cards, Lists & Tables */
+    .card {
+        border-radius: 16px !important;
+        margin-bottom: 1.25rem;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.08) !important;
+    }
+
+    .card-body {
+        padding: 1.25rem !important;
+    }
+
+    /* Product Cards Mobile Optimization */
+    .product-card, .col-6.col-md-3 {
+        width: 100% !important;
+        flex: 0 0 100% !important;
+        max-width: 100% !important;
+    }
+
+    /* Table Conversion to Card Layout */
+    @media (max-width: 600px) {
+        .table:not(.no-mobile-card) thead {
+            display: none;
+        }
+        .table:not(.no-mobile-card) tr {
+            display: block;
+            margin-bottom: 1rem;
+            border: 1px solid #dee2e6;
+            border-radius: 12px;
+            padding: 10px;
+            background: #fff;
+        }
+        body.dark-mode .table:not(.no-mobile-card) tr {
+            background: #1e1e1e;
+            border-color: #333;
+        }
+        .table:not(.no-mobile-card) td {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            text-align: right;
+            border-bottom: 1px solid #eee;
+            padding: 8px 5px !important;
+        }
+        body.dark-mode .table:not(.no-mobile-card) td {
+            border-bottom-color: #333;
+        }
+        .table:not(.no-mobile-card) td::before {
+            content: attr(data-label);
+            font-weight: bold;
+            text-align: left;
+            margin-right: 1rem;
+            color: #666;
+        }
+        body.dark-mode .table:not(.no-mobile-card) td::before {
+            color: #aaa;
+        }
+        .table:not(.no-mobile-card) td:last-child {
+            border-bottom: 0;
+        }
+    }
+
+    /* 6. Navigation & Header */
+    .navbar {
+        padding-top: 0.5rem !important;
+        padding-bottom: 0.5rem !important;
+    }
+
+    .navbar-brand span {
+        font-size: 1.2rem !important;
+    }
+
+    .navbar-toggler {
+        padding: 8px;
+        border-radius: 8px;
+    }
+
+    .nav-item {
+        width: 100%;
+        text-align: left;
+        border-bottom: 1px solid rgba(255,255,255,0.05);
+    }
+
+    .nav-link {
+        padding: 12px 15px !important;
+    }
+
+    /* 7. Images & Media */
+    img {
+        max-width: 100%;
+        height: auto !important;
+    }
+
+    .hero-section, [style*="min-height"] {
+        min-height: 350px !important;
+    }
+
+    /* Prevents oversized banners */
+    .card-img-top {
+        height: 220px !important;
+    }
+
+    /* 8. Modals, Popups & Alerts */
+    .modal-dialog {
+        margin: 10px !important;
+        display: flex;
+        align-items: center;
+        min-height: calc(100% - 20px);
+    }
+
+    .modal-content {
+        border-radius: 20px !important;
+        width: 100%;
+    }
+
+    .modal-header, .modal-footer {
+        padding: 15px 20px !important;
+    }
+
+    .btn-close {
+        padding: 1.25rem !important;
+    }
+
+    /* 9. Performance & Usability */
+    * {
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    .hover-lift:hover, .hover-zoom:hover img {
+        transform: none !important; /* Disable hover animations on touch devices */
+    }
+
+    /* Sticky Footer Buttons (Optional Enhancement) */
+    /* If you have a primary CTA like 'Checkout', it could be sticky. 
+       For now, we follow the general rules. */
+}
+
