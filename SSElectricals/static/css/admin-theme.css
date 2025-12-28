@@ -340,17 +340,77 @@ h6 {
    RESPONSIVE
    ======================================== */
 
-@media (max-width: 768px) {
+/* ========================================
+   RESPONSIVE & MOBILE COLLAPSIBLE SIDEBAR
+   ======================================== */
+
+.admin-mobile-header {
+    display: none;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    padding: 10px 15px;
+    height: 60px;
+    align-items: center;
+    justify-content: space-between;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1050;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.brand-small {
+    color: #fff;
+    font-weight: bold;
+    font-size: 1.1rem;
+}
+
+@media (max-width: 991.98px) {
+    .admin-mobile-header {
+        display: flex;
+    }
+
     .sidebar {
-        width: 100%;
-        height: auto;
-        position: relative;
+        width: 280px;
+        left: -280px;
+        top: 60px;
+        height: calc(100vh - 60px);
+        transition: left 0.3s ease-in-out;
+        z-index: 1040;
+    }
+
+    .sidebar.show {
+        left: 0;
     }
 
     .main-content {
-        margin-left: 0;
+        margin-left: 0 !important;
+        padding-top: 80px !important;
+    }
+
+    body.sidebar-open {
+        overflow: hidden;
+    }
+
+    /* Overlay effect when sidebar is open */
+    body.sidebar-open::after {
+        content: '';
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 1030;
     }
 }
+
+@media (min-width: 992px) {
+    .sidebar {
+        left: 0 !important;
+    }
+}
+
 
 /* ========================================
    DARK MODE STYLES - Cyberpunk Theme

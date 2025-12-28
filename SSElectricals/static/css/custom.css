@@ -251,125 +251,226 @@ body.dark-mode .dropdown-divider {
    Breakpoints: Phone & Small Tablet (<= 768px)
    ============================================ */
 
-   @media (max-width: 768px) {
+@media (max-width: 768px) {
+
     /* 1. Layout & Spacing */
     .container {
-        padding-left: 12px !important;
-        padding-right: 12px !important;
+        padding-left: 15px !important;
+        padding-right: 15px !important;
         width: 100% !important;
         max-width: 100% !important;
     }
 
     .row {
-        margin-left: -8px !important;
-        margin-right: -8px !important;
+        margin-left: -10px !important;
+        margin-right: -10px !important;
     }
 
-    .row > * {
-        padding-left: 8px !important;
-        padding-right: 8px !important;
+    .row>* {
+        padding-left: 10px !important;
+        padding-right: 10px !important;
+    }
+
+    /* Prevent Horizontal Scroll */
+    body,
+    html {
+        overflow-x: hidden;
+        width: 100%;
+        position: relative;
     }
 
     /* Vertical Spacing */
-    .mb-3, .my-3 { margin-bottom: 1.5rem !important; }
-    .mb-4, .my-4 { margin-bottom: 2rem !important; }
-    .mb-5, .my-5 { margin-bottom: 2.5rem !important; }
-
-    section, .py-5 {
-        padding-top: 2.5rem !important;
-        padding-bottom: 2.5rem !important;
+    .mb-3,
+    .my-3 {
+        margin-bottom: 1.25rem !important;
     }
 
-    /* 2. Typography & Readability */
-    body {
-        font-size: 16px;
-        line-height: 1.6;
+    .mb-4,
+    .my-4 {
+        margin-bottom: 1.5rem !important;
     }
 
-    h1, .display-3 { font-size: 2rem !important; }
-    h2 { font-size: 1.75rem !important; }
-    h3 { font-size: 1.5rem !important; }
-    h4 { font-size: 1.25rem !important; }
-    h5 { font-size: 1.15rem !important; }
-    
-    .form-label {
-        font-size: 1rem;
-        font-weight: 600;
-        margin-bottom: 0.6rem;
+    .mb-5,
+    .my-5 {
+        margin-bottom: 2rem !important;
     }
 
-    .lead { font-size: 1.1rem !important; }
-
-    /* 3. Buttons & Touch Targets */
-    .btn:not(.btn-sm):not(.navbar .btn) {
-        width: 100% !important;
-        min-height: 48px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin-bottom: 0.75rem;
-        font-size: 1rem;
-        font-weight: 600;
-        border-radius: 10px;
+    section,
+    .py-5 {
+        padding-top: 2rem !important;
+        padding-bottom: 2rem !important;
     }
 
-    .btn-group, .d-flex.gap-2 {
-        flex-direction: column;
+    /* 2. Header & Navigation */
+    .navbar {
+        height: auto !important;
+        padding-top: 0.5rem !important;
+        padding-bottom: 0.5rem !important;
+    }
+
+    .navbar-brand img {
+        height: 35px !important;
+        width: auto !important;
+    }
+
+    .navbar-brand span {
+        font-size: 1.1rem !important;
+    }
+
+    .navbar-toggler {
+        padding: 10px !important;
+        border-radius: 8px;
+    }
+
+    /* 3. Hero Section (“Power Your World”) */
+    [style*="min-height: 500px"] {
+        min-height: auto !important;
+        padding: 3rem 1rem !important;
+        margin: 0 !important;
+        border-radius: 0 !important;
+    }
+
+    .display-3 {
+        font-size: 2.25rem !important;
+        line-height: 1.2 !important;
+        margin-bottom: 1rem !important;
+    }
+
+    .lead.fs-4 {
+        font-size: 1rem !important;
+        line-height: 1.5 !important;
+        margin-bottom: 1.5rem !important;
+    }
+
+    /* Stack CTA Buttons Vertically */
+    .hero-section .d-flex,
+    [style*="background: linear-gradient"] .d-flex {
+        flex-direction: column !important;
+        gap: 12px !important;
         width: 100%;
     }
 
-    .btn-group > .btn, .d-flex.gap-2 > .btn {
+    .hero-section .btn,
+    [style*="background: linear-gradient"] .btn {
+        width: 100% !important;
         margin-right: 0 !important;
-        margin-left: 0 !important;
+        padding: 12px !important;
+        font-size: 1rem !important;
+    }
+
+    /* 4. Section Cards (Features, Categories) */
+    .card-feature {
+        padding: 1.5rem !important;
+        margin-bottom: 1rem !important;
         width: 100% !important;
     }
 
-    /* 4. Forms Optimization */
-    .form-control, .form-select {
-        height: 50px !important;
-        font-size: 16px !important; /* Prevents iOS zoom */
-        padding: 10px 15px !important;
-        border-radius: 10px !important;
+    .icon-box i {
+        font-size: 2.5rem !important;
     }
 
-    textarea.form-control {
-        height: auto !important;
-        min-height: 100px;
+    /* Category Cards */
+    .col-6.col-md-3 {
+        width: 50% !important;
+        flex: 0 0 50% !important;
     }
 
-    .input-group {
-        flex-direction: column;
+    .hover-zoom .card {
+        height: 160px !important;
     }
 
-    .input-group > * {
+    .hover-zoom .card-img {
+        height: 160px !important;
+    }
+
+    /* Professional Electrician Section */
+    .align-items-center.bg-white.rounded-4 {
+        margin: 0 -15px !important;
+        border-radius: 0 !important;
+    }
+
+    .col-md-5.p-0 img {
+        height: 250px !important;
+        min-height: 250px !important;
+    }
+
+    .col-md-7.p-5 {
+        padding: 1.5rem !important;
+    }
+
+    /* 5. Typography & Buttons */
+    body {
+        font-size: 15px;
+        line-height: 1.6;
+    }
+
+    h2 {
+        font-size: 1.5rem !important;
+    }
+
+    h4 {
+        font-size: 1.25rem !important;
+    }
+
+    /* Universal Button Fix */
+    .btn:not(.btn-sm):not(.navbar .btn):not(.position-absolute) {
+        min-height: 44px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        margin-bottom: 0.5rem;
+    }
+
+    /* Password Eye Icon Mobile Alignment Fix */
+    #toggle-password {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        width: 44px !important;
+        height: 44px !important;
+        min-height: auto !important;
+        padding: 0 !important;
+        margin-right: 0 !important;
+        /* Force remove inline margin */
+        right: 12px !important;
+        /* Spacing from right edge */
+        background: transparent !important;
+        border: none !important;
+        top: 50% !important;
+        transform: translateY(-50%) !important;
+    }
+
+    /* Ensure password text doesn't overlap icon */
+    #password-input {
+        padding-right: 52px !important;
+    }
+
+    /* 6. Footer Fixes */
+    .footer-links .row>div {
         width: 100% !important;
-        border-radius: 10px !important;
-        margin-bottom: 5px;
+        margin-bottom: 1.5rem;
+        text-align: center;
     }
 
-    /* 5. Cards, Lists & Tables */
-    .card {
-        border-radius: 16px !important;
-        margin-bottom: 1.25rem;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.08) !important;
+    .footer-col-head {
+        margin-bottom: 15px !important;
     }
 
-    .card-body {
-        padding: 1.25rem !important;
+    .footer-links ul li a:hover {
+        padding-left: 0 !important;
     }
 
-    /* Product Cards Mobile Optimization */
-    .product-card, .col-6.col-md-3 {
-        width: 100% !important;
-        flex: 0 0 100% !important;
-        max-width: 100% !important;
+    .footer-main {
+        padding-bottom: 10px !important;
     }
 
-    /* Table Conversion to Card Layout */
+    /* 7. Tables on Mobile */
     @media (max-width: 600px) {
         .table:not(.no-mobile-card) thead {
             display: none;
         }
+
         .table:not(.no-mobile-card) tr {
             display: block;
             margin-bottom: 1rem;
@@ -378,21 +479,25 @@ body.dark-mode .dropdown-divider {
             padding: 10px;
             background: #fff;
         }
+
         body.dark-mode .table:not(.no-mobile-card) tr {
             background: #1e1e1e;
             border-color: #333;
         }
+
         .table:not(.no-mobile-card) td {
             display: flex;
             justify-content: space-between;
             align-items: center;
             text-align: right;
             border-bottom: 1px solid #eee;
-            padding: 8px 5px !important;
+            padding: 10px 5px !important;
         }
+
         body.dark-mode .table:not(.no-mobile-card) td {
             border-bottom-color: #333;
         }
+
         .table:not(.no-mobile-card) td::before {
             content: attr(data-label);
             font-weight: bold;
@@ -400,86 +505,46 @@ body.dark-mode .dropdown-divider {
             margin-right: 1rem;
             color: #666;
         }
+
         body.dark-mode .table:not(.no-mobile-card) td::before {
             color: #aaa;
         }
+
         .table:not(.no-mobile-card) td:last-child {
             border-bottom: 0;
         }
     }
-
-    /* 6. Navigation & Header */
-    .navbar {
-        padding-top: 0.5rem !important;
-        padding-bottom: 0.5rem !important;
-    }
-
-    .navbar-brand span {
-        font-size: 1.2rem !important;
-    }
-
-    .navbar-toggler {
-        padding: 8px;
-        border-radius: 8px;
-    }
-
-    .nav-item {
-        width: 100%;
-        text-align: left;
-        border-bottom: 1px solid rgba(255,255,255,0.05);
-    }
-
-    .nav-link {
-        padding: 12px 15px !important;
-    }
-
-    /* 7. Images & Media */
-    img {
-        max-width: 100%;
-        height: auto !important;
-    }
-
-    .hero-section, [style*="min-height"] {
-        min-height: 350px !important;
-    }
-
-    /* Prevents oversized banners */
-    .card-img-top {
-        height: 220px !important;
-    }
-
-    /* 8. Modals, Popups & Alerts */
-    .modal-dialog {
-        margin: 10px !important;
-        display: flex;
-        align-items: center;
-        min-height: calc(100% - 20px);
-    }
-
-    .modal-content {
-        border-radius: 20px !important;
-        width: 100%;
-    }
-
-    .modal-header, .modal-footer {
-        padding: 15px 20px !important;
-    }
-
-    .btn-close {
-        padding: 1.25rem !important;
-    }
-
-    /* 9. Performance & Usability */
-    * {
-        -webkit-tap-highlight-color: transparent;
-    }
-
-    .hover-lift:hover, .hover-zoom:hover img {
-        transform: none !important; /* Disable hover animations on touch devices */
-    }
-
-    /* Sticky Footer Buttons (Optional Enhancement) */
-    /* If you have a primary CTA like 'Checkout', it could be sticky. 
-       For now, we follow the general rules. */
 }
 
+/* Fix for Back to Top Button Animation */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes fadeOutDown {
+    from {
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+    to {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+}
+
+.animate__fadeInUp {
+    animation: fadeInUp 0.3s forwards;
+}
+
+.animate__fadeOutDown {
+    animation: fadeOutDown 0.3s forwards;
+}

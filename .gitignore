@@ -8,8 +8,7 @@ __pycache__/
 local_settings.py
 # db.sqlite3
 # db.sqlite3-journal
-media/
-staticfiles/
+
 
 
 # Environment Variables
@@ -19,6 +18,5 @@ staticfiles/
 # OS
 .DS_Store
 Thumbs.db
-**/media/
 
 *.sqlite3
