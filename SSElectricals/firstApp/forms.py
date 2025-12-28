@@ -512,14 +512,14 @@ class DailySalesForm(forms.ModelForm):
         widgets = {
             'date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
             'total_sales': forms.NumberInput(attrs={
-                'class': 'form-control',
+                'class': 'form-control smart-default-field',
                 'placeholder': '0',
                 'step': '0.01',
                 'min': '0',
                 'id': 'id_total_sales'
             }),
             'online_received': forms.NumberInput(attrs={
-                'class': 'form-control',
+                'class': 'form-control smart-default-field',
                 'placeholder': '0',
                 'step': '0.01',
                 'min': '0',

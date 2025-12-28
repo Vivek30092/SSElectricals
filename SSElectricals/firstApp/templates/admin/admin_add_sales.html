@@ -192,14 +192,18 @@
         const smartDefaultFields = document.querySelectorAll('.smart-default-field');
 
         smartDefaultFields.forEach(field => {
-            // Track if field has been interacted with
-            let hasBeenFocused = false;
-
             // On focus: clear if showing default value
             field.addEventListener('focus', function () {
-                if (!hasBeenFocused && (this.value === '0' || this.value === '0.00' || this.value === '0.0')) {
+                if (this.value === '0' || this.value === '0.00' || this.value === '0.0') {
                     this.value = '';
-                    hasBeenFocused = true;
+                }
+            });
+
+            // On blur: restore 0 if empty
+            field.addEventListener('blur', function () {
+                if (this.value === '') {
+                    this.value = '0';
+                    calculateCash();
                 }
             });
 
