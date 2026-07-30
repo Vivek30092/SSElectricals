@@ -43,10 +43,14 @@ GOOGLE_PLACE_ID = os.getenv('GOOGLE_PLACE_ID', 'ChIJgfA7KTUDYzkR6n9gjeGDYoI')  #
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = "django-insecure-t07&hx8jj30@9b26uogg&uj_*p!x%0x-+6svt65ft15z5q*k7="
+# Loaded from environment — set this in .env locally and as an env var on Render
+SECRET_KEY = os.getenv('SECRET_KEY')
+if not SECRET_KEY:
+    raise ValueError("SECRET_KEY environment variable is not set!")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+# Set DEBUG=True in .env for local dev; on Render, set DEBUG=False
+DEBUG = os.getenv('DEBUG', 'False').strip().lower() in ('true', '1', 'yes')
 
 ALLOWED_HOSTS = [
     'localhost',
@@ -72,6 +76,8 @@ INSTALLED_APPS = [
     "allauth.account",
     "allauth.socialaccount",
     "allauth.socialaccount.providers.google",
+    "cloudinary_storage",
+    "cloudinary",
 ]
 
 SITE_ID = 1
@@ -127,16 +133,24 @@ if os.getenv('DATABASE_URL'):
             conn_health_checks=True,
         )
     }
-else:
-    # Local development configuration
+elif os.getenv('DB_ENGINE', '').lower() == 'postgresql':
+    # Local PostgreSQL configuration (only if explicitly set and PostgreSQL is installed)
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.postgresql',
-            'NAME': os.getenv('DB_NAME','sselectricals_db'),
-            'USER': os.getenv('DB_USER','sselectricals_user'),
-            'PASSWORD': os.getenv('DB_PASSWORD','v1430'),
+            'NAME': os.getenv('DB_NAME', 'sselectricals_db'),
+            'USER': os.getenv('DB_USER', 'sselectricals_user'),
+            'PASSWORD': os.getenv('DB_PASSWORD', 'v1430'),
             'HOST': os.getenv('DB_HOST', 'localhost'),
             'PORT': os.getenv('DB_PORT', '5432'),
+        }
+    }
+else:
+    # SQLite fallback for local development (no PostgreSQL required)
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
         }
     }
 
@@ -180,8 +194,17 @@ STATICFILES_DIRS = [BASE_DIR / "static"]
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
 # Media files
+if os.getenv('CLOUDINARY_CLOUD_NAME'):
+    DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
+    CLOUDINARY_STORAGE = {
+        'CLOUD_NAME': os.getenv('CLOUDINARY_CLOUD_NAME'),
+        'API_KEY': os.getenv('CLOUDINARY_API_KEY'),
+        'API_SECRET': os.getenv('CLOUDINARY_API_SECRET'),
+    }
+else:
+    MEDIA_ROOT = BASE_DIR / 'media'
+
 MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR / 'media'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field

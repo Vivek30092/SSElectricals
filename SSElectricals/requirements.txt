@@ -62,3 +62,5 @@ sqlparse==0.5.3
 # Note: Removed Google Cloud/Firebase packages if not actively used
 # Note: Removed Flask, FastAPI, Streamlit - not needed for Django project
 dj-database-url==2.3.0
+cloudinary==1.41.0
+django-cloudinary-storage==0.3.0

@@ -82,17 +82,6 @@ class Product(models.Model):
 
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
-        
-        if self.image:
-            try:
-                from PIL import Image
-                img = Image.open(self.image.path)
-                if img.height > 800 or img.width > 800:
-                    output_size = (800, 800)
-                    img.thumbnail(output_size)
-                    img.save(self.image.path)
-            except Exception as e:
-                pass
 
     def __str__(self):
         return self.name
@@ -140,17 +129,6 @@ class ProductImage(models.Model):
 
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
-        
-        if self.image:
-            try:
-                from PIL import Image
-                img = Image.open(self.image.path)
-                if img.height > 800 or img.width > 800:
-                    output_size = (800, 800)
-                    img.thumbnail(output_size)
-                    img.save(self.image.path)
-            except Exception as e:
-                pass
 
     def __str__(self):
         return f"Image for {self.product.name}"
